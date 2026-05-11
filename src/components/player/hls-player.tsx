@@ -65,10 +65,20 @@ function getBufferedEnd(video: HTMLVideoElement) {
   return video.buffered.end(video.buffered.length - 1);
 }
 
+function isHlsManifestUrl(value: string) {
+  return value.toLowerCase().split(/[?#]/)[0].endsWith(".m3u8");
+}
+
+function getVideoDuration(video: HTMLVideoElement) {
+  return Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+}
+
 export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
   const playerRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const usingHlsJsRef = useRef(false);
+  const streamReadyRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(false);
@@ -102,14 +112,19 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
     setManualLevel(-1);
     setCurrentLevel(-1);
     hlsRef.current = null;
+    usingHlsJsRef.current = false;
+    streamReadyRef.current = false;
     video.removeAttribute("src");
     video.load();
 
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+    const hlsManifest = isHlsManifestUrl(src);
+
+    if (!hlsManifest) {
       video.src = src;
-      setLoading(false);
+      video.load();
 
       return () => {
+        streamReadyRef.current = false;
         video.removeAttribute("src");
         video.load();
       };
@@ -124,10 +139,36 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
       });
 
       hlsRef.current = hls;
+      usingHlsJsRef.current = true;
+
+      const manifestTimeout = window.setTimeout(() => {
+        if (!streamReadyRef.current) {
+          console.error("[HlsPlayer] ERROR", {
+            details: "manifest timeout",
+            src
+          });
+          setLoading(false);
+          setError("HLS manifest жүктелмеді. .m3u8 URL және CORS баптауын тексеріңіз.");
+          hls.stopLoad();
+        }
+      }, 20000);
+
+      const handleMediaAttached = () => {
+        console.info("[HlsPlayer] MEDIA_ATTACHED", { src });
+      };
 
       const handleManifestParsed = () => {
+        window.clearTimeout(manifestTimeout);
+        console.info("[HlsPlayer] MANIFEST_PARSED", {
+          duration: getVideoDuration(video),
+          levels: hls.levels.length,
+          src
+        });
+        streamReadyRef.current = true;
         setQualityLevels(hls.levels.map((level, index) => ({ index, label: formatLevel(level) })));
+        setDuration(getVideoDuration(video));
         setLoading(false);
+        setError(null);
       };
 
       const handleLevelSwitched = (_event: string, data: { level: number }) => {
@@ -135,12 +176,20 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
       };
 
       const handleError = (_event: string, data: ErrorData) => {
+        console.error("[HlsPlayer] ERROR", data);
+
         if (!data.fatal) {
           return;
         }
 
+        setLoading(false);
+
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          setError("HLS желісі үзілді. Қайта қосылып жатыр...");
+          setError(
+            streamReadyRef.current
+              ? "HLS желісі үзілді. Қайта қосып көріңіз."
+              : "HLS manifest жүктелмеді. .m3u8 URL және CORS баптауын тексеріңіз."
+          );
           hls.startLoad();
           return;
         }
@@ -151,10 +200,10 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
           return;
         }
 
-        setLoading(false);
         setError("HLS stream ашылмады. .m3u8 URL және R2 CORS баптауын тексеріңіз.");
       };
 
+      hls.on(Hls.Events.MEDIA_ATTACHED, handleMediaAttached);
       hls.on(Hls.Events.MANIFEST_PARSED, handleManifestParsed);
       hls.on(Hls.Events.LEVEL_SWITCHED, handleLevelSwitched);
       hls.on(Hls.Events.ERROR, handleError);
@@ -162,11 +211,26 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
       hls.attachMedia(video);
 
       return () => {
+        window.clearTimeout(manifestTimeout);
+        hls.off(Hls.Events.MEDIA_ATTACHED, handleMediaAttached);
         hls.off(Hls.Events.MANIFEST_PARSED, handleManifestParsed);
         hls.off(Hls.Events.LEVEL_SWITCHED, handleLevelSwitched);
         hls.off(Hls.Events.ERROR, handleError);
         hls.destroy();
         hlsRef.current = null;
+        usingHlsJsRef.current = false;
+        streamReadyRef.current = false;
+        video.removeAttribute("src");
+        video.load();
+      };
+    }
+
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = src;
+      video.load();
+
+      return () => {
+        streamReadyRef.current = false;
         video.removeAttribute("src");
         video.load();
       };
@@ -206,6 +270,11 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
       return;
     }
 
+    if (!streamReadyRef.current) {
+      setLoading(true);
+      return;
+    }
+
     if (video.paused) {
       try {
         await video.play();
@@ -228,9 +297,11 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
     }
 
     setCurrentTime(video.currentTime);
-    setDuration(Number.isFinite(video.duration) ? video.duration : 0);
+    setDuration(getVideoDuration(video));
     setBufferedEnd(getBufferedEnd(video));
-    setLoading(video.readyState < 3 && !video.paused);
+    if (streamReadyRef.current) {
+      setLoading(video.readyState < 3 && !video.paused);
+    }
   }
 
   function seek(value: string) {
@@ -303,9 +374,15 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
     setError(null);
     setLoading(true);
     hlsRef.current?.startLoad();
-    void videoRef.current?.play().catch(() => {
-      setLoading(false);
-    });
+
+    if (streamReadyRef.current) {
+      void videoRef.current?.play().catch(() => {
+        setLoading(false);
+      });
+      return;
+    }
+
+    videoRef.current?.load();
   }
 
   const qualityLabel =
@@ -314,6 +391,7 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
         ? `Auto · ${qualityLevels.find((level) => level.index === currentLevel)?.label ?? "HLS"}`
         : "Auto"
       : qualityLevels.find((level) => level.index === manualLevel)?.label ?? "HLS";
+  const durationLabel = duration > 0 ? formatTime(duration) : loading ? "..." : "--:--";
 
   return (
     <section
@@ -330,11 +408,25 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
         onClick={togglePlayback}
         onDoubleClick={toggleFullscreen}
         onCanPlay={() => {
-          setLoading(false);
+          if (!usingHlsJsRef.current) {
+            streamReadyRef.current = true;
+            setLoading(false);
+          } else if (streamReadyRef.current) {
+            setLoading(false);
+          }
           syncVideoState();
         }}
         onDurationChange={syncVideoState}
-        onLoadedMetadata={syncVideoState}
+        onLoadedMetadata={() => {
+          if (!usingHlsJsRef.current) {
+            streamReadyRef.current = true;
+          }
+          syncVideoState();
+        }}
+        onError={() => {
+          setLoading(false);
+          setError("Видео жүктелмеді. HLS URL және CORS баптауын тексеріңіз.");
+        }}
         onPlay={() => {
           setPlaying(true);
           setLoading(false);
@@ -434,7 +526,7 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
             </button>
 
             <div className="hidden min-w-[104px] text-xs font-semibold text-zinc-300 sm:block">
-              {formatTime(currentTime)} / {formatTime(duration)}
+              {formatTime(currentTime)} / {durationLabel}
             </div>
 
             <button

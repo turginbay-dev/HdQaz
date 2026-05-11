@@ -38,6 +38,33 @@ type ManualMovieAdminProps = {
   initialMovies: Movie[];
 };
 
+type MovieApiResponse = {
+  data?: Movie & { published?: boolean; quality?: string };
+  error?: {
+    message?: string;
+    details?: unknown;
+  };
+};
+
+const validationFieldLabels: Record<string, string> = {
+  backdropUrl: "Фон URL",
+  badges: "Қазақша нұсқа",
+  catalogs: "Каталогтар",
+  description: "Қазақша сипаттама",
+  genres: "Жанрлар",
+  isNewRelease: "Жаңа релиз",
+  isPremium: "Премиум",
+  languages: "Тілдер",
+  originalTitle: "Оригинал атауы",
+  posterUrl: "Постер URL",
+  rating: "Рейтинг",
+  runtime: "Ұзақтығы",
+  slug: "Slug",
+  streams: "HLS ағын URL",
+  title: "Қазақша атауы",
+  year: "Жылы"
+};
+
 function createEmptyMovie(): AdminMovie {
   return {
     id: "",
@@ -67,6 +94,25 @@ function slugify(value: string) {
     .trim()
     .replace(/[^a-z0-9а-яәғқңөұүһі]+/gi, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function formatValidationDetails(details: unknown) {
+  if (!details || typeof details !== "object" || Array.isArray(details)) {
+    return null;
+  }
+
+  const entries = Object.entries(details as Record<string, unknown>)
+    .filter(([, value]) => typeof value === "string" && value.trim())
+    .map(([field, value]) => `${validationFieldLabels[field] ?? field}: ${value}`);
+
+  return entries.length > 0 ? entries.join(" ") : null;
+}
+
+function getMovieSaveError(result: MovieApiResponse | null) {
+  const message = result?.error?.message ?? "Киноны сақтау мүмкін болмады.";
+  const details = formatValidationDetails(result?.error?.details);
+
+  return details ? `${message} ${details}` : message;
 }
 
 function toAdminMovie(item: Movie & { published?: boolean; quality?: string }): AdminMovie {
@@ -208,14 +254,12 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
           published: movie.published
         })
       });
-      const result = (await response.json().catch(() => null)) as
-        | { data?: Movie & { published?: boolean; quality?: string }; error?: { message?: string } }
-        | null;
+      const result = (await response.json().catch(() => null)) as MovieApiResponse | null;
 
       const savedMovie = result?.data;
 
       if (!response.ok || !savedMovie) {
-        throw new Error(result?.error?.message ?? "Киноны сақтау мүмкін болмады.");
+        throw new Error(getMovieSaveError(result));
       }
 
       setSavedMovies((current) => [toAdminMovie(savedMovie), ...current]);

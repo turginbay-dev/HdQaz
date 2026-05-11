@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { Crown, Search, User } from "lucide-react";
+import { SiteLogo } from "@/components/layout/site-logo";
 import { mainNavigation } from "@/lib/navigation";
 import { cn } from "@/lib/cn";
 
@@ -44,12 +45,7 @@ export function DesktopNav() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
-        <Link
-          href="/"
-          className="rounded-full px-4 py-2 text-base font-semibold tracking-tight text-white"
-        >
-          HdQaz
-        </Link>
+        <SiteLogo className="mr-1" priority />
 
         <div className="flex items-center">
           {mainNavigation.map((item) => {

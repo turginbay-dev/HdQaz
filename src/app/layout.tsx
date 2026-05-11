@@ -7,7 +7,11 @@ export const metadata: Metadata = {
     default: "HdQaz",
     template: "%s | HdQaz"
   },
-  description: "Қазақша дыбыстама және жаңа релиздер қазақша субтитрмен."
+  description: "Қазақша дыбыстама және жаңа релиздер қазақша субтитрмен.",
+  icons: {
+    icon: [{ url: "/Logo.png", type: "image/png", sizes: "1024x1024" }],
+    apple: [{ url: "/Logo.png", type: "image/png", sizes: "1024x1024" }]
+  }
 };
 
 export default function RootLayout({

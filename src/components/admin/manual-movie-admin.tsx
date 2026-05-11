@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { Check, Eye, ImageIcon, Plus } from "lucide-react";
-import { getCatalogLabel, movieCatalogs, movieGenres, type MovieCatalogId } from "@/lib/movie-taxonomy";
+import {
+  formatMovieLanguages,
+  getCatalogLabel,
+  movieCatalogs,
+  movieGenres,
+  movieLanguages,
+  type MovieCatalogId,
+  type MovieLanguageId
+} from "@/lib/movie-taxonomy";
 import type { Movie } from "@/types/movie";
 
 type AdminMovie = {
@@ -18,6 +26,7 @@ type AdminMovie = {
   backdropUrl: string;
   streamUrl: string;
   localization: string;
+  languages: MovieLanguageId[];
   quality: string;
   genres: string[];
   catalogs: MovieCatalogId[];
@@ -43,6 +52,7 @@ function createEmptyMovie(): AdminMovie {
     backdropUrl: "",
     streamUrl: "",
     localization: "Қазақша дыбыстама",
+    languages: ["kk"],
     quality: "1080p",
     genres: ["Драма"],
     catalogs: ["full-hd", "kazakh-dubbed"],
@@ -73,6 +83,7 @@ function toAdminMovie(item: Movie & { published?: boolean; quality?: string }): 
     backdropUrl: item.backdropUrl,
     streamUrl: item.streams.master,
     localization: item.badges[0] ?? "Қазақша дыбыстама",
+    languages: item.languages,
     quality: item.quality ?? "1080p",
     genres: item.genres,
     catalogs: item.catalogs,
@@ -127,6 +138,21 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
     }));
   }
 
+  function toggleLanguage(language: string) {
+    const languageId = language as MovieLanguageId;
+
+    setMovie((current) => {
+      const languages = current.languages.includes(languageId)
+        ? current.languages.filter((item) => item !== languageId)
+        : [...current.languages, languageId];
+
+      return {
+        ...current,
+        languages: languages.length > 0 ? languages : current.languages
+      };
+    });
+  }
+
   const canSave =
     Boolean(
       movie.title &&
@@ -140,6 +166,7 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
         movie.backdropUrl &&
         movie.streamUrl
     ) &&
+    movie.languages.length > 0 &&
     movie.genres.length > 0 &&
     movie.catalogs.length > 0;
 
@@ -169,6 +196,7 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
           posterUrl: movie.posterUrl,
           backdropUrl: movie.backdropUrl,
           badges: [movie.localization],
+          languages: movie.languages,
           genres: movie.genres,
           catalogs: movie.catalogs,
           isPremium: movie.premium,
@@ -205,14 +233,14 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
-              Manual entry
+              Қолмен енгізу
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
               Киноны қолмен қосу
             </h2>
           </div>
           <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-medium text-zinc-400">
-            Local draft
+            Жергілікті жоба
           </span>
         </div>
 
@@ -254,19 +282,19 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
             placeholder="2 сағ 49 мин"
           />
           <AdminInput
-            label="Poster URL"
+            label="Постер URL"
             value={movie.posterUrl}
             onChange={(value) => updateField("posterUrl", value)}
             placeholder="https://..."
           />
           <AdminInput
-            label="Backdrop URL"
+            label="Фон URL"
             value={movie.backdropUrl}
             onChange={(value) => updateField("backdropUrl", value)}
             placeholder="https://..."
           />
           <AdminInput
-            label="HLS master URL"
+            label="HLS ағын URL"
             value={movie.streamUrl}
             onChange={(value) => updateField("streamUrl", value)}
             placeholder="/demo/interstellar/master.m3u8"
@@ -285,10 +313,10 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <AdminSelect
-            label="Статус"
+            label="Қазақша нұсқа"
             value={movie.localization}
             onChange={(value) => updateField("localization", value)}
-            options={["Қазақша дыбыстама", "Қазақша субтитрмен", "AI қазақша субтитр", "Дыбыстама күтілуде"]}
+            options={["Қазақша дыбыстама", "Қазақша субтитрмен"]}
           />
           <AdminSelect
             label="Сапа"
@@ -299,6 +327,12 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <AdminPillGroup
+            label="Тілдер"
+            items={movieLanguages.map((language) => ({ id: language.id, label: language.label }))}
+            selected={movie.languages}
+            onToggle={toggleLanguage}
+          />
           <AdminPillGroup
             label="Жанрлар"
             items={movieGenres.map((genre) => ({ id: genre, label: genre }))}
@@ -315,12 +349,12 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
 
         <div className="mt-5 flex flex-wrap gap-3">
           <AdminToggle
-            label="Premium"
+            label="Премиум"
             active={movie.premium}
             onClick={() => updateField("premium", !movie.premium)}
           />
           <AdminToggle
-            label="Published"
+            label="Жарияланған"
             active={movie.published}
             onClick={() => updateField("published", !movie.published)}
           />
@@ -333,7 +367,7 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
           type="button"
         >
           <Plus className="h-4 w-4" />
-          {isSaving ? "Сақталып жатыр..." : "DB-ге сақтау"}
+          {isSaving ? "Сақталып жатыр..." : "Дерекқорға сақтау"}
         </button>
         {formError ? (
           <p className="mt-3 max-w-2xl text-sm leading-6 text-red-300">
@@ -349,7 +383,7 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
               <Eye className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Preview</h3>
+              <h3 className="font-semibold text-white">Алдын ала көру</h3>
               <p className="text-xs text-zinc-500">Постер URL енгізсең көрінеді</p>
             </div>
           </div>
@@ -366,6 +400,9 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
           <h3 className="mt-4 truncate text-lg font-semibold text-white">{movie.title || "Кино атауы"}</h3>
           <p className="mt-1 text-sm text-zinc-500">
             {movie.year || "Жыл"} · {movie.rating || "Рейтинг"} · {movie.quality}
+          </p>
+          <p className="mt-1 text-sm text-zinc-500">
+            {formatMovieLanguages(movie.languages)}
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {movie.genres.slice(0, 3).map((genre) => (
@@ -385,9 +422,10 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
           <h3 className="mb-4 font-semibold text-white">Admin checklist</h3>
           {[
             "Қазақша сипаттама қолмен жазылады",
+            "Тілдер тек қазақ, ағылшын және орыс тілінен таңдалады",
             "Жанр мен каталог міндетті түрде белгіленеді",
             "Постер/backdrop және HLS stream URL арқылы сақталады",
-            "Save real DB `/api/movies` арқылы Supabase-ке жазады"
+            "Сақтау `/api/movies` арқылы Supabase-ке жазады"
           ].map((item) => (
             <div key={item} className="flex items-center gap-3 border-t border-white/10 py-3 first:border-t-0 first:pt-0">
               <Check className="h-4 w-4 text-[var(--accent)]" />
@@ -401,12 +439,12 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
-              Movies
+              Кинолар
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Кино тізімі</h2>
           </div>
           <span className="glass rounded-full px-4 py-2 text-sm font-medium text-zinc-300">
-            {visibleMovies.length} item
+            {visibleMovies.length} кино
           </span>
         </div>
 
@@ -427,12 +465,12 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
                   {item.year} · {item.rating} · {item.localization}
                 </p>
                 <p className="mt-1 truncate text-xs text-zinc-600">
-                  {item.genres.join(", ")} · {item.catalogs.map(getCatalogLabel).join(", ")}
+                  {formatMovieLanguages(item.languages, "short")} · {item.genres.join(", ")} · {item.catalogs.map(getCatalogLabel).join(", ")}
                 </p>
               </div>
               <div className="hidden items-center gap-2 sm:flex">
-                <StatusPill active={item.published} label={item.published ? "Published" : "Draft"} />
-                <StatusPill active={item.premium} label={item.premium ? "Premium" : "Free"} />
+                <StatusPill active={item.published} label={item.published ? "Жарияланған" : "Жоба"} />
+                <StatusPill active={item.premium} label={item.premium ? "Премиум" : "Тегін"} />
               </div>
             </article>
           ))}

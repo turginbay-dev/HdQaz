@@ -20,6 +20,7 @@ export async function GET(request: Request) {
       filter: getSearchString(searchParams, "filter"),
       genre: getSearchString(searchParams, "genre"),
       includeDrafts,
+      language: getSearchString(searchParams, "language"),
       q: getSearchString(searchParams, "q")
     });
 

@@ -1,10 +1,8 @@
-import type { MovieCatalogId } from "@/lib/movie-taxonomy";
+import type { MovieCatalogId, MovieLanguageId } from "@/lib/movie-taxonomy";
 
 export type MovieLocalization =
   | "Қазақша дыбыстама"
-  | "Қазақша субтитрмен"
-  | "AI қазақша субтитр"
-  | "Дыбыстама күтілуде";
+  | "Қазақша субтитрмен";
 
 export type Movie = {
   id: string;
@@ -18,6 +16,7 @@ export type Movie = {
   posterUrl: string;
   backdropUrl: string;
   badges: MovieLocalization[];
+  languages: MovieLanguageId[];
   genres: string[];
   catalogs: MovieCatalogId[];
   isPremium: boolean;

@@ -32,6 +32,7 @@ create table if not exists public.movies (
   poster_url text not null,
   backdrop_url text not null,
   badges text[] not null default '{}',
+  languages text[] not null default array['kk']::text[],
   genres text[] not null default '{}',
   catalogs text[] not null default '{}',
   is_premium boolean not null default false,
@@ -43,6 +44,16 @@ create table if not exists public.movies (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.movies
+add column if not exists languages text[] not null default array['kk']::text[];
+
+alter table public.movies
+drop constraint if exists movies_languages_allowed_check;
+
+alter table public.movies
+add constraint movies_languages_allowed_check
+check (languages <@ array['kk', 'en', 'ru']::text[] and cardinality(languages) > 0);
 
 create table if not exists public.content_requests (
   id uuid primary key default gen_random_uuid(),

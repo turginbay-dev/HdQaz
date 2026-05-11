@@ -5,7 +5,7 @@ import { GlassPanel } from "@/components/glass/glass-panel";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieRow } from "@/components/movie/movie-row";
 import { getMovieBySlug, getTrendingMovies } from "@/features/movies/queries";
-import { getCatalogLabel } from "@/lib/movie-taxonomy";
+import { getCatalogLabel, getMovieLanguageLabel } from "@/lib/movie-taxonomy";
 
 type MoviePageProps = {
   params: Promise<{
@@ -38,6 +38,14 @@ export default async function MoviePage({ params }: MoviePageProps) {
               <div className="mb-4 flex flex-wrap gap-2">
                 {movie.badges.map((badge) => (
                   <MovieBadge key={badge} label={badge} />
+                ))}
+                {movie.languages.map((language) => (
+                  <span
+                    key={language}
+                    className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-zinc-100"
+                  >
+                    {getMovieLanguageLabel(language)}
+                  </span>
                 ))}
               </div>
               <h1 className="text-5xl font-semibold tracking-tight text-white sm:text-7xl">

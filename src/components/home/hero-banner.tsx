@@ -3,9 +3,11 @@
 import { useRef } from "react";
 import Image from "next/image";
 import { motion, useMotionValue, useScroll, useTransform } from "framer-motion";
-import { Info, Play, Sparkles } from "lucide-react";
+import { Info, Play } from "lucide-react";
+import { LogoMark } from "@/components/layout/site-logo";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { PremiumButton } from "@/components/ui/premium-button";
+import { formatMovieLanguages } from "@/lib/movie-taxonomy";
 import type { Movie } from "@/types/movie";
 
 type HeroBannerProps = {
@@ -94,7 +96,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            <Sparkles className="h-3.5 w-3.5 text-[var(--accent)]" />
+            <LogoMark className="h-6 w-6 p-0.5" sizes="24px" />
             HdQaz Original Selection
           </motion.div>
 
@@ -137,11 +139,11 @@ export function HeroBanner({ movie }: HeroBannerProps) {
           >
             <PremiumButton href={`/watch/${movie.slug}`} className="hero-watch-button min-w-40">
               <Play className="h-4 w-4 fill-current" />
-              Watch now
+              Қазір көру
             </PremiumButton>
             <PremiumButton href={`/movie/${movie.slug}`} variant="glass" className="min-w-40">
               <Info className="h-4 w-4" />
-              More details
+              Толығырақ
             </PremiumButton>
           </motion.div>
         </div>
@@ -177,9 +179,9 @@ export function HeroBanner({ movie }: HeroBannerProps) {
         transition={{ duration: 0.7, delay: 0.55 }}
       >
         {[
-          ["4K", "cinematic"],
-          [movie.rating, "rating"],
-          ["KK", "audio / subtitle"]
+          ["4K", "Кино сапасы"],
+          [movie.rating, "Рейтинг"],
+          [formatMovieLanguages(movie.languages, "short"), "Тілдер"]
         ].map(([value, label]) => (
           <div key={label} className="glass rounded-2xl px-4 py-3 text-center">
             <p className="text-lg font-semibold text-white">{value}</p>

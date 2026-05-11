@@ -31,6 +31,10 @@ export default async function ProfilePage() {
     user.email?.split("@")[0] ??
     "HdQaz қолданушысы";
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
+  const providers = Array.isArray(user.app_metadata?.providers)
+    ? (user.app_metadata.providers as string[])
+    : [user.app_metadata?.provider as string | undefined].filter(Boolean);
+  const authMethod = providers.includes("google") ? "Google" : "Email және пароль";
 
   return (
     <main className="ambient-page min-h-screen px-4 pb-20 pt-28 sm:px-6 lg:px-8">
@@ -67,9 +71,9 @@ export default async function ProfilePage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-[var(--accent)]">
               <ShieldCheck className="h-6 w-6" />
             </div>
-            <h2 className="mt-5 text-xl font-semibold text-white">Google аккаунт қосылған</h2>
+            <h2 className="mt-5 text-xl font-semibold text-white">Аккаунт қосылған</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              Кіру әдісі: Google OAuth. Telegram арқылы кіру бұл жобада қолданылмайды.
+              Кіру әдісі: {authMethod}. Бұл жобада тек email/password және Google қолданылады.
             </p>
           </div>
 

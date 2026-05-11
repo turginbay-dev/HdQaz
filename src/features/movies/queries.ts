@@ -5,6 +5,7 @@ export type MovieFilters = {
   genre?: string;
   catalog?: string;
   filter?: string;
+  language?: string;
 };
 
 export function getAllMovies() {
@@ -25,10 +26,7 @@ function matchesLegacyFilter(movie: Movie, filter?: string) {
   }
 
   if (filter === "subtitles") {
-    return (
-      movie.badges.includes("Қазақша субтитрмен") ||
-      movie.badges.includes("AI қазақша субтитр")
-    );
+    return movie.badges.includes("Қазақша субтитрмен");
   }
 
   return true;
@@ -38,12 +36,14 @@ export function getMoviesByFilters(filters: MovieFilters = {}) {
   const genre = filters.genre?.trim();
   const catalog = filters.catalog?.trim();
   const filter = filters.filter?.trim();
+  const language = filters.language?.trim();
 
   return movies.filter((movie) => {
     const matchesGenre = !genre || movie.genres.includes(genre);
     const matchesCatalog = !catalog || movie.catalogs.some((item) => item === catalog);
+    const matchesLanguage = !language || movie.languages.some((item) => item === language);
 
-    return matchesGenre && matchesCatalog && matchesLegacyFilter(movie, filter);
+    return matchesGenre && matchesCatalog && matchesLanguage && matchesLegacyFilter(movie, filter);
   });
 }
 

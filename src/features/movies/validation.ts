@@ -1,4 +1,4 @@
-import { movieCatalogs, movieGenres, type MovieCatalogId } from "@/lib/movie-taxonomy";
+import { isMovieLanguageId, movieCatalogs, movieGenres, type MovieCatalogId, type MovieLanguageId } from "@/lib/movie-taxonomy";
 import type { MovieLocalization } from "@/types/movie";
 import type { MovieInput } from "@/types/backend";
 
@@ -14,9 +14,7 @@ type ValidationResult<T> =
 
 const localizations: MovieLocalization[] = [
   "Қазақша дыбыстама",
-  "Қазақша субтитрмен",
-  "AI қазақша субтитр",
-  "Дыбыстама күтілуде"
+  "Қазақша субтитрмен"
 ];
 
 const catalogIds = new Set<string>(movieCatalogs.map((catalog) => catalog.id));
@@ -147,6 +145,20 @@ export function parseMovieInput(
     }
   } else if (!partial) {
     errors.badges = "Required.";
+  }
+
+  const languages = asStringArray(payload.languages);
+  if (languages) {
+    const invalid = languages.find((language) => !isMovieLanguageId(language));
+    if (invalid) {
+      errors.languages = `Қолдау жоқ тіл: ${invalid}. Тек kk, en немесе ru қолданылады.`;
+    } else if (languages.length === 0) {
+      errors.languages = "Кемінде бір тіл таңдаңыз.";
+    } else {
+      data.languages = languages as MovieLanguageId[];
+    }
+  } else if (!partial) {
+    data.languages = ["kk"];
   }
 
   const genres = asStringArray(payload.genres);

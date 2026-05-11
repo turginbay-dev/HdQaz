@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { GlassPanel } from "@/components/glass/glass-panel";
+import { LogoMark } from "@/components/layout/site-logo";
 
 export const metadata = {
   title: "Premium"
@@ -34,6 +35,7 @@ export default function PremiumPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <div className="mx-auto mb-10 max-w-2xl text-center">
+        <LogoMark className="mx-auto mb-4 h-20 w-20 p-1.5" sizes="80px" />
         <p className="text-sm font-medium uppercase tracking-[0.28em] text-[var(--accent)]">
           HdQaz Premium
         </p>

@@ -1,20 +1,30 @@
 import { redirect } from "next/navigation";
-import { ShieldCheck, Sparkles } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { EmailPasswordAuthForm } from "@/components/auth/email-password-auth-form";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { LogoMark } from "@/components/layout/site-logo";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 type LoginPageProps = {
   searchParams?: Promise<{
     error?: string;
+    message?: string;
   }>;
 };
 
 const errorMessages: Record<string, string> = {
   supabase_not_configured:
     "Supabase env әлі қосылмаған. .env.local ішіне Supabase URL және anon key енгізіңіз.",
+  email_password_required: "Email енгізіп, кемінде 6 таңбалы пароль жазыңыз.",
+  email_signin_failed: "Email немесе пароль дұрыс емес.",
+  email_signup_failed: "Email арқылы тіркелу орындалмады. Supabase Email provider баптауын тексеріңіз.",
   google_oauth_failed: "Google арқылы кіру басталмады. Supabase Google provider баптауын тексеріңіз.",
   auth_callback_failed: "Google callback аяқталмады. Redirect URL баптауын тексеріңіз."
+};
+
+const statusMessages: Record<string, string> = {
+  check_email: "Аккаунтты растау үшін email поштаңызды тексеріңіз."
 };
 
 export const metadata = {
@@ -37,6 +47,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   const error = params?.error ? errorMessages[params.error] : null;
+  const status = params?.message ? statusMessages[params.message] : null;
 
   return (
     <main className="ambient-page relative min-h-screen overflow-hidden px-4 pb-20 pt-28 sm:px-6 lg:px-8">
@@ -46,14 +57,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <section className="relative mx-auto grid min-h-[calc(100vh-7rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[minmax(0,1fr)_460px]">
         <div className="max-w-3xl">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-zinc-200 backdrop-blur-2xl">
-            <Sparkles className="h-3.5 w-3.5 text-[var(--accent)]" />
+            <LogoMark className="h-6 w-6 p-0.5" sizes="24px" />
             HdQaz Account
           </div>
           <h1 className="max-w-3xl font-semibold leading-[0.92] tracking-[-0.05em] text-white [font-size:clamp(3.4rem,8vw,7rem)]">
             Бір аккаунт. Барлық қазақша кино.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-7 text-zinc-300 sm:text-lg">
-            Google арқылы кіріп, көру тарихын, Premium статусын және жеке ұсыныстарды сақтаңыз.
+            Email және парольмен немесе Google арқылы кіріп, көру тарихын, Premium статусын және жеке ұсыныстарды сақтаңыз.
           </p>
         </div>
 
@@ -63,7 +74,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
           <h2 className="text-2xl font-semibold tracking-tight text-white">Кіру</h2>
           <p className="mt-3 text-sm leading-6 text-zinc-400">
-            Қазір тек Google OAuth қолданылады. Telegram login қосылмайды.
+            Бұл жобада тек email/password және Google арқылы кіру қолданылады.
           </p>
 
           {error && (
@@ -72,14 +83,30 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </div>
           )}
 
+          {status && (
+            <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm leading-6 text-emerald-100">
+              {status}
+            </div>
+          )}
+
           {!config.configured && (
             <div className="mt-5 rounded-2xl border border-[rgba(217,183,111,0.26)] bg-[rgba(217,183,111,0.1)] p-4 text-sm leading-6 text-zinc-200">
-              Google login іске қосу үшін `.env.local` ішіне `NEXT_PUBLIC_SUPABASE_URL`
+              Auth іске қосу үшін `.env.local` ішіне `NEXT_PUBLIC_SUPABASE_URL`
               және `NEXT_PUBLIC_SUPABASE_ANON_KEY` мәндерін енгізу керек.
             </div>
           )}
 
           <div className="mt-6">
+            <EmailPasswordAuthForm disabled={!config.configured} />
+          </div>
+
+          <div className="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+            <span className="h-px flex-1 bg-white/10" />
+            немесе
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+
+          <div>
             <GoogleSignInButton disabled={!config.configured} />
           </div>
         </div>

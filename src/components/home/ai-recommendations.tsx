@@ -10,9 +10,9 @@ type AiRecommendationsProps = {
 };
 
 const reasons = [
-  "Фантастика, кең атмосфера, жоғары retention",
+  "Фантастика, кең атмосфера, жоғары қызығушылық",
   "Жаңа релиз, жеңіл эмоция, отбасылық кеш",
-  "Қараңғы эстетика, drama score, premium аудитория"
+  "Қараңғы эстетика, драмалық ырғақ, премиум аудитория"
 ];
 
 export function AiRecommendations({ movies }: AiRecommendationsProps) {
@@ -25,7 +25,7 @@ export function AiRecommendations({ movies }: AiRecommendationsProps) {
           <div>
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
               <Brain className="h-3.5 w-3.5" />
-              AI Signal
+              Ұсыныс сигналы
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-4xl">
               Сізге дәл келетін таңдаулар
@@ -53,7 +53,7 @@ export function AiRecommendations({ movies }: AiRecommendationsProps) {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/[0.82] to-transparent" />
                 <span className="absolute left-3 top-3 glass rounded-full px-3 py-1 text-xs font-semibold text-white">
-                  Match {96 - index * 4}%
+                  Сәйкестік {96 - index * 4}%
                 </span>
               </div>
 

@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/api/errors";
 import { getOptionalAdminClient } from "@/lib/supabase/admin";
 import { movies } from "@/features/movies/data";
+import { normalizeMovieLanguages } from "@/lib/movie-taxonomy";
 import type { Movie } from "@/types/movie";
 import type { MovieInput, MovieRecord } from "@/types/backend";
 
@@ -9,6 +10,7 @@ export type MovieListFilters = {
   filter?: string;
   genre?: string;
   includeDrafts?: boolean;
+  language?: string;
   limit?: number;
   offset?: number;
   q?: string;
@@ -26,6 +28,7 @@ type SupabaseMovieRow = {
   poster_url: string;
   backdrop_url: string;
   badges: string[] | null;
+  languages: string[] | null;
   genres: string[] | null;
   catalogs: string[] | null;
   is_premium: boolean;
@@ -61,6 +64,7 @@ function rowToMovie(row: SupabaseMovieRow): MovieRecord {
     posterUrl: row.poster_url,
     backdropUrl: row.backdrop_url,
     badges: (row.badges ?? []) as Movie["badges"],
+    languages: normalizeMovieLanguages(row.languages),
     genres: row.genres ?? [],
     catalogs: (row.catalogs ?? []) as Movie["catalogs"],
     isPremium: row.is_premium,
@@ -89,6 +93,7 @@ function movieToRow(input: MovieInput): MovieRowPatch {
     poster_url: input.posterUrl,
     backdrop_url: input.backdropUrl,
     badges: input.badges,
+    languages: input.languages,
     genres: input.genres,
     catalogs: input.catalogs,
     is_premium: input.isPremium,
@@ -114,6 +119,7 @@ function moviePatchToRow(input: Partial<MovieInput>): MovieRowPatch {
   if (input.posterUrl) patch.poster_url = input.posterUrl;
   if (input.backdropUrl) patch.backdrop_url = input.backdropUrl;
   if (input.badges) patch.badges = input.badges;
+  if (input.languages) patch.languages = input.languages;
   if (input.genres) patch.genres = input.genres;
   if (input.catalogs) patch.catalogs = input.catalogs;
   if (input.isPremium !== undefined) patch.is_premium = input.isPremium;
@@ -140,7 +146,7 @@ function matchesLegacyFilter(movie: MovieRecord, filter?: string) {
   }
 
   if (filter === "subtitles") {
-    return movie.badges.includes("Қазақша субтитрмен") || movie.badges.includes("AI қазақша субтитр");
+    return movie.badges.includes("Қазақша субтитрмен");
   }
 
   if (filter === "premium") {
@@ -154,6 +160,7 @@ function applyMovieFilters(records: MovieRecord[], filters: MovieListFilters = {
   const query = filters.q?.trim().toLowerCase();
   const genre = filters.genre?.trim();
   const catalog = filters.catalog?.trim();
+  const language = filters.language?.trim();
   const offset = filters.offset ?? 0;
   const limit = filters.limit ?? records.length;
 
@@ -161,6 +168,7 @@ function applyMovieFilters(records: MovieRecord[], filters: MovieListFilters = {
     .filter((movie) => filters.includeDrafts || movie.published)
     .filter((movie) => !genre || movie.genres.includes(genre))
     .filter((movie) => !catalog || movie.catalogs.includes(catalog as Movie["catalogs"][number]))
+    .filter((movie) => !language || movie.languages.includes(language as Movie["languages"][number]))
     .filter((movie) => matchesLegacyFilter(movie, filters.filter?.trim()))
     .filter((movie) => {
       if (!query) {

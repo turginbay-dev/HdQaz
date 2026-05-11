@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, Film, FolderKanban, Settings2, ShieldAlert, Tags } from "lucide-react";
+import { ArrowLeft, Film, FolderKanban, ShieldAlert, Tags } from "lucide-react";
 import { ManualMovieAdmin } from "@/components/admin/manual-movie-admin";
+import { LogoMark } from "@/components/layout/site-logo";
 import { getAllMovies } from "@/features/movies/queries";
 import { movieCatalogs, movieGenres } from "@/lib/movie-taxonomy";
 
@@ -23,7 +24,7 @@ export default function AdminPage() {
               Басты бет
             </Link>
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
-              <Settings2 className="h-4 w-4" />
+              <LogoMark className="h-8 w-8 p-0.5" sizes="32px" />
               HdQaz Admin
             </p>
             <h1 className="mt-3 font-semibold leading-[0.95] tracking-[-0.05em] text-white [font-size:clamp(3rem,7vw,6rem)]">

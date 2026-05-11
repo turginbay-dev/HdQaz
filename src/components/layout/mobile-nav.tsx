@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Crown, Menu, Search, User, X } from "lucide-react";
+import { SiteLogo } from "@/components/layout/site-logo";
 import { mainNavigation } from "@/lib/navigation";
 
 export function MobileNav() {
@@ -16,12 +17,7 @@ export function MobileNav() {
     <>
       <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-4 py-4 lg:hidden">
         <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}>
-          <Link
-            href="/"
-            className="glass flex h-12 items-center rounded-full px-4 text-base font-semibold text-white"
-          >
-            HdQaz
-          </Link>
+          <SiteLogo variant="mobile" priority />
         </motion.div>
         <motion.div
           className="flex items-center gap-2"
@@ -64,13 +60,7 @@ export function MobileNav() {
               transition={{ type: "spring", stiffness: 280, damping: 30 }}
             >
               <div className="flex items-center justify-between">
-                <Link
-                  href="/"
-                  className="text-lg font-semibold text-white"
-                  onClick={() => setOpen(false)}
-                >
-                  HdQaz
-                </Link>
+                <SiteLogo variant="drawer" onClick={() => setOpen(false)} />
                 <button
                   className="glass-button flex h-10 w-10 items-center justify-center rounded-full text-white"
                   aria-label="Жабу"

@@ -3,13 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { Maximize, Pause, Play, Settings, Volume2 } from "lucide-react";
+import { formatMovieLanguages } from "@/lib/movie-taxonomy";
+import type { MovieLanguageId } from "@/lib/movie-taxonomy";
 
 type HlsPlayerProps = {
   src: string;
   poster: string;
+  languages: MovieLanguageId[];
 };
 
-export function HlsPlayer({ src, poster }: HlsPlayerProps) {
+export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -80,7 +83,7 @@ export function HlsPlayer({ src, poster }: HlsPlayerProps) {
             </button>
             <div className="hidden items-center gap-2 text-sm text-zinc-300 sm:flex">
               <Volume2 className="h-4 w-4" />
-              <span>Қазақша дыбыстама</span>
+              <span>{formatMovieLanguages(languages, "short")}</span>
             </div>
           </div>
 

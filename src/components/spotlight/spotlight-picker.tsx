@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useAnimationControls,
+  useMotionValue,
+  useTransform
+} from "framer-motion";
 import { Play, Shuffle, Sparkles } from "lucide-react";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { PremiumButton } from "@/components/ui/premium-button";
@@ -13,41 +19,117 @@ type SpotlightPickerProps = {
   movies: Movie[];
 };
 
+const LOOP_COUNT = 5;
+const CENTER_LOOP = Math.floor(LOOP_COUNT / 2);
+
 export function SpotlightPicker({ movies }: SpotlightPickerProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [rolling, setRolling] = useState(false);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const firstPosterRef = useRef<HTMLDivElement | null>(null);
+  const controls = useAnimationControls();
+  const [layout, setLayout] = useState({
+    cardWidth: 160,
+    gap: 20,
+    paddingLeft: 28,
+    viewportWidth: 0
+  });
   const selectedMovie = movies[selectedIndex];
   const pointerX = useMotionValue(0.5);
   const pointerY = useMotionValue(0.5);
   const rotateY = useTransform(pointerX, [0, 1], [-5, 5]);
   const rotateX = useTransform(pointerY, [0, 1], [3, -3]);
 
-  const loopedMovies = useMemo(() => [...movies, ...movies, ...movies], [movies]);
+  const loopedMovies = useMemo(
+    () => Array.from({ length: LOOP_COUNT }, () => movies).flat(),
+    [movies]
+  );
+  const activeTrackIndex = CENTER_LOOP * movies.length + selectedIndex;
+
+  const getTrackX = useCallback(
+    (trackIndex: number) =>
+      layout.viewportWidth / 2 -
+      layout.paddingLeft -
+      trackIndex * (layout.cardWidth + layout.gap) -
+      layout.cardWidth / 2,
+    [layout]
+  );
 
   useEffect(() => {
-    if (movies.length < 2 || rolling) {
+    setSelectedIndex((current) => {
+      if (movies.length === 0) {
+        return 0;
+      }
+
+      return Math.min(current, movies.length - 1);
+    });
+  }, [movies.length]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const track = trackRef.current;
+    const firstPoster = firstPosterRef.current;
+
+    if (!viewport || !track || !firstPoster) {
       return;
     }
 
-    const id = window.setInterval(() => {
-      setSelectedIndex((current) => (current + 1) % movies.length);
-    }, 4200);
+    const updateLayout = () => {
+      const trackStyles = window.getComputedStyle(track);
 
-    return () => window.clearInterval(id);
-  }, [movies.length, rolling]);
+      setLayout({
+        cardWidth: firstPoster.offsetWidth,
+        gap: Number.parseFloat(trackStyles.columnGap) || 20,
+        paddingLeft: Number.parseFloat(trackStyles.paddingLeft) || 28,
+        viewportWidth: viewport.clientWidth
+      });
+    };
 
-  function pickRandomMovie() {
+    updateLayout();
+
+    const resizeObserver = new ResizeObserver(updateLayout);
+    resizeObserver.observe(viewport);
+    resizeObserver.observe(firstPoster);
+    window.addEventListener("resize", updateLayout);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateLayout);
+    };
+  }, [movies.length]);
+
+  useEffect(() => {
+    if (movies.length === 0 || rolling) {
+      return;
+    }
+
+    void controls.start({
+      x: getTrackX(activeTrackIndex),
+      transition: { type: "spring", stiffness: 120, damping: 24 }
+    });
+  }, [activeTrackIndex, controls, getTrackX, movies.length, rolling]);
+
+  async function pickRandomMovie() {
     if (rolling || movies.length === 0) {
       return;
     }
 
-    setRolling(true);
-    const nextIndex = Math.floor(Math.random() * movies.length);
+    const randomStep =
+      movies.length > 1 ? Math.floor(Math.random() * (movies.length - 1)) + 1 : 0;
+    const nextIndex = (selectedIndex + randomStep) % movies.length;
+    const targetTrackIndex = (CENTER_LOOP + 1) * movies.length + nextIndex;
 
-    window.setTimeout(() => {
-      setSelectedIndex(nextIndex);
-      setRolling(false);
-    }, 980);
+    setRolling(true);
+
+    await controls.start({
+      x: getTrackX(targetTrackIndex),
+      transition: { duration: 1.1, ease: [0.16, 1, 0.3, 1] }
+    });
+
+    controls.set({ x: getTrackX(CENTER_LOOP * movies.length + nextIndex) });
+    setSelectedIndex(nextIndex);
+    setRolling(false);
   }
 
   if (!selectedMovie) {
@@ -112,29 +194,27 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
             </PremiumButton>
           </div>
 
-          <div className="cinema-mask relative h-[270px] overflow-hidden rounded-[30px] border border-white/10 bg-black/[0.28] sm:h-[330px]">
+          <div
+            ref={viewportRef}
+            className="cinema-mask relative h-[270px] overflow-hidden rounded-[30px] border border-white/10 bg-black/[0.28] sm:h-[330px]"
+          >
             <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-[2px] -translate-x-1/2 bg-[var(--accent)] shadow-[0_0_46px_rgba(217,183,111,0.95)]" />
             <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-52 w-40 -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-[rgba(217,183,111,0.45)] shadow-[0_0_80px_rgba(217,183,111,0.24)]" />
 
             <motion.div
+              ref={trackRef}
               className="flex h-full items-center gap-5 px-7"
-              animate={{
-                x: rolling ? ["0%", "-38%"] : `calc(50% - ${selectedIndex * 168 + 84}px)`
-              }}
-              transition={
-                rolling
-                  ? { duration: 0.98, ease: [0.16, 1, 0.3, 1] }
-                  : { type: "spring", stiffness: 120, damping: 24 }
-              }
+              initial={false}
+              animate={controls}
             >
               {loopedMovies.map((movie, index) => {
-                const normalizedIndex = index % movies.length;
-                const active = normalizedIndex === selectedIndex;
+                const active = index === activeTrackIndex && !rolling;
 
                 return (
-                  <motion.button
+                  <motion.div
+                    ref={index === 0 ? firstPosterRef : undefined}
                     key={`${movie.id}-${index}`}
-                    className="poster-reflection relative h-56 w-36 shrink-0 overflow-hidden rounded-[24px] border border-white/10 bg-white/5 shadow-2xl sm:h-72 sm:w-44"
+                    className="poster-reflection relative h-60 w-40 shrink-0 overflow-hidden rounded-[24px] border border-white/10 bg-white/5 shadow-2xl sm:h-72"
                     animate={{
                       scale: active ? 1.08 : 0.9,
                       opacity: active ? 1 : 0.48,
@@ -142,8 +222,6 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
                     }}
                     whileHover={{ scale: 1.04, opacity: 1, y: -12 }}
                     transition={{ type: "spring", stiffness: 220, damping: 24 }}
-                    onMouseEnter={() => setSelectedIndex(normalizedIndex)}
-                    onClick={() => setSelectedIndex(normalizedIndex)}
                   >
                     <Image
                       src={movie.posterUrl}
@@ -153,7 +231,7 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
                       className="object-cover"
                     />
                     <span className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  </motion.button>
+                  </motion.div>
                 );
               })}
             </motion.div>
@@ -211,7 +289,10 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
               </div>
 
               <div className="mt-5 flex gap-2">
-                <PremiumButton href={`/watch/${selectedMovie.slug}`} className="flex-1">
+                <PremiumButton
+                  href={`/watch/${selectedMovie.slug}`}
+                  className="hero-watch-button flex-1"
+                >
                   <Play className="h-4 w-4 fill-current" />
                   Көру
                 </PremiumButton>

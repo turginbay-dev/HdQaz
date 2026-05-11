@@ -135,7 +135,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.34 }}
           >
-            <PremiumButton href={`/watch/${movie.slug}`} className="min-w-40">
+            <PremiumButton href={`/watch/${movie.slug}`} className="hero-watch-button min-w-40">
               <Play className="h-4 w-4 fill-current" />
               Watch now
             </PremiumButton>

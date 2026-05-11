@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1500" viewBox="0 0 1000 1500" role="img" aria-label="Movie poster fallback">
+  <defs>
+    <linearGradient id="poster" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#171717"/>
+      <stop offset="0.5" stop-color="#2a252d"/>
+      <stop offset="1" stop-color="#080808"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="68%" cy="24%" r="52%">
+      <stop offset="0" stop-color="#d9b76f" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#d9b76f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1000" height="1500" fill="url(#poster)"/>
+  <rect width="1000" height="1500" fill="url(#glow)"/>
+  <rect x="130" y="170" width="740" height="1160" rx="62" fill="#fff" fill-opacity="0.045" stroke="#fff" stroke-opacity="0.16" stroke-width="2"/>
+  <g fill="none" stroke="#fff" stroke-opacity="0.2" stroke-width="5">
+    <rect x="330" y="570" width="340" height="220" rx="28"/>
+    <path d="M468 630 L468 730 L572 680 Z" fill="#fff" fill-opacity="0.22" stroke="none"/>
+  </g>
+  <text x="500" y="890" text-anchor="middle" fill="#fff" fill-opacity="0.72" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="700" letter-spacing="8">HDQAZ</text>
+</svg>

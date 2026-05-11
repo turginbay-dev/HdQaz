@@ -2,10 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Play, Plus } from "lucide-react";
 import { GlassPanel } from "@/components/glass/glass-panel";
+import { MovieImage } from "@/components/movie/movie-image";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieRow } from "@/components/movie/movie-row";
-import { getMovieBySlug, getTrendingMovies } from "@/features/movies/queries";
+import { getAllMovies, getMovieBySlug, getTrendingMovies } from "@/features/movies/queries";
 import { getCatalogLabel, getMovieLanguageLabel } from "@/lib/movie-taxonomy";
+
+export const dynamic = "force-dynamic";
 
 type MoviePageProps = {
   params: Promise<{
@@ -15,7 +18,7 @@ type MoviePageProps = {
 
 export default async function MoviePage({ params }: MoviePageProps) {
   const { slug } = await params;
-  const movie = getMovieBySlug(slug);
+  const [movie, movies] = await Promise.all([getMovieBySlug(slug), getAllMovies()]);
 
   if (!movie) {
     notFound();
@@ -24,9 +27,13 @@ export default async function MoviePage({ params }: MoviePageProps) {
   return (
     <main className="min-h-screen pb-20">
       <section className="relative min-h-[78vh] overflow-hidden">
-        <img
+        <MovieImage
           src={movie.backdropUrl}
           alt=""
+          fallback="backdrop"
+          fill
+          priority
+          sizes="100vw"
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-black/20" />
@@ -90,9 +97,12 @@ export default async function MoviePage({ params }: MoviePageProps) {
             </div>
 
             <GlassPanel className="hidden p-4 lg:block">
-              <img
+              <MovieImage
                 src={movie.posterUrl}
                 alt={movie.title}
+                fallback="poster"
+                width={680}
+                height={1020}
                 className="aspect-[2/3] w-full rounded-md object-cover"
               />
             </GlassPanel>
@@ -101,7 +111,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
       </section>
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <MovieRow title="Ұқсас кинолар" movies={getTrendingMovies()} />
+        <MovieRow title="Ұқсас кинолар" movies={getTrendingMovies(movies)} />
       </div>
     </main>
   );

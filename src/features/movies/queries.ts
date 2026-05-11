@@ -1,6 +1,9 @@
+import { cache } from "react";
 import { movies } from "./data";
+import { getMovieBySlug as getMovieRecordBySlug, listMovies } from "./repository";
 import { movieMatchesSearch } from "./search";
 import type { Movie } from "@/types/movie";
+import type { MovieRecord } from "@/types/backend";
 
 export type MovieFilters = {
   genre?: string;
@@ -10,9 +13,8 @@ export type MovieFilters = {
   q?: string;
 };
 
-export function getAllMovies() {
-  return movies;
-}
+const getPublishedMovies = cache(() => listMovies());
+const getDraftAwareMovies = cache((includeDrafts: boolean) => listMovies({ includeDrafts }));
 
 function matchesLegacyFilter(movie: Movie, filter?: string) {
   if (!filter) {
@@ -34,14 +36,18 @@ function matchesLegacyFilter(movie: Movie, filter?: string) {
   return true;
 }
 
-export function getMoviesByFilters(filters: MovieFilters = {}) {
+export async function getAllMovies(options: { includeDrafts?: boolean } = {}) {
+  return options.includeDrafts ? getDraftAwareMovies(true) : getPublishedMovies();
+}
+
+export function selectMoviesByFilters(records: Movie[], filters: MovieFilters = {}) {
   const genre = filters.genre?.trim();
   const catalog = filters.catalog?.trim();
   const filter = filters.filter?.trim();
   const language = filters.language?.trim();
   const query = filters.q?.trim();
 
-  return movies.filter((movie) => {
+  return records.filter((movie) => {
     const matchesGenre = !genre || movie.genres.includes(genre);
     const matchesCatalog = !catalog || movie.catalogs.some((item) => item === catalog);
     const matchesLanguage = !language || movie.languages.some((item) => item === language);
@@ -50,54 +56,58 @@ export function getMoviesByFilters(filters: MovieFilters = {}) {
   });
 }
 
-export function getMoviesByCatalog(catalog: string) {
-  return getMoviesByFilters({ catalog });
+export async function getMoviesByFilters(filters: MovieFilters = {}) {
+  return selectMoviesByFilters(await getPublishedMovies(), filters);
 }
 
-export function getMoviesByGenre(genre: string) {
-  return getMoviesByFilters({ genre });
+export function getMoviesByCatalog(records: Movie[], catalog: string) {
+  return selectMoviesByFilters(records, { catalog });
 }
 
-export function getFeaturedMovie() {
-  return movies[1];
+export function getMoviesByGenre(records: Movie[], genre: string) {
+  return selectMoviesByFilters(records, { genre });
 }
 
-export function getTrendingMovies() {
-  return movies;
+export function getFeaturedMovie(records: Movie[]) {
+  return records[0] ?? movies[0];
 }
 
-export function getDubbedMovies() {
-  return getMoviesByCatalog("kazakh-dubbed");
+export function getTrendingMovies(records: Movie[]) {
+  return records;
 }
 
-export function getSubtitleMovies() {
-  return getMoviesByCatalog("kazakh-subtitles");
+export function getDubbedMovies(records: Movie[]) {
+  return getMoviesByCatalog(records, "kazakh-dubbed");
 }
 
-export function getNewReleases() {
-  return getMoviesByCatalog("new-releases");
+export function getSubtitleMovies(records: Movie[]) {
+  return getMoviesByCatalog(records, "kazakh-subtitles");
 }
 
-export function getMovieBySlug(slug: string) {
-  return movies.find((movie) => movie.slug === slug);
+export function getNewReleases(records: Movie[]) {
+  return getMoviesByCatalog(records, "new-releases");
 }
 
-export function getContinueWatchingMovies() {
-  return movies.slice(0, 3);
+export async function getMovieBySlug(slug: string): Promise<MovieRecord | null> {
+  return getMovieRecordBySlug(slug);
 }
 
-export function getAiRecommendedMovies() {
-  const recommendations = getMoviesByCatalog("ai-picks");
-  const fallback = [movies[1], movies[3], movies[4]].filter(
+export function getContinueWatchingMovies(records: Movie[]) {
+  return records.slice(0, 3);
+}
+
+export function getAiRecommendedMovies(records: Movie[]) {
+  const recommendations = getMoviesByCatalog(records, "ai-picks");
+  const fallback = records.filter(
     (movie) => !recommendations.some((recommendedMovie) => recommendedMovie.id === movie.id)
   );
 
   return [...recommendations, ...fallback].slice(0, 3);
 }
 
-export function getTopTenMovies() {
-  const ranked = getMoviesByCatalog("top-10");
-  const fallback = movies.filter((movie) => !ranked.some((rankedMovie) => rankedMovie.id === movie.id));
+export function getTopTenMovies(records: Movie[]) {
+  const ranked = getMoviesByCatalog(records, "top-10");
+  const fallback = records.filter((movie) => !ranked.some((rankedMovie) => rankedMovie.id === movie.id));
 
   return [...ranked, ...fallback].slice(0, 10);
 }

@@ -3,7 +3,10 @@ import { HlsPlayer } from "@/components/player/hls-player";
 import { GlassPanel } from "@/components/glass/glass-panel";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { getMovieBySlug } from "@/features/movies/queries";
+import { getMovieImageSrc } from "@/lib/movie-images";
 import { getMovieLanguageLabel } from "@/lib/movie-taxonomy";
+
+export const dynamic = "force-dynamic";
 
 type WatchPageProps = {
   params: Promise<{
@@ -13,7 +16,7 @@ type WatchPageProps = {
 
 export default async function WatchPage({ params }: WatchPageProps) {
   const { slug } = await params;
-  const movie = getMovieBySlug(slug);
+  const movie = await getMovieBySlug(slug);
 
   if (!movie) {
     notFound();
@@ -22,7 +25,11 @@ export default async function WatchPage({ params }: WatchPageProps) {
   return (
     <main className="min-h-screen px-4 pb-20 pt-24 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
-        <HlsPlayer poster={movie.backdropUrl} src={movie.streams.master} languages={movie.languages} />
+        <HlsPlayer
+          poster={getMovieImageSrc(movie.backdropUrl, "backdrop")}
+          src={movie.streams.master}
+          languages={movie.languages}
+        />
 
         <GlassPanel className="mt-5 p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

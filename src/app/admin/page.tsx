@@ -19,6 +19,8 @@ export default async function AdminPage() {
     notFound();
   }
 
+  const initialMovies = await getAllMovies({ includeDrafts: true });
+
   return (
     <main className="ambient-page min-h-screen px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <section className="mx-auto w-full max-w-7xl">
@@ -45,14 +47,14 @@ export default async function AdminPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:w-[560px]">
-            <AdminMetric icon={<Film className="h-5 w-5" />} label="Movies" value={String(getAllMovies().length)} />
+            <AdminMetric icon={<Film className="h-5 w-5" />} label="Movies" value={String(initialMovies.length)} />
             <AdminMetric icon={<Tags className="h-5 w-5" />} label="Genres" value={String(movieGenres.length)} />
             <AdminMetric icon={<FolderKanban className="h-5 w-5" />} label="Catalogs" value={String(movieCatalogs.length)} />
             <AdminMetric icon={<ShieldAlert className="h-5 w-5" />} label="Guard" value="Email" />
           </div>
         </div>
 
-        <ManualMovieAdmin initialMovies={getAllMovies()} />
+        <ManualMovieAdmin initialMovies={initialMovies} />
       </section>
     </main>
   );

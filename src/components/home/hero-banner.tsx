@@ -1,11 +1,11 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
 import { motion, useMotionValue, useScroll, useTransform } from "framer-motion";
 import { Info, Play } from "lucide-react";
 import { LogoMark } from "@/components/layout/site-logo";
 import { MovieBadge } from "@/components/movie/movie-badge";
+import { MovieImage } from "@/components/movie/movie-image";
 import { PremiumButton } from "@/components/ui/premium-button";
 import { formatMovieLanguages } from "@/lib/movie-taxonomy";
 import type { Movie } from "@/types/movie";
@@ -56,9 +56,10 @@ export function HeroBanner({ movie }: HeroBannerProps) {
         animate={{ scale: [1.08, 1.115, 1.08] }}
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
       >
-        <Image
+        <MovieImage
           src={movie.backdropUrl}
           alt=""
+          fallback="backdrop"
           fill
           priority
           sizes="100vw"
@@ -158,9 +159,10 @@ export function HeroBanner({ movie }: HeroBannerProps) {
           <div className="absolute -inset-10 rounded-full bg-[rgba(217,183,111,0.2)] blur-3xl" />
           <div className="poster-reflection relative aspect-[2/3] overflow-hidden rounded-[34px] border border-white/[0.16] bg-white/[0.06] p-2 shadow-[0_42px_150px_rgba(0,0,0,0.72)] backdrop-blur-2xl">
             <div className="relative h-full overflow-hidden rounded-[27px]">
-              <Image
+              <MovieImage
                 src={movie.posterUrl}
                 alt={movie.title}
+                fallback="poster"
                 fill
                 priority
                 sizes="420px"

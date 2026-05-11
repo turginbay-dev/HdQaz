@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   AnimatePresence,
@@ -12,6 +11,7 @@ import {
 } from "framer-motion";
 import { Play, Shuffle, Sparkles } from "lucide-react";
 import { MovieBadge } from "@/components/movie/movie-badge";
+import { MovieImage } from "@/components/movie/movie-image";
 import { PremiumButton } from "@/components/ui/premium-button";
 import type { Movie } from "@/types/movie";
 
@@ -154,9 +154,10 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
           exit={{ opacity: 0, scale: 1.02 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Image
+          <MovieImage
             src={selectedMovie.backdropUrl}
             alt=""
+            fallback="backdrop"
             fill
             sizes="100vw"
             className="object-cover"
@@ -223,9 +224,10 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
                     whileHover={{ scale: 1.04, opacity: 1, y: -12 }}
                     transition={{ type: "spring", stiffness: 220, damping: 24 }}
                   >
-                    <Image
+                    <MovieImage
                       src={movie.posterUrl}
                       alt={movie.title}
+                      fallback="poster"
                       fill
                       sizes="180px"
                       className="object-cover"
@@ -252,9 +254,10 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
             >
               <div className="grid grid-cols-[112px_1fr] gap-4">
                 <div className="relative aspect-[2/3] overflow-hidden rounded-[22px] shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-                  <Image
+                  <MovieImage
                     src={selectedMovie.posterUrl}
                     alt={selectedMovie.title}
+                    fallback="poster"
                     fill
                     sizes="120px"
                     className="object-cover"

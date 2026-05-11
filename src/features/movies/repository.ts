@@ -1,7 +1,10 @@
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
 import { getOptionalAdminClient } from "@/lib/supabase/admin";
+import { getSupabaseConfig } from "@/lib/supabase/config";
 import { movies } from "@/features/movies/data";
 import { movieMatchesSearch } from "@/features/movies/search";
+import { normalizeMovieImageUrl } from "@/lib/movie-images";
 import { normalizeMovieLanguages } from "@/lib/movie-taxonomy";
 import type { Movie } from "@/types/movie";
 import type { MovieInput, MovieRecord } from "@/types/backend";
@@ -44,12 +47,45 @@ type SupabaseMovieRow = {
 
 type MovieRowPatch = Partial<Omit<SupabaseMovieRow, "created_at" | "updated_at">>;
 
+let cachedPublicReadClient: SupabaseClient | null = null;
+
+function getOptionalPublicReadClient() {
+  const config = getSupabaseConfig();
+
+  if (!config.url || !config.anonKey) {
+    return null;
+  }
+
+  cachedPublicReadClient ??= createClient(config.url, config.anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+
+  return cachedPublicReadClient;
+}
+
+function getOptionalMovieReadClient(includeDrafts?: boolean) {
+  const adminClient = getOptionalAdminClient();
+
+  if (adminClient) {
+    return adminClient;
+  }
+
+  return includeDrafts ? null : getOptionalPublicReadClient();
+}
+
 function seedMovies(): MovieRecord[] {
   return movies.map((movie) => ({
     ...movie,
     quality: "1080p",
     published: true
   }));
+}
+
+function normalizeStoredMovieImageUrl(value: string) {
+  return normalizeMovieImageUrl(value) ?? value;
 }
 
 function rowToMovie(row: SupabaseMovieRow): MovieRecord {
@@ -62,8 +98,8 @@ function rowToMovie(row: SupabaseMovieRow): MovieRecord {
     runtime: row.runtime,
     rating: row.rating,
     description: row.description,
-    posterUrl: row.poster_url,
-    backdropUrl: row.backdrop_url,
+    posterUrl: normalizeStoredMovieImageUrl(row.poster_url),
+    backdropUrl: normalizeStoredMovieImageUrl(row.backdrop_url),
     badges: (row.badges ?? []) as Movie["badges"],
     languages: normalizeMovieLanguages(row.languages),
     genres: row.genres ?? [],
@@ -91,8 +127,8 @@ function movieToRow(input: MovieInput): MovieRowPatch {
     runtime: input.runtime,
     rating: input.rating,
     description: input.description,
-    poster_url: input.posterUrl,
-    backdrop_url: input.backdropUrl,
+    poster_url: normalizeStoredMovieImageUrl(input.posterUrl),
+    backdrop_url: normalizeStoredMovieImageUrl(input.backdropUrl),
     badges: input.badges,
     languages: input.languages,
     genres: input.genres,
@@ -117,8 +153,8 @@ function moviePatchToRow(input: Partial<MovieInput>): MovieRowPatch {
   if (input.runtime) patch.runtime = input.runtime;
   if (input.rating) patch.rating = input.rating;
   if (input.description) patch.description = input.description;
-  if (input.posterUrl) patch.poster_url = input.posterUrl;
-  if (input.backdropUrl) patch.backdrop_url = input.backdropUrl;
+  if (input.posterUrl) patch.poster_url = normalizeStoredMovieImageUrl(input.posterUrl);
+  if (input.backdropUrl) patch.backdrop_url = normalizeStoredMovieImageUrl(input.backdropUrl);
   if (input.badges) patch.badges = input.badges;
   if (input.languages) patch.languages = input.languages;
   if (input.genres) patch.genres = input.genres;
@@ -202,7 +238,7 @@ function throwDatabaseError(error: { code?: string; message: string }, fallback:
 }
 
 export async function listMovies(filters: MovieListFilters = {}) {
-  const supabase = getOptionalAdminClient();
+  const supabase = getOptionalMovieReadClient(filters.includeDrafts);
 
   if (!supabase) {
     return applyMovieFilters(seedMovies(), filters);
@@ -222,7 +258,7 @@ export async function listMovies(filters: MovieListFilters = {}) {
 }
 
 export async function getMovieBySlug(slug: string, options: { includeDrafts?: boolean } = {}) {
-  const supabase = getOptionalAdminClient();
+  const supabase = getOptionalMovieReadClient(options.includeDrafts);
 
   if (!supabase) {
     return seedMovies().find((movie) => movie.slug === slug && (options.includeDrafts || movie.published)) ?? null;

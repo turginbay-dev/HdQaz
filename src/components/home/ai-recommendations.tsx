@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Brain, Sparkles } from "lucide-react";
 import { MovieBadge } from "@/components/movie/movie-badge";
+import { MovieImage } from "@/components/movie/movie-image";
 import { Reveal } from "@/components/motion/reveal";
 import type { Movie } from "@/types/movie";
 
@@ -44,9 +44,10 @@ export function AiRecommendations({ movies }: AiRecommendationsProps) {
               className="group rounded-[28px] border border-white/10 bg-black/[0.28] p-3 transition duration-500 hover:-translate-y-1 hover:border-[rgba(217,183,111,0.28)] hover:bg-white/[0.07]"
             >
               <div className="relative aspect-[16/10] overflow-hidden rounded-[22px]">
-                <Image
+                <MovieImage
                   src={movie.backdropUrl}
                   alt={movie.title}
+                  fallback="backdrop"
                   fill
                   sizes="(max-width: 1024px) 100vw, 33vw"
                   className="object-cover transition duration-700 group-hover:scale-105"

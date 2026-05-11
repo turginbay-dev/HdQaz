@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import { Play, Star } from "lucide-react";
 import { MovieBadge } from "@/components/movie/movie-badge";
+import { MovieImage } from "@/components/movie/movie-image";
 import { getCatalogLabel } from "@/lib/movie-taxonomy";
 import type { Movie } from "@/types/movie";
 
@@ -23,9 +23,10 @@ export function MovieCard({ movie, priority = false }: MovieCardProps) {
       <Link href={`/movie/${movie.slug}`} className="block outline-none">
         <article className="relative overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] shadow-[0_24px_80px_rgba(0,0,0,0.28)] transition duration-500 group-hover:border-[rgba(217,183,111,0.35)] group-hover:shadow-[0_28px_110px_rgba(217,183,111,0.14)]">
           <div className="poster-reflection relative aspect-[2/3] overflow-hidden rounded-[24px]">
-            <Image
+            <MovieImage
               src={movie.posterUrl}
               alt={movie.title}
+              fallback="poster"
               fill
               priority={priority}
               sizes="(max-width: 640px) 42vw, (max-width: 1024px) 24vw, 220px"

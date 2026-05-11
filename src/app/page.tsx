@@ -9,6 +9,7 @@ import { AdminShortcut } from "@/components/home/admin-shortcut";
 import { getCurrentAdminUser } from "@/lib/admin-access";
 import {
   getAiRecommendedMovies,
+  getAllMovies,
   getContinueWatchingMovies,
   getDubbedMovies,
   getFeaturedMovie,
@@ -19,9 +20,11 @@ import {
   getTrendingMovies
 } from "@/features/movies/queries";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
-  const featured = getFeaturedMovie();
-  const adminUser = await getCurrentAdminUser();
+  const [movies, adminUser] = await Promise.all([getAllMovies(), getCurrentAdminUser()]);
+  const featured = getFeaturedMovie(movies);
 
   return (
     <main className="ambient-page">
@@ -29,35 +32,35 @@ export default async function HomePage() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-14 px-4 pb-24 pt-3 sm:px-6 lg:gap-18 lg:px-8">
         {adminUser ? <AdminShortcut /> : null}
         <CategoryRail />
-        <ContinueWatching movies={getContinueWatchingMovies()} />
-        <SpotlightPicker movies={getTrendingMovies()} />
-        <AiRecommendations movies={getAiRecommendedMovies()} />
-        <MovieRow title="Трендте" movies={getTrendingMovies()} />
-        <TopTenRow movies={getTopTenMovies()} />
+        <ContinueWatching movies={getContinueWatchingMovies(movies)} />
+        <SpotlightPicker movies={getTrendingMovies(movies)} />
+        <AiRecommendations movies={getAiRecommendedMovies(movies)} />
+        <MovieRow title="Трендте" movies={getTrendingMovies(movies)} />
+        <TopTenRow movies={getTopTenMovies(movies)} />
         <MovieRow
           title="Қазақша дыбыстама"
           href={{ pathname: "/catalog", query: { catalog: "kazakh-dubbed" } }}
-          movies={getDubbedMovies()}
+          movies={getDubbedMovies(movies)}
         />
         <MovieRow
           title="Қазақша субтитрмен"
           href={{ pathname: "/catalog", query: { catalog: "kazakh-subtitles" } }}
-          movies={getSubtitleMovies()}
+          movies={getSubtitleMovies(movies)}
         />
         <MovieRow
           title="Фантастика"
           href={{ pathname: "/catalog", query: { genre: "Фантастика" } }}
-          movies={getMoviesByGenre("Фантастика")}
+          movies={getMoviesByGenre(movies, "Фантастика")}
         />
         <MovieRow
           title="Драма"
           href={{ pathname: "/catalog", query: { genre: "Драма" } }}
-          movies={getMoviesByGenre("Драма")}
+          movies={getMoviesByGenre(movies, "Драма")}
         />
         <MovieRow
           title="Жаңа релиздер"
           href={{ pathname: "/catalog", query: { catalog: "new-releases" } }}
-          movies={getNewReleases()}
+          movies={getNewReleases(movies)}
         />
       </div>
     </main>

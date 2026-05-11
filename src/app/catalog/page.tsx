@@ -9,6 +9,8 @@ export const metadata = {
   title: "Каталог"
 };
 
+export const dynamic = "force-dynamic";
+
 type CatalogPageProps = {
   searchParams?: Promise<{
     catalog?: string | string[];
@@ -40,7 +42,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const selectedFilter = getSearchParam(params?.filter);
   const selectedLanguage = getSearchParam(params?.language);
   const selectedQuery = getSearchParam(params?.q)?.trim();
-  const movies = getMoviesByFilters({
+  const movies = await getMoviesByFilters({
     catalog: selectedCatalog,
     filter: selectedFilter,
     genre: selectedGenre,

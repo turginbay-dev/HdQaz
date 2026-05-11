@@ -297,7 +297,7 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
             label="HLS ағын URL"
             value={movie.streamUrl}
             onChange={(value) => updateField("streamUrl", value)}
-            placeholder="/demo/interstellar/master.m3u8"
+            placeholder="https://cdn.example.com/movies/interstellar/master.m3u8"
           />
         </div>
 
@@ -424,7 +424,7 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
             "Қазақша сипаттама қолмен жазылады",
             "Тілдер тек қазақ, ағылшын және орыс тілінен таңдалады",
             "Жанр мен каталог міндетті түрде белгіленеді",
-            "Постер/backdrop және HLS stream URL арқылы сақталады",
+            "Постер/backdrop және HLS .m3u8 stream URL арқылы сақталады",
             "Сақтау `/api/movies` арқылы Supabase-ке жазады"
           ].map((item) => (
             <div key={item} className="flex items-center gap-3 border-t border-white/10 py-3 first:border-t-0 first:pt-0">

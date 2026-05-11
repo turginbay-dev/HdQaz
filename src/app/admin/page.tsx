@@ -1,16 +1,24 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { notFound } from "next/navigation";
 import { ArrowLeft, Film, FolderKanban, ShieldAlert, Tags } from "lucide-react";
 import { ManualMovieAdmin } from "@/components/admin/manual-movie-admin";
 import { LogoMark } from "@/components/layout/site-logo";
 import { getAllMovies } from "@/features/movies/queries";
+import { getCurrentAdminUser } from "@/lib/admin-access";
 import { movieCatalogs, movieGenres } from "@/lib/movie-taxonomy";
 
 export const metadata = {
   title: "Admin"
 };
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  const adminUser = await getCurrentAdminUser();
+
+  if (!adminUser) {
+    notFound();
+  }
+
   return (
     <main className="ambient-page min-h-screen px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <section className="mx-auto w-full max-w-7xl">
@@ -32,7 +40,7 @@ export default function AdminPage() {
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-400">
               Кино сақтау `/api/movies` backend endpoint арқылы жүреді. Жазу операциялары
-              `ADMIN_EMAILS` allowlist немесе backend admin token арқылы қорғалады.
+              `.env.local` ішіндегі admin email allowlist арқылы қорғалады.
             </p>
           </div>
 
@@ -40,7 +48,7 @@ export default function AdminPage() {
             <AdminMetric icon={<Film className="h-5 w-5" />} label="Movies" value={String(getAllMovies().length)} />
             <AdminMetric icon={<Tags className="h-5 w-5" />} label="Genres" value={String(movieGenres.length)} />
             <AdminMetric icon={<FolderKanban className="h-5 w-5" />} label="Catalogs" value={String(movieCatalogs.length)} />
-            <AdminMetric icon={<ShieldAlert className="h-5 w-5" />} label="Guard" value="API" />
+            <AdminMetric icon={<ShieldAlert className="h-5 w-5" />} label="Guard" value="Email" />
           </div>
         </div>
 

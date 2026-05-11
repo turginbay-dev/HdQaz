@@ -14,7 +14,7 @@ export function AdminShortcut() {
           </span>
           <div>
             <p className="text-sm font-semibold text-white">Admin</p>
-            <p className="mt-1 text-sm text-zinc-500">Уақытша ашық контент панелі</p>
+            <p className="mt-1 text-sm text-zinc-500">Контент басқару панелі</p>
           </div>
         </div>
         <span className="hidden rounded-full bg-white px-4 py-2 text-sm font-semibold text-black sm:inline-flex">

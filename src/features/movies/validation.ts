@@ -62,6 +62,12 @@ function isValidAssetUrl(value: string) {
   }
 }
 
+function isHlsManifestUrl(value: string) {
+  const pathname = value.startsWith("/") ? value : new URL(value).pathname;
+
+  return pathname.toLowerCase().endsWith(".m3u8");
+}
+
 function validateSlug(value: string) {
   return /^[a-z0-9а-яәғқңөұүһі-]+$/i.test(value);
 }
@@ -193,6 +199,8 @@ export function parseMovieInput(
   if (streamMaster) {
     if (!isValidAssetUrl(streamMaster)) {
       errors.streams = "Master stream must be a valid URL or app-relative path.";
+    } else if (!isHlsManifestUrl(streamMaster)) {
+      errors.streams = "Master stream must be an HLS .m3u8 manifest URL.";
     } else {
       data.streams = {
         master: streamMaster

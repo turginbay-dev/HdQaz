@@ -95,6 +95,47 @@ input {
   transform: scale(0.97);
 }
 
+.cinema-range {
+  height: 1.25rem;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cinema-range::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  background: transparent;
+}
+
+.cinema-range::-webkit-slider-thumb {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-top: -0.3125rem;
+  appearance: none;
+  border: 2px solid rgba(217, 183, 111, 0.92);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 5px rgba(217, 183, 111, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+.cinema-range::-moz-range-track {
+  height: 0.25rem;
+  background: transparent;
+}
+
+.cinema-range::-moz-range-thumb {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid rgba(217, 183, 111, 0.92);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 5px rgba(217, 183, 111, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
 .hero-watch-button {
   border: 1px solid rgba(255, 255, 255, 0.18);
   background:

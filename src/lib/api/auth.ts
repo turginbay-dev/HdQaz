@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { isAdminEmail } from "@/lib/admin-access";
 import { ApiError } from "@/lib/api/errors";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -8,13 +9,6 @@ export type AuthContext = {
   isAdmin: boolean;
   adminSource?: "email" | "token";
 };
-
-function getAdminEmails() {
-  return (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-}
 
 function getRequestToken(request: Request) {
   const bearer = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
@@ -44,13 +38,13 @@ export async function getAuthContext(request: Request): Promise<AuthContext> {
   }
 
   const email = user?.email?.toLowerCase();
-  const isAdminEmail = Boolean(email && getAdminEmails().includes(email));
+  const isAllowedAdminEmail = isAdminEmail(email);
   const isAdminToken = hasValidAdminToken(request);
 
   return {
     user,
-    isAdmin: isAdminEmail || isAdminToken,
-    adminSource: isAdminEmail ? "email" : isAdminToken ? "token" : undefined
+    isAdmin: isAllowedAdminEmail || isAdminToken,
+    adminSource: isAllowedAdminEmail ? "email" : isAdminToken ? "token" : undefined
   };
 }
 

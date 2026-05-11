@@ -1,36 +1,84 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
-import { Crown, Search, User } from "lucide-react";
+import { Crown, Search, User, X } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
-import { mainNavigation } from "@/lib/navigation";
+import { mainNavigation, searchSuggestions } from "@/lib/navigation";
 import { cn } from "@/lib/cn";
-
-const searchHints = ["Interstellar", "Қазақша дыбыстама", "Dune: Part Two", "Жаңа релиздер"];
 
 export function DesktopNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { scrollY } = useScroll();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
+  const [searchValue, setSearchValue] = useState("");
+  const currentSearchQuery = searchParams.get("q") ?? "";
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     setScrolled(latest > 32);
   });
 
   useEffect(() => {
+    setSearchValue(currentSearchQuery);
+  }, [currentSearchQuery]);
+
+  useEffect(() => {
     const id = window.setInterval(() => {
-      setHintIndex((current) => (current + 1) % searchHints.length);
+      setHintIndex((current) => (current + 1) % searchSuggestions.length);
     }, 2200);
 
     return () => window.clearInterval(id);
   }, []);
+
+  function focusSearchInput() {
+    setSearchOpen(true);
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+  }
+
+  function submitSearch(value: string) {
+    const query = value.trim();
+
+    if (!query) {
+      focusSearchInput();
+      return;
+    }
+
+    const params = new URLSearchParams({ q: query });
+
+    router.push(`/catalog?${params.toString()}`);
+    searchInputRef.current?.blur();
+    setFocused(false);
+    setSearchOpen(false);
+  }
+
+  function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!searchOpen && !focused) {
+      focusSearchInput();
+      return;
+    }
+
+    submitSearch(searchValue);
+  }
+
+  function clearSearch() {
+    setSearchValue("");
+
+    if (pathname === "/catalog" && currentSearchQuery) {
+      router.push("/catalog");
+    }
+
+    focusSearchInput();
+  }
 
   return (
     <header className="fixed left-0 right-0 top-5 z-50 hidden justify-center px-6 lg:flex">
@@ -86,10 +134,11 @@ export function DesktopNav() {
         </div>
 
         <div className="ml-1 flex items-center gap-2 border-l border-white/10 pl-3">
-          <motion.div
+          <motion.form
             className="relative"
             animate={{ width: searchOpen || focused ? 238 : 44 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
+            onSubmit={handleSearchSubmit}
             onHoverStart={() => setSearchOpen(true)}
             onHoverEnd={() => {
               if (!focused) {
@@ -103,36 +152,59 @@ export function DesktopNav() {
                 searchOpen || focused ? "justify-start gap-2 px-4" : "justify-center"
               )}
             >
-              <Search className="h-4 w-4 shrink-0" />
+              <button
+                className="flex h-5 w-5 shrink-0 items-center justify-center text-white"
+                aria-label="Кино іздеу"
+                type="submit"
+              >
+                <Search className="h-4 w-4" />
+              </button>
               {(searchOpen || focused) && (
                 <>
                   <input
+                    ref={searchInputRef}
                     className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-transparent"
                     aria-label="Кино іздеу"
-                    onFocus={() => setFocused(true)}
+                    value={searchValue}
+                    onChange={(event) => setSearchValue(event.target.value)}
+                    onFocus={() => {
+                      setFocused(true);
+                      setSearchOpen(true);
+                    }}
                     onBlur={() => {
                       setFocused(false);
                       setSearchOpen(false);
                     }}
                   />
-                  {!focused && (
+                  {searchValue && (
+                    <button
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/10 hover:text-white"
+                      aria-label="Іздеуді тазалау"
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={clearSearch}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  {!focused && !searchValue && (
                     <AnimatePresence mode="wait">
                       <motion.span
-                        key={searchHints[hintIndex]}
+                        key={searchSuggestions[hintIndex]}
                         className="pointer-events-none absolute left-10 right-4 truncate text-sm text-zinc-400"
                         initial={{ opacity: 0, y: 8, filter: "blur(6px)" }}
                         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                         exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
                         transition={{ duration: 0.24 }}
                       >
-                        {searchHints[hintIndex]}
+                        {searchSuggestions[hintIndex]}
                       </motion.span>
                     </AnimatePresence>
                   )}
                 </>
               )}
             </div>
-          </motion.div>
+          </motion.form>
 
           <Link
             href="/premium"

@@ -1,4 +1,5 @@
 import { movies } from "./data";
+import { movieMatchesSearch } from "./search";
 import type { Movie } from "@/types/movie";
 
 export type MovieFilters = {
@@ -6,6 +7,7 @@ export type MovieFilters = {
   catalog?: string;
   filter?: string;
   language?: string;
+  q?: string;
 };
 
 export function getAllMovies() {
@@ -37,13 +39,14 @@ export function getMoviesByFilters(filters: MovieFilters = {}) {
   const catalog = filters.catalog?.trim();
   const filter = filters.filter?.trim();
   const language = filters.language?.trim();
+  const query = filters.q?.trim();
 
   return movies.filter((movie) => {
     const matchesGenre = !genre || movie.genres.includes(genre);
     const matchesCatalog = !catalog || movie.catalogs.some((item) => item === catalog);
     const matchesLanguage = !language || movie.languages.some((item) => item === language);
 
-    return matchesGenre && matchesCatalog && matchesLanguage && matchesLegacyFilter(movie, filter);
+    return matchesGenre && matchesCatalog && matchesLanguage && matchesLegacyFilter(movie, filter) && movieMatchesSearch(movie, query);
   });
 }
 

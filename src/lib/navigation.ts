@@ -16,3 +16,5 @@ export const mainNavigation = [
     href: "/requests"
   }
 ];
+
+export const searchSuggestions = ["Interstellar", "Қазақша дыбыстама", "Dune: Part Two", "Жаңа релиздер"];

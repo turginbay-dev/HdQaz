@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/api/errors";
 import { getOptionalAdminClient } from "@/lib/supabase/admin";
 import { movies } from "@/features/movies/data";
+import { movieMatchesSearch } from "@/features/movies/search";
 import { normalizeMovieLanguages } from "@/lib/movie-taxonomy";
 import type { Movie } from "@/types/movie";
 import type { MovieInput, MovieRecord } from "@/types/backend";
@@ -157,7 +158,7 @@ function matchesLegacyFilter(movie: MovieRecord, filter?: string) {
 }
 
 function applyMovieFilters(records: MovieRecord[], filters: MovieListFilters = {}) {
-  const query = filters.q?.trim().toLowerCase();
+  const query = filters.q?.trim();
   const genre = filters.genre?.trim();
   const catalog = filters.catalog?.trim();
   const language = filters.language?.trim();
@@ -170,16 +171,7 @@ function applyMovieFilters(records: MovieRecord[], filters: MovieListFilters = {
     .filter((movie) => !catalog || movie.catalogs.includes(catalog as Movie["catalogs"][number]))
     .filter((movie) => !language || movie.languages.includes(language as Movie["languages"][number]))
     .filter((movie) => matchesLegacyFilter(movie, filters.filter?.trim()))
-    .filter((movie) => {
-      if (!query) {
-        return true;
-      }
-
-      return [movie.title, movie.originalTitle, movie.description, movie.slug]
-        .join(" ")
-        .toLowerCase()
-        .includes(query);
-    })
+    .filter((movie) => movieMatchesSearch(movie, query))
     .slice(offset, offset + limit);
 }
 
@@ -195,6 +187,10 @@ function requireDatabase() {
   }
 
   return supabase;
+}
+
+function isMissingMoviesTableError(error: { code?: string; message: string }) {
+  return error.code === "42P01" || error.code === "PGRST205" || error.message.includes("Could not find the table");
 }
 
 function throwDatabaseError(error: { code?: string; message: string }, fallback: string): never {
@@ -215,6 +211,10 @@ export async function listMovies(filters: MovieListFilters = {}) {
   const { data, error } = await supabase.from("movies").select("*").order("created_at", { ascending: false });
 
   if (error) {
+    if (isMissingMoviesTableError(error)) {
+      return applyMovieFilters(seedMovies(), filters);
+    }
+
     throwDatabaseError(error, "Failed to load movies.");
   }
 

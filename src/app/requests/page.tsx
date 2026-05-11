@@ -1,31 +1,22 @@
 import { GlassPanel } from "@/components/glass/glass-panel";
+import { listContentRequests } from "@/features/requests/repository";
 
 export const metadata = {
   title: "Сұраныстар"
 };
 
-const requests = [
-  {
-    title: "Interstellar",
-    status: "Дыбыстамаға сұраныс",
-    votes: 28,
-    target: 40
-  },
-  {
-    title: "Dune: Part Two",
-    status: "Қазақша субтитр дайындалуда",
-    votes: 8,
-    target: 10
-  },
-  {
-    title: "Inside Out 2",
-    status: "Кезекте",
-    votes: 17,
-    target: 40
-  }
-];
+export const dynamic = "force-dynamic";
 
-export default function RequestsPage() {
+const statusLabels = {
+  requested: "Дыбыстамаға сұраныс",
+  in_progress: "Қазақша нұсқа дайындалуда",
+  ready: "Дайын",
+  rejected: "Қабылданбады"
+};
+
+export default async function RequestsPage() {
+  const requests = await listContentRequests();
+
   return (
     <main className="mx-auto min-h-screen w-full max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <div className="mb-8 max-w-2xl">
@@ -55,11 +46,11 @@ export default function RequestsPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         {requests.map((request) => {
-          const percent = Math.min(100, Math.round((request.votes / request.target) * 100));
+          const percent = Math.min(100, Math.round((request.votes / request.targetVotes) * 100));
 
           return (
-            <GlassPanel key={request.title} className="p-5">
-              <p className="text-sm text-zinc-400">{request.status}</p>
+            <GlassPanel key={request.id} className="p-5">
+              <p className="text-sm text-zinc-400">{statusLabels[request.status]}</p>
               <h2 className="mt-2 text-xl font-semibold text-white">{request.title}</h2>
               <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
                 <div
@@ -69,7 +60,7 @@ export default function RequestsPage() {
               </div>
               <div className="mt-3 flex items-center justify-between text-sm text-zinc-300">
                 <span>
-                  {request.votes} / {request.target} дауыс
+                  {request.votes} / {request.targetVotes} дауыс
                 </span>
                 <button className="glass-button rounded-full px-4 py-2 font-medium text-white">
                   Дауыс беру

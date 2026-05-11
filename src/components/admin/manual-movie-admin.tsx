@@ -16,6 +16,7 @@ type AdminMovie = {
   description: string;
   posterUrl: string;
   backdropUrl: string;
+  streamUrl: string;
   localization: string;
   quality: string;
   genres: string[];
@@ -40,6 +41,7 @@ function createEmptyMovie(): AdminMovie {
     description: "",
     posterUrl: "",
     backdropUrl: "",
+    streamUrl: "",
     localization: "Қазақша дыбыстама",
     quality: "1080p",
     genres: ["Драма"],
@@ -57,33 +59,37 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function toAdminMovie(item: Movie & { published?: boolean; quality?: string }): AdminMovie {
+  return {
+    id: item.id,
+    title: item.title,
+    originalTitle: item.originalTitle,
+    slug: item.slug,
+    year: String(item.year),
+    rating: item.rating,
+    runtime: item.runtime,
+    description: item.description,
+    posterUrl: item.posterUrl,
+    backdropUrl: item.backdropUrl,
+    streamUrl: item.streams.master,
+    localization: item.badges[0] ?? "Қазақша дыбыстама",
+    quality: item.quality ?? "1080p",
+    genres: item.genres,
+    catalogs: item.catalogs,
+    premium: item.isPremium,
+    published: item.published ?? true
+  };
+}
+
 export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
   const [movie, setMovie] = useState<AdminMovie>(() => createEmptyMovie());
-  const [drafts, setDrafts] = useState<AdminMovie[]>([]);
+  const [savedMovies, setSavedMovies] = useState<AdminMovie[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const visibleMovies = useMemo(
-    () => [
-      ...drafts,
-      ...initialMovies.map((item) => ({
-        id: item.id,
-        title: item.title,
-        originalTitle: item.originalTitle,
-        slug: item.slug,
-        year: String(item.year),
-        rating: item.rating,
-        runtime: item.runtime,
-        description: item.description,
-        posterUrl: item.posterUrl,
-        backdropUrl: item.backdropUrl,
-        localization: item.badges[0] ?? "Қазақша дыбыстама",
-        quality: "1080p",
-        genres: item.genres,
-        catalogs: item.catalogs,
-        premium: item.isPremium,
-        published: true
-      }))
-    ],
-    [drafts, initialMovies]
+    () => [...savedMovies, ...initialMovies.map(toAdminMovie)],
+    [savedMovies, initialMovies]
   );
 
   function updateField<T extends keyof AdminMovie>(field: T, value: AdminMovie[T]) {
@@ -121,20 +127,76 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
     }));
   }
 
-  function addDraft() {
-    if (!movie.title || !movie.posterUrl || movie.genres.length === 0 || movie.catalogs.length === 0) {
+  const canSave =
+    Boolean(
+      movie.title &&
+        movie.originalTitle &&
+        movie.slug &&
+        movie.year &&
+        movie.rating &&
+        movie.runtime &&
+        movie.description &&
+        movie.posterUrl &&
+        movie.backdropUrl &&
+        movie.streamUrl
+    ) &&
+    movie.genres.length > 0 &&
+    movie.catalogs.length > 0;
+
+  async function saveMovie() {
+    if (!canSave || isSaving) {
       return;
     }
 
-    setDrafts((current) => [
-      {
-        ...movie,
-        id: crypto.randomUUID(),
-        slug: movie.slug || slugify(movie.title)
-      },
-      ...current
-    ]);
-    setMovie(createEmptyMovie());
+    setIsSaving(true);
+    setFormError(null);
+
+    try {
+      const slug = movie.slug || slugify(movie.title);
+      const response = await fetch("/api/movies", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          slug,
+          title: movie.title,
+          originalTitle: movie.originalTitle,
+          year: Number(movie.year),
+          runtime: movie.runtime,
+          rating: movie.rating,
+          description: movie.description,
+          posterUrl: movie.posterUrl,
+          backdropUrl: movie.backdropUrl,
+          badges: [movie.localization],
+          genres: movie.genres,
+          catalogs: movie.catalogs,
+          isPremium: movie.premium,
+          isNewRelease: movie.catalogs.includes("new-releases"),
+          streams: {
+            master: movie.streamUrl
+          },
+          quality: movie.quality,
+          published: movie.published
+        })
+      });
+      const result = (await response.json().catch(() => null)) as
+        | { data?: Movie & { published?: boolean; quality?: string }; error?: { message?: string } }
+        | null;
+
+      const savedMovie = result?.data;
+
+      if (!response.ok || !savedMovie) {
+        throw new Error(result?.error?.message ?? "Киноны сақтау мүмкін болмады.");
+      }
+
+      setSavedMovies((current) => [toAdminMovie(savedMovie), ...current]);
+      setMovie(createEmptyMovie());
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Киноны сақтау мүмкін болмады.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -203,6 +265,12 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
             onChange={(value) => updateField("backdropUrl", value)}
             placeholder="https://..."
           />
+          <AdminInput
+            label="HLS master URL"
+            value={movie.streamUrl}
+            onChange={(value) => updateField("streamUrl", value)}
+            placeholder="/demo/interstellar/master.m3u8"
+          />
         </div>
 
         <label className="mt-4 block">
@@ -260,13 +328,18 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
 
         <button
           className="cinema-sweep mt-6 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-black shadow-[0_18px_70px_rgba(255,255,255,0.16)] transition hover:bg-[#f3ead5] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-          disabled={!movie.title || !movie.posterUrl || movie.genres.length === 0 || movie.catalogs.length === 0}
-          onClick={addDraft}
+          disabled={!canSave || isSaving}
+          onClick={saveMovie}
           type="button"
         >
           <Plus className="h-4 w-4" />
-          Draft қосу
+          {isSaving ? "Сақталып жатыр..." : "DB-ге сақтау"}
         </button>
+        {formError ? (
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-red-300">
+            {formError}
+          </p>
+        ) : null}
       </section>
 
       <aside className="space-y-4">
@@ -313,8 +386,8 @@ export function ManualMovieAdmin({ initialMovies }: ManualMovieAdminProps) {
           {[
             "Қазақша сипаттама қолмен жазылады",
             "Жанр мен каталог міндетті түрде белгіленеді",
-            "Постер/backdrop әзірге URL арқылы",
-            "Supabase қосылғанда Save real DB болады"
+            "Постер/backdrop және HLS stream URL арқылы сақталады",
+            "Save real DB `/api/movies` арқылы Supabase-ке жазады"
           ].map((item) => (
             <div key={item} className="flex items-center gap-3 border-t border-white/10 py-3 first:border-t-0 first:pt-0">
               <Check className="h-4 w-4 text-[var(--accent)]" />

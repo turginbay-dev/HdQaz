@@ -30,16 +30,16 @@ export default function AdminPage() {
               Контент басқару панелі
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-400">
-              Әзірге Google auth қосылмағандықтан бұл панель ашық тұр. Кейін `/admin`
-              тек admin email allowlist арқылы қорғалады.
+              Кино сақтау `/api/movies` backend endpoint арқылы жүреді. Жазу операциялары
+              `ADMIN_EMAILS` allowlist немесе backend admin token арқылы қорғалады.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:w-[560px]">
-            <AdminMetric icon={<Film className="h-5 w-5" />} label="Movies" value="Manual" />
+            <AdminMetric icon={<Film className="h-5 w-5" />} label="Movies" value={String(getAllMovies().length)} />
             <AdminMetric icon={<Tags className="h-5 w-5" />} label="Genres" value={String(movieGenres.length)} />
             <AdminMetric icon={<FolderKanban className="h-5 w-5" />} label="Catalogs" value={String(movieCatalogs.length)} />
-            <AdminMetric icon={<ShieldAlert className="h-5 w-5" />} label="Guard" value="Off" />
+            <AdminMetric icon={<ShieldAlert className="h-5 w-5" />} label="Guard" value="API" />
           </div>
         </div>
 

@@ -1,0 +1,231 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
+import { Play, Shuffle, Sparkles } from "lucide-react";
+import { MovieBadge } from "@/components/movie/movie-badge";
+import { PremiumButton } from "@/components/ui/premium-button";
+import type { Movie } from "@/types/movie";
+
+type SpotlightPickerProps = {
+  movies: Movie[];
+};
+
+export function SpotlightPicker({ movies }: SpotlightPickerProps) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [rolling, setRolling] = useState(false);
+  const selectedMovie = movies[selectedIndex];
+  const pointerX = useMotionValue(0.5);
+  const pointerY = useMotionValue(0.5);
+  const rotateY = useTransform(pointerX, [0, 1], [-5, 5]);
+  const rotateX = useTransform(pointerY, [0, 1], [3, -3]);
+
+  const loopedMovies = useMemo(() => [...movies, ...movies, ...movies], [movies]);
+
+  useEffect(() => {
+    if (movies.length < 2 || rolling) {
+      return;
+    }
+
+    const id = window.setInterval(() => {
+      setSelectedIndex((current) => (current + 1) % movies.length);
+    }, 4200);
+
+    return () => window.clearInterval(id);
+  }, [movies.length, rolling]);
+
+  function pickRandomMovie() {
+    if (rolling || movies.length === 0) {
+      return;
+    }
+
+    setRolling(true);
+    const nextIndex = Math.floor(Math.random() * movies.length);
+
+    window.setTimeout(() => {
+      setSelectedIndex(nextIndex);
+      setRolling(false);
+    }, 980);
+  }
+
+  if (!selectedMovie) {
+    return null;
+  }
+
+  return (
+    <section
+      className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(140deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] px-4 py-5 shadow-[0_30px_120px_rgba(0,0,0,0.44)] backdrop-blur-3xl sm:px-6 sm:py-7 lg:px-8"
+      onMouseMove={(event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        pointerX.set((event.clientX - rect.left) / rect.width);
+        pointerY.set((event.clientY - rect.top) / rect.height);
+      }}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={selectedMovie.backdropUrl}
+          className="absolute inset-0"
+          initial={{ opacity: 0, scale: 1.04 }}
+          animate={{ opacity: 0.24, scale: 1 }}
+          exit={{ opacity: 0, scale: 1.02 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Image
+            src={selectedMovie.backdropUrl}
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover"
+          />
+        </motion.div>
+      </AnimatePresence>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_22%_10%,rgba(217,183,111,0.18),transparent_36%),radial-gradient(ellipse_at_88%_12%,rgba(143,183,255,0.14),transparent_32%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/70" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+
+      <div className="relative grid gap-7 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
+        <div className="min-w-0">
+          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
+                <Sparkles className="h-3.5 w-3.5" />
+                Spotlight
+              </p>
+              <AnimatePresence mode="wait">
+                <motion.h2
+                  key={selectedMovie.id}
+                  className="mt-2 max-w-2xl text-3xl font-semibold tracking-[-0.03em] text-white sm:text-5xl"
+                  initial={{ opacity: 0, y: 14, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, y: -10, filter: "blur(8px)" }}
+                  transition={{ duration: 0.35 }}
+                >
+                  {selectedMovie.title} атмосферасы
+                </motion.h2>
+              </AnimatePresence>
+            </div>
+            <PremiumButton onClick={pickRandomMovie} variant="glass" className="w-full sm:w-auto">
+              <Shuffle className="h-4 w-4" />
+              Random Atmosphere
+            </PremiumButton>
+          </div>
+
+          <div className="cinema-mask relative h-[270px] overflow-hidden rounded-[30px] border border-white/10 bg-black/[0.28] sm:h-[330px]">
+            <div className="pointer-events-none absolute inset-y-0 left-1/2 z-20 w-[2px] -translate-x-1/2 bg-[var(--accent)] shadow-[0_0_46px_rgba(217,183,111,0.95)]" />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-52 w-40 -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-[rgba(217,183,111,0.45)] shadow-[0_0_80px_rgba(217,183,111,0.24)]" />
+
+            <motion.div
+              className="flex h-full items-center gap-5 px-7"
+              animate={{
+                x: rolling ? ["0%", "-38%"] : `calc(50% - ${selectedIndex * 168 + 84}px)`
+              }}
+              transition={
+                rolling
+                  ? { duration: 0.98, ease: [0.16, 1, 0.3, 1] }
+                  : { type: "spring", stiffness: 120, damping: 24 }
+              }
+            >
+              {loopedMovies.map((movie, index) => {
+                const normalizedIndex = index % movies.length;
+                const active = normalizedIndex === selectedIndex;
+
+                return (
+                  <motion.button
+                    key={`${movie.id}-${index}`}
+                    className="poster-reflection relative h-56 w-36 shrink-0 overflow-hidden rounded-[24px] border border-white/10 bg-white/5 shadow-2xl sm:h-72 sm:w-44"
+                    animate={{
+                      scale: active ? 1.08 : 0.9,
+                      opacity: active ? 1 : 0.48,
+                      y: active ? -8 : 8
+                    }}
+                    whileHover={{ scale: 1.04, opacity: 1, y: -12 }}
+                    transition={{ type: "spring", stiffness: 220, damping: 24 }}
+                    onMouseEnter={() => setSelectedIndex(normalizedIndex)}
+                    onClick={() => setSelectedIndex(normalizedIndex)}
+                  >
+                    <Image
+                      src={movie.posterUrl}
+                      alt={movie.title}
+                      fill
+                      sizes="180px"
+                      className="object-cover"
+                    />
+                    <span className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  </motion.button>
+                );
+              })}
+            </motion.div>
+          </div>
+        </div>
+
+        <motion.div
+          className="relative rounded-[30px] border border-white/[0.12] bg-black/[0.34] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.44)] backdrop-blur-3xl"
+          style={{ rotateX, rotateY, transformPerspective: 900 }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedMovie.id}
+              initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -12, filter: "blur(8px)" }}
+              transition={{ duration: 0.32 }}
+            >
+              <div className="grid grid-cols-[112px_1fr] gap-4">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-[22px] shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                  <Image
+                    src={selectedMovie.posterUrl}
+                    alt={selectedMovie.title}
+                    fill
+                    sizes="120px"
+                    className="object-cover"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    {selectedMovie.badges.slice(0, 2).map((badge) => (
+                      <MovieBadge key={badge} label={badge} />
+                    ))}
+                  </div>
+                  <h3 className="text-2xl font-semibold tracking-tight text-white">
+                    {selectedMovie.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                    {selectedMovie.year} · {selectedMovie.runtime} · IMDb {selectedMovie.rating}
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-4 line-clamp-3 text-sm leading-6 text-zinc-300">
+                {selectedMovie.description}
+              </p>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.06] p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
+                  Atmosphere signal
+                </p>
+                <p className="mt-2 text-sm leading-6 text-zinc-300">
+                  Жанр, дыбыстама және mood rhythm бойынша кешкі көруге лайық.
+                </p>
+              </div>
+
+              <div className="mt-5 flex gap-2">
+                <PremiumButton href={`/watch/${selectedMovie.slug}`} className="flex-1">
+                  <Play className="h-4 w-4 fill-current" />
+                  Көру
+                </PremiumButton>
+                <Link
+                  href={`/movie/${selectedMovie.slug}`}
+                  className="glass-button inline-flex min-h-12 items-center justify-center rounded-full px-4 text-sm font-semibold text-white"
+                >
+                  Detail
+                </Link>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
+      </div>
+    </section>
+  );
+}

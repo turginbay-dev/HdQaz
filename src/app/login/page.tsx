@@ -1,0 +1,89 @@
+import { redirect } from "next/navigation";
+import { ShieldCheck, Sparkles } from "lucide-react";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { getSupabaseConfig } from "@/lib/supabase/config";
+import { createClient } from "@/lib/supabase/server";
+
+type LoginPageProps = {
+  searchParams?: Promise<{
+    error?: string;
+  }>;
+};
+
+const errorMessages: Record<string, string> = {
+  supabase_not_configured:
+    "Supabase env әлі қосылмаған. .env.local ішіне Supabase URL және anon key енгізіңіз.",
+  google_oauth_failed: "Google арқылы кіру басталмады. Supabase Google provider баптауын тексеріңіз.",
+  auth_callback_failed: "Google callback аяқталмады. Redirect URL баптауын тексеріңіз."
+};
+
+export const metadata = {
+  title: "Кіру"
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const config = getSupabaseConfig();
+  const params = await searchParams;
+
+  if (config.configured) {
+    const supabase = await createClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      redirect("/profile");
+    }
+  }
+
+  const error = params?.error ? errorMessages[params.error] : null;
+
+  return (
+    <main className="ambient-page relative min-h-screen overflow-hidden px-4 pb-20 pt-28 sm:px-6 lg:px-8">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_12%,rgba(217,183,111,0.18),transparent_34%),radial-gradient(ellipse_at_12%_20%,rgba(143,183,255,0.13),transparent_28%)]" />
+      <div className="cinematic-fog" />
+
+      <section className="relative mx-auto grid min-h-[calc(100vh-7rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[minmax(0,1fr)_460px]">
+        <div className="max-w-3xl">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-zinc-200 backdrop-blur-2xl">
+            <Sparkles className="h-3.5 w-3.5 text-[var(--accent)]" />
+            HdQaz Account
+          </div>
+          <h1 className="max-w-3xl font-semibold leading-[0.92] tracking-[-0.05em] text-white [font-size:clamp(3.4rem,8vw,7rem)]">
+            Бір аккаунт. Барлық қазақша кино.
+          </h1>
+          <p className="mt-6 max-w-2xl text-base leading-7 text-zinc-300 sm:text-lg">
+            Google арқылы кіріп, көру тарихын, Premium статусын және жеке ұсыныстарды сақтаңыз.
+          </p>
+        </div>
+
+        <div className="glass-strong rounded-[34px] p-5 sm:p-7">
+          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(217,183,111,0.16)] text-[var(--accent)]">
+            <ShieldCheck className="h-7 w-7" />
+          </div>
+          <h2 className="text-2xl font-semibold tracking-tight text-white">Кіру</h2>
+          <p className="mt-3 text-sm leading-6 text-zinc-400">
+            Қазір тек Google OAuth қолданылады. Telegram login қосылмайды.
+          </p>
+
+          {error && (
+            <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm leading-6 text-red-100">
+              {error}
+            </div>
+          )}
+
+          {!config.configured && (
+            <div className="mt-5 rounded-2xl border border-[rgba(217,183,111,0.26)] bg-[rgba(217,183,111,0.1)] p-4 text-sm leading-6 text-zinc-200">
+              Google login іске қосу үшін `.env.local` ішіне `NEXT_PUBLIC_SUPABASE_URL`
+              және `NEXT_PUBLIC_SUPABASE_ANON_KEY` мәндерін енгізу керек.
+            </div>
+          )}
+
+          <div className="mt-6">
+            <GoogleSignInButton disabled={!config.configured} />
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}

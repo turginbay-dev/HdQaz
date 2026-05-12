@@ -3,6 +3,7 @@ import { Brain, Sparkles } from "lucide-react";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieImage } from "@/components/movie/movie-image";
 import { Reveal } from "@/components/motion/reveal";
+import { contentStatusLabels, contentTypeLabels } from "@/features/content/format";
 import type { Movie } from "@/types/movie";
 
 type AiRecommendationsProps = {
@@ -40,7 +41,7 @@ export function AiRecommendations({ movies }: AiRecommendationsProps) {
           {movies.map((movie, index) => (
             <Link
               key={movie.id}
-              href={`/movie/${movie.slug}`}
+              href={`/${movie.slug}`}
               className="group rounded-[28px] border border-white/10 bg-black/[0.28] p-3 transition duration-500 hover:-translate-y-1 hover:border-[rgba(217,183,111,0.28)] hover:bg-white/[0.07]"
             >
               <div className="relative aspect-[16/10] overflow-hidden rounded-[22px]">
@@ -60,9 +61,8 @@ export function AiRecommendations({ movies }: AiRecommendationsProps) {
 
               <div className="px-1 pt-4">
                 <div className="mb-2 flex flex-wrap gap-1.5">
-                  {movie.badges.slice(0, 1).map((badge) => (
-                    <MovieBadge key={badge} label={badge} />
-                  ))}
+                  <MovieBadge label={movie.type ? contentTypeLabels[movie.type] : "Movie"} />
+                  <MovieBadge label={movie.status ? contentStatusLabels[movie.status] : "Аяқталған"} />
                 </div>
                 <h3 className="text-lg font-semibold tracking-tight text-white">{movie.title}</h3>
                 <p className="mt-2 flex gap-2 text-sm leading-6 text-zinc-400">

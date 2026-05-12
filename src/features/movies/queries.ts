@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { movies } from "./data";
-import { getMovieBySlug as getMovieRecordBySlug, listMovies } from "./repository";
 import { movieMatchesSearch } from "./search";
+import { contentToMovieRecord, getContentBySlug as getContentRecordBySlug, listContents } from "@/features/content/repository";
 import type { Movie } from "@/types/movie";
 import type { MovieRecord } from "@/types/backend";
 
@@ -15,6 +15,10 @@ export type MovieFilters = {
 
 const getPublishedMovies = cache(() => listMovies());
 const getDraftAwareMovies = cache((includeDrafts: boolean) => listMovies({ includeDrafts }));
+
+async function listMovies(options: { includeDrafts?: boolean } = {}) {
+  return (await listContents(options)).map(contentToMovieRecord);
+}
 
 function matchesLegacyFilter(movie: Movie, filter?: string) {
   if (!filter) {
@@ -89,7 +93,9 @@ export function getNewReleases(records: Movie[]) {
 }
 
 export async function getMovieBySlug(slug: string): Promise<MovieRecord | null> {
-  return getMovieRecordBySlug(slug);
+  const content = await getContentRecordBySlug(slug);
+
+  return content ? contentToMovieRecord(content) : null;
 }
 
 export function getContinueWatchingMovies(records: Movie[]) {

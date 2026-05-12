@@ -13,6 +13,7 @@ import { Play, Shuffle, Sparkles } from "lucide-react";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieImage } from "@/components/movie/movie-image";
 import { PremiumButton } from "@/components/ui/premium-button";
+import { contentStatusLabels, contentTypeLabels, formatEpisodeCount, isEpisodicType } from "@/features/content/format";
 import type { Movie } from "@/types/movie";
 
 type SpotlightPickerProps = {
@@ -135,6 +136,12 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
   if (!selectedMovie) {
     return null;
   }
+
+  const selectedTypeLabel = selectedMovie.type ? contentTypeLabels[selectedMovie.type] : "Movie";
+  const selectedStatusLabel = selectedMovie.status ? contentStatusLabels[selectedMovie.status] : "Аяқталған";
+  const selectedRuntime = isEpisodicType(selectedMovie.type)
+    ? formatEpisodeCount(selectedMovie.episodeCount) || "Сериялар"
+    : selectedMovie.runtime;
 
   return (
     <section
@@ -265,15 +272,14 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
                 </div>
                 <div className="min-w-0">
                   <div className="mb-3 flex flex-wrap gap-1.5">
-                    {selectedMovie.badges.slice(0, 2).map((badge) => (
-                      <MovieBadge key={badge} label={badge} />
-                    ))}
+                    <MovieBadge label={selectedTypeLabel} />
+                    <MovieBadge label={selectedStatusLabel} />
                   </div>
                   <h3 className="text-2xl font-semibold tracking-tight text-white">
                     {selectedMovie.title}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-zinc-400">
-                    {selectedMovie.year} · {selectedMovie.runtime} · IMDb {selectedMovie.rating}
+                    {selectedMovie.year} · {selectedRuntime} · {selectedMovie.dubber?.name ?? selectedStatusLabel}
                   </p>
                 </div>
               </div>
@@ -300,7 +306,7 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
                   Көру
                 </PremiumButton>
                 <Link
-                  href={`/movie/${selectedMovie.slug}`}
+                  href={`/${selectedMovie.slug}`}
                   className="glass-button inline-flex min-h-12 items-center justify-center rounded-full px-4 text-sm font-semibold text-white"
                 >
                   Detail

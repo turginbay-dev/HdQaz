@@ -7,6 +7,7 @@ import { LogoMark } from "@/components/layout/site-logo";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieImage } from "@/components/movie/movie-image";
 import { PremiumButton } from "@/components/ui/premium-button";
+import { contentStatusLabels, contentTypeLabels, formatEpisodeCount, isEpisodicType } from "@/features/content/format";
 import { formatMovieLanguages } from "@/lib/movie-taxonomy";
 import type { Movie } from "@/types/movie";
 
@@ -23,6 +24,9 @@ const dust = Array.from({ length: 22 }, (_, index) => ({
 }));
 
 export function HeroBanner({ movie }: HeroBannerProps) {
+  const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Movie";
+  const statusLabel = movie.status ? contentStatusLabels[movie.status] : movie.isNewRelease ? "Жаңа" : "Аяқталған";
+  const countLabel = isEpisodicType(movie.type) ? formatEpisodeCount(movie.episodeCount) || "Сериялар" : movie.runtime;
   const ref = useRef<HTMLElement | null>(null);
   const pointerX = useMotionValue(0.5);
   const pointerY = useMotionValue(0.5);
@@ -107,10 +111,9 @@ export function HeroBanner({ movie }: HeroBannerProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.08 }}
           >
-            {movie.badges.map((badge) => (
-              <MovieBadge key={badge} label={badge} />
-            ))}
-            {movie.isNewRelease && <MovieBadge label="Жаңа" />}
+            <MovieBadge label={typeLabel} />
+            <MovieBadge label={statusLabel} />
+            {movie.dubber?.name ? <MovieBadge label={movie.dubber.name} /> : null}
             <MovieBadge label="1080p" />
           </motion.div>
 
@@ -142,7 +145,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
               <Play className="h-4 w-4 fill-current" />
               Қазір көру
             </PremiumButton>
-            <PremiumButton href={`/movie/${movie.slug}`} variant="glass" className="min-w-40">
+            <PremiumButton href={`/${movie.slug}`} variant="glass" className="min-w-40">
               <Info className="h-4 w-4" />
               Толығырақ
             </PremiumButton>
@@ -182,8 +185,8 @@ export function HeroBanner({ movie }: HeroBannerProps) {
       >
         {[
           ["4K", "Кино сапасы"],
-          [movie.rating, "Рейтинг"],
-          [formatMovieLanguages(movie.languages, "short"), "Тілдер"]
+          [countLabel, isEpisodicType(movie.type) ? "Серия" : "Ұзақтығы"],
+          [movie.dubber?.name ?? formatMovieLanguages(movie.languages, "short"), "Дыбыстама"]
         ].map(([value, label]) => (
           <div key={label} className="glass rounded-2xl px-4 py-3 text-center">
             <p className="text-lg font-semibold text-white">{value}</p>

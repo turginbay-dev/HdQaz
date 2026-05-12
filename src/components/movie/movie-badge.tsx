@@ -1,8 +1,7 @@
 import { cn } from "@/lib/cn";
-import type { MovieLocalization } from "@/types/movie";
 
 type MovieBadgeProps = {
-  label: MovieLocalization | "Premium" | "1080p" | "Жаңа";
+  label: string;
 };
 
 export function MovieBadge({ label }: MovieBadgeProps) {

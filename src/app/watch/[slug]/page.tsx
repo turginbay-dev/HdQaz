@@ -1,10 +1,10 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { HlsPlayer } from "@/components/player/hls-player";
 import { GlassPanel } from "@/components/glass/glass-panel";
 import { MovieBadge } from "@/components/movie/movie-badge";
+import { contentStatusLabels, contentTypeLabels, isEpisodicType } from "@/features/content/format";
 import { getMovieBySlug } from "@/features/movies/queries";
 import { getMovieImageSrc } from "@/lib/movie-images";
-import { getMovieLanguageLabel } from "@/lib/movie-taxonomy";
 
 export const dynamic = "force-dynamic";
 
@@ -16,40 +16,51 @@ type WatchPageProps = {
 
 export default async function WatchPage({ params }: WatchPageProps) {
   const { slug } = await params;
-  const movie = await getMovieBySlug(slug);
+  const content = await getMovieBySlug(slug);
 
-  if (!movie) {
+  if (!content) {
     notFound();
   }
+
+  if (isEpisodicType(content.type)) {
+    const firstEpisode = content.episodes?.[0];
+
+    if (!firstEpisode) {
+      notFound();
+    }
+
+    redirect(`/watch/${content.slug}/${firstEpisode.slug}`);
+  }
+
+  const streamUrl = content.hlsUrl ?? content.streams.master;
+
+  if (!streamUrl) {
+    notFound();
+  }
+
+  const typeLabel = content.type ? contentTypeLabels[content.type] : "Movie";
+  const statusLabel = content.status ? contentStatusLabels[content.status] : "Аяқталған";
 
   return (
     <main className="min-h-screen px-4 pb-20 pt-24 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl">
         <HlsPlayer
-          poster={getMovieImageSrc(movie.backdropUrl, "backdrop")}
-          src={movie.streams.master}
-          languages={movie.languages}
+          poster={getMovieImageSrc(content.backdropUrl, "backdrop")}
+          src={streamUrl}
+          languages={content.languages}
         />
 
         <GlassPanel className="mt-5 p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="mb-2 flex flex-wrap gap-2">
-                {movie.badges.map((badge) => (
-                  <MovieBadge key={badge} label={badge} />
-                ))}
-                {movie.languages.map((language) => (
-                  <span
-                    key={language}
-                    className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-zinc-100"
-                  >
-                    {getMovieLanguageLabel(language)}
-                  </span>
-                ))}
+                <MovieBadge label={typeLabel} />
+                <MovieBadge label={statusLabel} />
+                {content.dubber?.name ? <MovieBadge label={content.dubber.name} /> : null}
               </div>
-              <h1 className="text-2xl font-semibold text-white">{movie.title}</h1>
+              <h1 className="text-2xl font-semibold text-white">{content.title}</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-300">
-                {movie.description}
+                {content.description}
               </p>
             </div>
 

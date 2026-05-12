@@ -1,23 +1,23 @@
 import { requireAdmin } from "@/lib/api/auth";
 import { handleApiError, ok } from "@/lib/api/responses";
-import { listMovies } from "@/features/movies/repository";
+import { listContents } from "@/features/content/repository";
 import { listContentRequests } from "@/features/requests/repository";
 
 export async function GET(request: Request) {
   try {
     await requireAdmin(request);
 
-    const [movies, requests] = await Promise.all([
-      listMovies({ includeDrafts: true, limit: 1000 }),
+    const [contents, requests] = await Promise.all([
+      listContents({ includeDrafts: true, limit: 1000 }),
       listContentRequests()
     ]);
 
     return ok({
-      movies: {
-        total: movies.length,
-        published: movies.filter((movie) => movie.published).length,
-        drafts: movies.filter((movie) => !movie.published).length,
-        premium: movies.filter((movie) => movie.isPremium).length
+      contents: {
+        total: contents.length,
+        published: contents.filter((content) => content.isPublished).length,
+        drafts: contents.filter((content) => !content.isPublished).length,
+        episodic: contents.filter((content) => content.type !== "movie").length
       },
       requests: {
         total: requests.length,

@@ -1,4 +1,5 @@
 import type { Movie } from "@/types/movie";
+export type { Content, ContentInput, ContentStatus, ContentType, Dubber, Episode, EpisodeInput, Genre } from "@/types/content";
 
 export type MovieRecord = Movie & {
   tmdbId?: number | null;

@@ -22,6 +22,19 @@ export type Dubber = {
   createdAt?: string;
 };
 
+export type DubberInput = {
+  id?: string;
+  name: string;
+  slug: string;
+  logoUrl?: string | null;
+  description?: string | null;
+  telegramUrl?: string | null;
+  vkUrl?: string | null;
+  supportUrl?: string | null;
+  chatUrl?: string | null;
+  isActive?: boolean;
+};
+
 export type Episode = {
   id: string;
   contentId: string;

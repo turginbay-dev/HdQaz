@@ -43,6 +43,19 @@ type EpisodeDraft = {
   isPublished: boolean;
 };
 
+type DubberDraft = {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string;
+  description: string;
+  telegramUrl: string;
+  vkUrl: string;
+  supportUrl: string;
+  chatUrl: string;
+  isActive: boolean;
+};
+
 type ManualMovieAdminProps = {
   dubbers: Dubber[];
   genres: Genre[];
@@ -59,6 +72,14 @@ type ContentApiResponse = {
 
 type EpisodeApiResponse = {
   data?: Episode;
+  error?: {
+    message?: string;
+    details?: unknown;
+  };
+};
+
+type DubberApiResponse = {
+  data?: Dubber;
   error?: {
     message?: string;
     details?: unknown;
@@ -115,6 +136,21 @@ function createEmptyEpisode(nextNumber = 1): EpisodeDraft {
   };
 }
 
+function createEmptyDubber(): DubberDraft {
+  return {
+    id: "",
+    name: "",
+    slug: "",
+    logoUrl: "",
+    description: "",
+    telegramUrl: "",
+    vkUrl: "",
+    supportUrl: "",
+    chatUrl: "",
+    isActive: true
+  };
+}
+
 function sortEpisodes(episodes: Episode[]) {
   return [...episodes].sort((left, right) => left.episodeNumber - right.episodeNumber);
 }
@@ -154,6 +190,21 @@ function toEpisodeDraft(episode: Episode): EpisodeDraft {
   };
 }
 
+function toDubberDraft(dubber: Dubber): DubberDraft {
+  return {
+    id: dubber.id,
+    name: dubber.name,
+    slug: dubber.slug,
+    logoUrl: dubber.logoUrl ?? "",
+    description: dubber.description ?? "",
+    telegramUrl: dubber.telegramUrl ?? "",
+    vkUrl: dubber.vkUrl ?? "",
+    supportUrl: dubber.supportUrl ?? "",
+    chatUrl: dubber.chatUrl ?? "",
+    isActive: dubber.isActive
+  };
+}
+
 function formatValidationDetails(details: unknown) {
   if (!details || typeof details !== "object" || Array.isArray(details)) {
     return null;
@@ -166,7 +217,7 @@ function formatValidationDetails(details: unknown) {
   return entries.length > 0 ? entries.join(" ") : null;
 }
 
-function getApiError(result: ContentApiResponse | EpisodeApiResponse | null, fallback: string) {
+function getApiError(result: ContentApiResponse | EpisodeApiResponse | DubberApiResponse | null, fallback: string) {
   const message = result?.error?.message ?? fallback;
   const details = formatValidationDetails(result?.error?.details);
 
@@ -175,15 +226,19 @@ function getApiError(result: ContentApiResponse | EpisodeApiResponse | null, fal
 
 export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMovieAdminProps) {
   const [contents, setContents] = useState<Content[]>(initialContents);
+  const [availableDubbers, setAvailableDubbers] = useState<Dubber[]>(dubbers);
   const [contentDraft, setContentDraft] = useState<AdminContent>(() => createEmptyContent());
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [episodeDraft, setEpisodeDraft] = useState<EpisodeDraft>(() => createEmptyEpisode());
+  const [dubberDraft, setDubberDraft] = useState<DubberDraft>(() => createEmptyDubber());
   const [typeFilter, setTypeFilter] = useState<ContentType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<ContentStatus | "all">("all");
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [isSavingEpisode, setIsSavingEpisode] = useState(false);
+  const [isSavingDubber, setIsSavingDubber] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [episodeError, setEpisodeError] = useState<string | null>(null);
+  const [dubberError, setDubberError] = useState<string | null>(null);
 
   const filteredContents = useMemo(
     () =>
@@ -195,7 +250,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
       }),
     [contents, statusFilter, typeFilter]
   );
-  const selectedDubber = dubbers.find((dubber) => dubber.id === contentDraft.dubberId);
+  const selectedDubber = availableDubbers.find((dubber) => dubber.id === contentDraft.dubberId);
   const selectedGenreNames = genres
     .filter((genre) => contentDraft.genreIds.includes(genre.id))
     .map((genre) => genre.name);
@@ -218,6 +273,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
   const canSaveEpisode =
     Boolean(contentDraft.id && activeSlug && episodeDraft.episodeNumber && episodeDraft.hlsUrl) &&
     isEpisodicType(contentDraft.type);
+  const canSaveDubber = Boolean(dubberDraft.name && dubberDraft.slug);
 
   function updateContentField<T extends keyof AdminContent>(field: T, value: AdminContent[T]) {
     setContentDraft((current) => {
@@ -248,12 +304,32 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
     }));
   }
 
+  function updateDubberField<T extends keyof DubberDraft>(field: T, value: DubberDraft[T]) {
+    setDubberDraft((current) => {
+      const next = {
+        ...current,
+        [field]: value
+      };
+
+      if (field === "name" && !current.slug) {
+        next.slug = slugifyContent(String(value));
+      }
+
+      return next;
+    });
+  }
+
   function startNewContent() {
     setContentDraft(createEmptyContent());
     setEditingSlug(null);
     setEpisodeDraft(createEmptyEpisode());
     setFormError(null);
     setEpisodeError(null);
+  }
+
+  function startNewDubber() {
+    setDubberDraft(createEmptyDubber());
+    setDubberError(null);
   }
 
   function startEditContent(content: Content) {
@@ -266,6 +342,11 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
     setEpisodeError(null);
   }
 
+  function startEditDubber(dubber: Dubber) {
+    setDubberDraft(toDubberDraft(dubber));
+    setDubberError(null);
+  }
+
   function upsertContent(savedContent: Content) {
     setContents((current) => {
       const exists = current.some((content) => content.id === savedContent.id);
@@ -275,6 +356,73 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
 
       return next;
     });
+  }
+
+  function upsertDubber(savedDubber: Dubber) {
+    setAvailableDubbers((current) => {
+      const exists = current.some((dubber) => dubber.id === savedDubber.id);
+      const next = exists
+        ? current.map((dubber) => (dubber.id === savedDubber.id ? savedDubber : dubber))
+        : [...current, savedDubber];
+
+      return next.sort((left, right) => left.name.localeCompare(right.name, "kk"));
+    });
+    setContents((current) =>
+      current.map((content) =>
+        content.dubberId === savedDubber.id
+          ? {
+              ...content,
+              dubber: savedDubber
+            }
+          : content
+      )
+    );
+  }
+
+  async function saveDubber() {
+    if (!canSaveDubber || isSavingDubber) {
+      return;
+    }
+
+    setIsSavingDubber(true);
+    setDubberError(null);
+
+    try {
+      const payload = {
+        name: dubberDraft.name,
+        slug: dubberDraft.slug || slugifyContent(dubberDraft.name),
+        logoUrl: dubberDraft.logoUrl || null,
+        description: dubberDraft.description || null,
+        telegramUrl: dubberDraft.telegramUrl || null,
+        vkUrl: dubberDraft.vkUrl || null,
+        supportUrl: dubberDraft.supportUrl || null,
+        chatUrl: dubberDraft.chatUrl || null,
+        isActive: dubberDraft.isActive
+      };
+      const response = await fetch(
+        dubberDraft.id ? `/api/dubbers/${encodeURIComponent(dubberDraft.id)}` : "/api/dubbers",
+        {
+          method: dubberDraft.id ? "PATCH" : "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+      const result = (await response.json().catch(() => null)) as DubberApiResponse | null;
+      const savedDubber = result?.data;
+
+      if (!response.ok || !savedDubber) {
+        throw new Error(getApiError(result, "Дыбыстама тобын сақтау мүмкін болмады."));
+      }
+
+      upsertDubber(savedDubber);
+      setDubberDraft(toDubberDraft(savedDubber));
+    } catch (error) {
+      setDubberError(error instanceof Error ? error.message : "Дыбыстама тобын сақтау мүмкін болмады.");
+    } finally {
+      setIsSavingDubber(false);
+    }
   }
 
   async function saveContent() {
@@ -536,7 +684,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
             onChange={(value) => updateContentField("dubberId", value)}
             options={[
               { label: "Таңдалмаған", value: "" },
-              ...dubbers.map((dubber) => ({ label: dubber.name, value: dubber.id }))
+              ...availableDubbers.map((dubber) => ({ label: dubber.name, value: dubber.id }))
             ]}
           />
           {!isEpisodicType(contentDraft.type) ? (
@@ -760,6 +908,129 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                 {genre}
               </span>
             ))}
+          </div>
+        </section>
+
+        <section className="glass rounded-[30px] p-5">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-white">Дыбыстама топтары</h3>
+              <p className="mt-1 text-xs text-zinc-500">{availableDubbers.length} даббер</p>
+            </div>
+            <button
+              className="glass-button flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
+              onClick={startNewDubber}
+              aria-label="Жаңа дыбыстама тобын қосу"
+              type="button"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="grid gap-3">
+            <AdminInput
+              label="Топ атауы"
+              value={dubberDraft.name}
+              onChange={(value) => updateDubberField("name", value)}
+              placeholder="Qazaq Dub"
+            />
+            <AdminInput
+              label="Slug"
+              value={dubberDraft.slug}
+              onChange={(value) => updateDubberField("slug", value)}
+              placeholder="qazaq-dub"
+            />
+            <AdminInput
+              label="Лого URL"
+              value={dubberDraft.logoUrl}
+              onChange={(value) => updateDubberField("logoUrl", value)}
+              placeholder="https://..."
+            />
+            <label className="block">
+              <span className="text-sm font-medium text-zinc-300">Сипаттама</span>
+              <textarea
+                value={dubberDraft.description}
+                onChange={(event) => updateDubberField("description", event.target.value)}
+                className="mt-2 min-h-24 w-full resize-none rounded-[24px] border border-white/10 bg-white/[0.06] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-zinc-600 focus:border-[rgba(217,183,111,0.45)] focus:bg-white/[0.08]"
+                placeholder="Команда туралы қысқаша..."
+              />
+            </label>
+            <AdminInput
+              label="Telegram URL"
+              value={dubberDraft.telegramUrl}
+              onChange={(value) => updateDubberField("telegramUrl", value)}
+              placeholder="https://t.me/..."
+            />
+            <AdminInput
+              label="VK URL"
+              value={dubberDraft.vkUrl}
+              onChange={(value) => updateDubberField("vkUrl", value)}
+              placeholder="https://vk.com/..."
+            />
+            <AdminInput
+              label="Support URL"
+              value={dubberDraft.supportUrl}
+              onChange={(value) => updateDubberField("supportUrl", value)}
+              placeholder="https://..."
+            />
+            <AdminInput
+              label="Chat URL"
+              value={dubberDraft.chatUrl}
+              onChange={(value) => updateDubberField("chatUrl", value)}
+              placeholder="https://..."
+            />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <AdminToggle
+              label={dubberDraft.isActive ? "Белсенді" : "Жасырылған"}
+              active={dubberDraft.isActive}
+              onClick={() => updateDubberField("isActive", !dubberDraft.isActive)}
+            />
+          </div>
+
+          <button
+            className="hero-watch-button mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canSaveDubber || isSavingDubber}
+            onClick={saveDubber}
+            type="button"
+          >
+            <Save className="h-4 w-4" />
+            {isSavingDubber ? "Сақталып жатыр..." : dubberDraft.id ? "Топты сақтау" : "Топ қосу"}
+          </button>
+          {dubberError ? (
+            <p className="mt-3 text-sm leading-6 text-red-300">{dubberError}</p>
+          ) : null}
+
+          <div className="mt-5 divide-y divide-white/10 border-t border-white/10">
+            {availableDubbers.length > 0 ? (
+              availableDubbers.map((dubber) => (
+                <div key={dubber.id} className="flex items-center gap-3 py-3">
+                  {dubber.logoUrl ? (
+                    <img src={dubber.logoUrl} alt={dubber.name} className="h-10 w-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-[var(--accent)]">
+                      {dubber.name.slice(0, 1)}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-white">{dubber.name}</p>
+                    <p className="truncate text-xs text-zinc-500">{dubber.slug}</p>
+                  </div>
+                  <StatusPill active={dubber.isActive} label={dubber.isActive ? "Active" : "Hidden"} />
+                  <button
+                    className="glass-button flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white"
+                    onClick={() => startEditDubber(dubber)}
+                    aria-label={`${dubber.name} өңдеу`}
+                    type="button"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="py-3 text-sm text-zinc-500">Әзірге даббер жоқ</p>
+            )}
           </div>
         </section>
 

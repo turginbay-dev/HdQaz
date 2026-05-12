@@ -5,7 +5,7 @@ import { getOptionalAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { movies } from "@/features/movies/data";
 import { formatDurationMinutes, formatEpisodeCount, slugifyContent } from "@/features/content/format";
-import type { Content, ContentInput, ContentStatus, ContentType, Dubber, Episode, EpisodeInput, Genre } from "@/types/content";
+import type { Content, ContentInput, ContentStatus, ContentType, Dubber, DubberInput, Episode, EpisodeInput, Genre } from "@/types/content";
 import type { MovieRecord } from "@/types/backend";
 
 export type ContentListFilters = {
@@ -80,6 +80,7 @@ type DubberRow = {
 
 type ContentRowPatch = Partial<Omit<ContentRow, "created_at" | "updated_at">>;
 type EpisodeRowPatch = Partial<Omit<EpisodeRow, "created_at" | "updated_at">>;
+type DubberRowPatch = Partial<Omit<DubberRow, "created_at">>;
 
 let cachedPublicReadClient: SupabaseClient | null = null;
 
@@ -134,7 +135,7 @@ function isMissingContentTableError(error: { code?: string; message: string }) {
 
 function throwDatabaseError(error: { code?: string; message: string }, fallback: string): never {
   if (error.code === "23505") {
-    throw new ApiError(409, "conflict", "A content item or episode with this slug/number already exists.");
+    throw new ApiError(409, "conflict", "A record with this slug or number already exists.");
   }
 
   throw new ApiError(500, "database_error", fallback, error.message);
@@ -250,6 +251,21 @@ function episodeToRow(input: EpisodeInput, contentId: string): EpisodeRowPatch {
     hls_url: input.hlsUrl,
     duration_minutes: input.durationMinutes ?? null,
     is_published: input.isPublished ?? false
+  };
+}
+
+function dubberToRow(input: DubberInput): DubberRowPatch {
+  return {
+    ...(input.id ? { id: input.id } : {}),
+    name: input.name,
+    slug: input.slug,
+    logo_url: input.logoUrl ? normalizeStoredImageUrl(input.logoUrl) : null,
+    description: input.description ?? null,
+    telegram_url: input.telegramUrl ?? null,
+    vk_url: input.vkUrl ?? null,
+    support_url: input.supportUrl ?? null,
+    chat_url: input.chatUrl ?? null,
+    is_active: input.isActive ?? true
   };
 }
 
@@ -506,6 +522,32 @@ export async function listDubbers(options: { includeInactive?: boolean } = {}) {
   }
 
   return ((data ?? []) as DubberRow[]).map(rowToDubber);
+}
+
+export async function createDubber(input: DubberInput) {
+  const supabase = requireDatabase();
+  const { data, error } = await supabase.from("dubbers").insert(dubberToRow(input)).select("*").single();
+
+  if (error) {
+    throwDatabaseError(error, "Failed to create dubber.");
+  }
+
+  return rowToDubber(data as DubberRow);
+}
+
+export async function updateDubber(id: string, input: DubberInput) {
+  const supabase = requireDatabase();
+  const { data, error } = await supabase.from("dubbers").update(dubberToRow(input)).eq("id", id).select("*").maybeSingle();
+
+  if (error) {
+    throwDatabaseError(error, "Failed to update dubber.");
+  }
+
+  if (!data) {
+    throw new ApiError(404, "not_found", "Dubber not found.");
+  }
+
+  return rowToDubber(data as DubberRow);
 }
 
 async function syncContentGenres(supabase: SupabaseClient, contentId: string, genreIds: string[]) {

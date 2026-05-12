@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Hls, { type ErrorData, type Level } from "hls.js";
-import { Loader2, Maximize, Minimize, Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { Loader2, Maximize, Minimize, Pause, Play, RotateCcw, RotateCw, Volume2, VolumeX } from "lucide-react";
 import { formatMovieLanguages } from "@/lib/movie-taxonomy";
 import type { MovieLanguageId } from "@/lib/movie-taxonomy";
 
@@ -13,8 +13,15 @@ type HlsPlayerProps = {
 };
 
 type QualityLevel = {
+  height: number;
   index: number;
   label: string;
+};
+
+type WebKitFullscreenVideo = HTMLVideoElement & {
+  webkitEnterFullscreen?: () => void;
+  webkitExitFullscreen?: () => void;
+  webkitSupportsFullscreen?: boolean;
 };
 
 function formatTime(value: number) {
@@ -34,16 +41,29 @@ function formatTime(value: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-function formatLevel(level: Level) {
-  if (level.height) {
-    return `${level.height}p`;
-  }
+function getSelectableQualityLevels(levels: Level[]): QualityLevel[] {
+  const bestByHeight = new Map<number, QualityLevel & { bitrate: number }>();
 
-  if (level.name) {
-    return level.name;
-  }
+  levels.forEach((level, index) => {
+    if (!level.height || level.height < 720 || level.height > 1080) {
+      return;
+    }
 
-  return `${Math.round(level.bitrate / 1000)} kbps`;
+    const current = bestByHeight.get(level.height);
+
+    if (!current || level.bitrate > current.bitrate) {
+      bestByHeight.set(level.height, {
+        bitrate: level.bitrate,
+        height: level.height,
+        index,
+        label: `${level.height}p`
+      });
+    }
+  });
+
+  return Array.from(bestByHeight.values())
+    .sort((left, right) => left.height - right.height)
+    .map(({ bitrate: _bitrate, ...level }) => level);
 }
 
 function getBufferedEnd(video: HTMLVideoElement) {
@@ -165,7 +185,7 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
           src
         });
         streamReadyRef.current = true;
-        setQualityLevels(hls.levels.map((level, index) => ({ index, label: formatLevel(level) })));
+        setQualityLevels(getSelectableQualityLevels(hls.levels));
         setDuration(getVideoDuration(video));
         setLoading(false);
         setError(null);
@@ -252,14 +272,22 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
   }, [muted, volume]);
 
   useEffect(() => {
+    const video = videoRef.current;
+
     const syncFullscreen = () => {
       setFullscreen(Boolean(document.fullscreenElement));
     };
+    const handleNativeFullscreenStart = () => setFullscreen(true);
+    const handleNativeFullscreenEnd = () => setFullscreen(false);
 
     document.addEventListener("fullscreenchange", syncFullscreen);
+    video?.addEventListener("webkitbeginfullscreen", handleNativeFullscreenStart);
+    video?.addEventListener("webkitendfullscreen", handleNativeFullscreenEnd);
 
     return () => {
       document.removeEventListener("fullscreenchange", syncFullscreen);
+      video?.removeEventListener("webkitbeginfullscreen", handleNativeFullscreenStart);
+      video?.removeEventListener("webkitendfullscreen", handleNativeFullscreenEnd);
     };
   }, []);
 
@@ -316,6 +344,20 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
     setCurrentTime(nextTime);
   }
 
+  function seekBy(seconds: number) {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    const videoDuration = getVideoDuration(video);
+    const nextTime = Math.max(0, Math.min(videoDuration || Number.POSITIVE_INFINITY, video.currentTime + seconds));
+
+    video.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  }
+
   function toggleMute() {
     const video = videoRef.current;
 
@@ -345,25 +387,53 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
     const nextLevel = Number(value);
     const hls = hlsRef.current;
 
+    if (!Number.isFinite(nextLevel)) {
+      return;
+    }
+
     setManualLevel(nextLevel);
 
-    if (hls && Number.isFinite(nextLevel)) {
+    if (hls) {
       hls.currentLevel = nextLevel;
     }
   }
 
   async function toggleFullscreen() {
     const player = playerRef.current;
+    const video = videoRef.current as WebKitFullscreenVideo | null;
 
-    if (!player) {
+    if (!player || !video) {
       return;
     }
 
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
+        return;
+      }
+
+      if (fullscreen && video.webkitExitFullscreen) {
+        video.webkitExitFullscreen();
+        setFullscreen(false);
+        return;
+      }
+
+      if (player.requestFullscreen) {
+        try {
+          await player.requestFullscreen();
+          return;
+        } catch (requestError) {
+          if (!video.webkitEnterFullscreen) {
+            throw requestError;
+          }
+        }
+      }
+
+      if (video.webkitEnterFullscreen) {
+        video.webkitEnterFullscreen();
+        setFullscreen(true);
       } else {
-        await player.requestFullscreen();
+        setError("Толық экран режимі бұл браузерде қолжетімсіз.");
       }
     } catch {
       setError("Толық экран режимі іске қосылмады.");
@@ -385,23 +455,20 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
     videoRef.current?.load();
   }
 
-  const qualityLabel =
-    manualLevel === -1
-      ? currentLevel >= 0
-        ? `Auto · ${qualityLevels.find((level) => level.index === currentLevel)?.label ?? "HLS"}`
-        : "Auto"
-      : qualityLevels.find((level) => level.index === manualLevel)?.label ?? "HLS";
+  const activeAutoQuality = qualityLevels.find((level) => level.index === currentLevel)?.label;
+  const selectedQuality = qualityLevels.find((level) => level.index === manualLevel)?.label;
+  const qualityLabel = manualLevel === -1 ? (activeAutoQuality ? `Auto · ${activeAutoQuality}` : "Auto") : selectedQuality ?? "Auto";
   const durationLabel = duration > 0 ? formatTime(duration) : loading ? "..." : "--:--";
 
   return (
     <section
       ref={playerRef}
-      className="group relative overflow-hidden rounded-[30px] border border-white/[0.14] bg-black shadow-[0_34px_130px_rgba(0,0,0,0.72)]"
+      className="cinema-player-shell group relative overflow-hidden rounded-[30px] border border-white/[0.14] bg-black shadow-[0_34px_130px_rgba(0,0,0,0.72)]"
     >
       <video
         ref={videoRef}
         poster={poster}
-        className="relative z-0 aspect-video w-full bg-black object-contain"
+        className="cinema-player-video relative z-0 aspect-video w-full bg-black object-contain"
         crossOrigin="anonymous"
         playsInline
         preload="metadata"
@@ -450,7 +517,6 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
 
       <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-3 sm:left-5 sm:right-5 sm:top-5">
         <div className="glass inline-flex max-w-[calc(100%-4rem)] items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold text-white">
-          <span className="rounded-full bg-[rgba(217,183,111,0.18)] px-2 py-0.5 text-[var(--accent)]">R2 HLS</span>
           <span className="truncate text-zinc-300">{formatMovieLanguages(languages, "short")}</span>
         </div>
         <div className="glass hidden rounded-full px-3 py-2 text-xs font-semibold text-zinc-200 sm:block">
@@ -493,9 +559,9 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
         </div>
       ) : null}
 
-      <div className="absolute inset-x-2 bottom-2 sm:inset-x-5 sm:bottom-5">
-        <div className="glass-strong rounded-[26px] p-3 sm:rounded-full sm:px-4">
-          <div className="relative mb-2 flex h-5 items-center sm:mb-0">
+      <div className="cinema-player-controls absolute inset-x-2 bottom-2 sm:inset-x-5 sm:bottom-5">
+        <div className="glass-strong rounded-[26px] p-3 sm:rounded-[30px] sm:px-4">
+          <div className="relative mb-2 flex h-5 items-center">
             <div className="absolute left-0 right-0 h-1 overflow-hidden rounded-full bg-white/15">
               <div className="h-full rounded-full bg-white/25" style={{ width: `${bufferedPercent}%` }} />
               <div
@@ -515,43 +581,65 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:scale-105"
-              aria-label={playing ? "Пауза" : "Ойнату"}
-              onClick={togglePlayback}
-              type="button"
-            >
-              {playing ? <Pause className="h-4 w-4 fill-current" /> : <Play className="ml-0.5 h-4 w-4 fill-current" />}
-            </button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2">
+              <button
+                className="glass-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
+                aria-label="10 секунд артқа"
+                onClick={() => seekBy(-10)}
+                type="button"
+              >
+                <RotateCcw className="h-4 w-4" />
+                <span className="absolute text-[10px] font-bold leading-none">10</span>
+              </button>
 
-            <div className="hidden min-w-[104px] text-xs font-semibold text-zinc-300 sm:block">
-              {formatTime(currentTime)} / {durationLabel}
+              <button
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-black shadow-[0_14px_38px_rgba(255,255,255,0.18)] transition hover:scale-105"
+                aria-label={playing ? "Пауза" : "Ойнату"}
+                onClick={togglePlayback}
+                type="button"
+              >
+                {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
+              </button>
+
+              <button
+                className="glass-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
+                aria-label="10 секунд алға"
+                onClick={() => seekBy(10)}
+                type="button"
+              >
+                <RotateCw className="h-4 w-4" />
+                <span className="absolute text-[10px] font-bold leading-none">10</span>
+              </button>
+
+              <div className="min-w-0 pl-1 text-xs font-semibold text-zinc-300">
+                {formatTime(currentTime)} / {durationLabel}
+              </div>
             </div>
 
-            <button
-              className="glass-button flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
-              aria-label={muted ? "Дыбысты қосу" : "Дыбысты өшіру"}
-              onClick={toggleMute}
-              type="button"
-            >
-              {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-            </button>
+            <div className="flex items-center justify-between gap-2 sm:ml-auto sm:justify-end">
+              <button
+                className="glass-button flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
+                aria-label={muted ? "Дыбысты қосу" : "Дыбысты өшіру"}
+                onClick={toggleMute}
+                type="button"
+              >
+                {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </button>
 
-            <input
-              className="cinema-range hidden w-24 sm:block"
-              aria-label="Дыбыс деңгейі"
-              type="range"
-              min={0}
-              max={1}
-              step="0.01"
-              value={muted ? 0 : volume}
-              onChange={(event) => changeVolume(event.target.value)}
-            />
+              <input
+                className="cinema-range hidden w-24 sm:block"
+                aria-label="Дыбыс деңгейі"
+                type="range"
+                min={0}
+                max={1}
+                step="0.01"
+                value={muted ? 0 : volume}
+                onChange={(event) => changeVolume(event.target.value)}
+              />
 
-            <div className="ml-auto flex items-center gap-2">
               <select
-                className="glass-button h-11 max-w-[116px] rounded-full bg-black/30 px-3 text-xs font-semibold text-white outline-none"
+                className="glass-button h-11 min-w-[96px] rounded-full bg-black/30 px-3 text-xs font-semibold text-white outline-none"
                 aria-label="Сапа"
                 value={String(manualLevel)}
                 onChange={(event) => changeQuality(event.target.value)}

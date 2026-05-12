@@ -1,5 +1,5 @@
 import { isEpisodicType } from "@/features/content/format";
-import type { ContentInput, ContentStatus, ContentType, EpisodeInput } from "@/types/content";
+import type { ContentInput, ContentStatus, ContentType, DubberInput, EpisodeInput } from "@/types/content";
 
 type ValidationResult<T> =
   | {
@@ -186,6 +186,44 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
       dubberId: asNullableString(payload.dubberId) ?? null,
       genreIds: genreIds ?? [],
       isPublished: asBoolean(payload.isPublished) ?? false
+    },
+    errors: null
+  };
+}
+
+export function parseDubberInput(payload: Record<string, unknown>): ValidationResult<DubberInput> {
+  const errors: Record<string, string> = {};
+  const name = requireString(payload, "name", errors);
+  const slug = requireString(payload, "slug", errors);
+
+  if (slug && !validateSlug(slug)) {
+    errors.slug = "Use letters, numbers, and dashes only.";
+  }
+
+  const logoUrl = optionalUrl(payload, "logoUrl", errors);
+  const telegramUrl = optionalUrl(payload, "telegramUrl", errors);
+  const vkUrl = optionalUrl(payload, "vkUrl", errors);
+  const supportUrl = optionalUrl(payload, "supportUrl", errors);
+  const chatUrl = optionalUrl(payload, "chatUrl", errors);
+
+  if (Object.keys(errors).length > 0) {
+    return {
+      data: null,
+      errors
+    };
+  }
+
+  return {
+    data: {
+      name: name ?? "",
+      slug: slug ?? "",
+      logoUrl,
+      description: asNullableString(payload.description) ?? null,
+      telegramUrl,
+      vkUrl,
+      supportUrl,
+      chatUrl,
+      isActive: asBoolean(payload.isActive) ?? true
     },
     errors: null
   };

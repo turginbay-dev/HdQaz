@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
+import { useCallback, useState, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { LockKeyhole, LogIn, Mail, UserPlus } from "lucide-react";
 import { signInWithPassword } from "@/app/auth/actions";
+import { TurnstileWidget } from "@/components/auth/turnstile-widget";
 
 type EmailPasswordAuthFormProps = {
   disabled?: boolean;
@@ -20,12 +21,25 @@ type SignupResponse = {
 };
 
 const SIGNUP_PASSWORD_MIN_LENGTH = 8;
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFormProps) {
   const router = useRouter();
   const [signupError, setSignupError] = useState<string | null>(null);
   const [signupStatus, setSignupStatus] = useState<string | null>(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const turnstileRequired = Boolean(TURNSTILE_SITE_KEY);
+
+  const resetTurnstile = useCallback(() => {
+    if (!turnstileRequired) {
+      return;
+    }
+
+    setTurnstileToken("");
+    setTurnstileResetKey((current) => current + 1);
+  }, [turnstileRequired]);
 
   async function handleSignup(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -48,6 +62,11 @@ export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFor
       return;
     }
 
+    if (turnstileRequired && !turnstileToken) {
+      setSignupError("Қауіпсіздік тексерісін аяқтаңыз.");
+      return;
+    }
+
     setIsSigningUp(true);
 
     try {
@@ -58,7 +77,8 @@ export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFor
         },
         body: JSON.stringify({
           email,
-          password
+          password,
+          turnstileToken
         })
       });
       const result = (await response.json()) as SignupResponse;
@@ -79,11 +99,14 @@ export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFor
       setSignupError("Signup failed. Try again later.");
     } finally {
       setIsSigningUp(false);
+      resetTurnstile();
     }
   }
 
   return (
     <form action={signInWithPassword} className="space-y-4">
+      <input name="cf-turnstile-response" type="hidden" value={turnstileToken} readOnly />
+
       <label className="block">
         <span className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
           <Mail className="h-3.5 w-3.5" />
@@ -130,9 +153,16 @@ export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFor
         </div>
       )}
 
+      <TurnstileWidget
+        disabled={disabled || isSigningUp}
+        onTokenChange={setTurnstileToken}
+        resetKey={turnstileResetKey}
+        siteKey={TURNSTILE_SITE_KEY}
+      />
+
       <div className="grid gap-3 sm:grid-cols-2">
         <button
-          disabled={disabled || isSigningUp}
+          disabled={disabled || isSigningUp || (turnstileRequired && !turnstileToken)}
           className="cinema-sweep inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-5 text-sm font-semibold text-black shadow-[0_18px_70px_rgba(217,183,111,0.18)] transition hover:bg-[#f3d78e] disabled:cursor-not-allowed disabled:opacity-55"
           type="submit"
         >
@@ -140,7 +170,7 @@ export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFor
           Кіру
         </button>
         <button
-          disabled={disabled || isSigningUp}
+          disabled={disabled || isSigningUp || (turnstileRequired && !turnstileToken)}
           onClick={handleSignup}
           className="glass-button inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
           type="button"

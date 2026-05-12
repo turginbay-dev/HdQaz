@@ -5,6 +5,7 @@ import { fail, handleApiError, ok, validationError } from "@/lib/api/responses";
 import { getSiteUrl } from "@/lib/site-url";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 
@@ -23,6 +24,7 @@ type RateLimitEntry = {
 type SignupInput = {
   email: string;
   password: string;
+  turnstileToken: string;
 };
 
 const signupRateLimitStore = new Map<string, RateLimitEntry>();
@@ -104,6 +106,12 @@ function parseSignupInput(payload: Record<string, unknown>) {
   const errors: Record<string, string> = {};
   const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
   const password = typeof payload.password === "string" ? payload.password : "";
+  const turnstileToken =
+    typeof payload.turnstileToken === "string"
+      ? payload.turnstileToken
+      : typeof payload["cf-turnstile-response"] === "string"
+        ? payload["cf-turnstile-response"]
+        : "";
 
   if (!email) {
     errors.email = "Required.";
@@ -129,7 +137,8 @@ function parseSignupInput(payload: Record<string, unknown>) {
   return {
     data: {
       email,
-      password
+      password,
+      turnstileToken
     } satisfies SignupInput,
     errors: null
   };
@@ -184,6 +193,18 @@ export async function POST(request: NextRequest) {
 
     if (parsed.errors) {
       return validationError(parsed.errors);
+    }
+
+    const turnstile = await verifyTurnstileToken(parsed.data.turnstileToken, clientIp);
+
+    if (!turnstile.success) {
+      return fail(
+        turnstile.errorCode === "not_configured" ? 503 : 400,
+        turnstile.errorCode === "not_configured" ? "captcha_not_configured" : "captcha_failed",
+        turnstile.errorCode === "not_configured"
+          ? "Cloudflare Turnstile толық бапталмаған."
+          : "Қауіпсіздік тексерісі өтпеді. Қайта көріңіз."
+      );
     }
 
     const supabase = await createClient();

@@ -6,6 +6,7 @@ import { GlassPanel } from "@/components/glass/glass-panel";
 import { MovieImage } from "@/components/movie/movie-image";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieRow } from "@/components/movie/movie-row";
+import { WatchButton } from "@/components/ui/watch-button";
 import { contentStatusLabels, contentTypeLabels, isEpisodicType } from "@/features/content/format";
 import { getAllMovies, getMovieBySlug, getTrendingMovies } from "@/features/movies/queries";
 
@@ -60,13 +61,12 @@ export default async function ContentPage({ params }: ContentPageProps) {
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {content.genres.map((genre) => (
-                  <Link
+                  <span
                     key={genre}
-                    href={{ pathname: "/catalog", query: { genre } }}
                     className="glass-button rounded-full px-3 py-1.5 text-xs font-semibold text-white"
                   >
                     {genre}
-                  </Link>
+                  </span>
                 ))}
               </div>
 
@@ -79,21 +79,9 @@ export default async function ContentPage({ params }: ContentPageProps) {
 
               <div className="mt-8 flex flex-wrap gap-3">
                 {!isEpisodicType(content.type) ? (
-                  <Link
-                    href={`/watch/${content.slug}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
-                  >
-                    <Play className="h-4 w-4 fill-current" />
-                    Көру
-                  </Link>
+                  <WatchButton href={`/watch/${content.slug}`} />
                 ) : episodes[0] ? (
-                  <Link
-                    href={`/watch/${content.slug}/${episodes[0].slug}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200"
-                  >
-                    <Play className="h-4 w-4 fill-current" />
-                    1-серия
-                  </Link>
+                  <WatchButton href={`/watch/${content.slug}/${episodes[0].slug}`} />
                 ) : null}
                 <button className="glass-button inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white">
                   <Plus className="h-4 w-4" />

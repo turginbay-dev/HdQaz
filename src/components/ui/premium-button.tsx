@@ -1,8 +1,5 @@
-"use client";
-
 import Link from "next/link";
 import type { MouseEventHandler, ReactNode } from "react";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
 
 type PremiumButtonProps = {
@@ -34,24 +31,20 @@ export function PremiumButton({
 
   if (href) {
     return (
-      <motion.div whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.97 }}>
-        <Link href={href} className={classes}>
-          {children}
-        </Link>
-      </motion.div>
+      <Link href={href} className={classes}>
+        {children}
+      </Link>
     );
   }
 
   return (
-    <motion.button
-      whileHover={{ y: -2, scale: 1.02 }}
-      whileTap={{ scale: 0.97 }}
+    <button
       className={classes}
       disabled={disabled}
       onClick={onClick}
       type={type}
     >
       {children}
-    </motion.button>
+    </button>
   );
 }

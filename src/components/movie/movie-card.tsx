@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { Play, Radio } from "lucide-react";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieImage } from "@/components/movie/movie-image";
@@ -21,11 +20,7 @@ export function MovieCard({ movie, priority = false }: MovieCardProps) {
     : formatDurationMinutes(movie.durationMinutes) || movie.runtime;
 
   return (
-    <motion.div
-      className="group relative"
-      whileHover={{ y: -10, scale: 1.025 }}
-      transition={{ type: "spring", stiffness: 280, damping: 24 }}
-    >
+    <div className="group relative transition duration-300 hover:-translate-y-2">
       <Link href={`/${movie.slug}`} className="block outline-none">
         <article className="relative overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] shadow-[0_24px_80px_rgba(0,0,0,0.28)] transition duration-500 group-hover:border-[rgba(217,183,111,0.35)] group-hover:shadow-[0_28px_110px_rgba(217,183,111,0.14)]">
           <div className="poster-reflection relative aspect-[2/3] overflow-hidden rounded-[24px]">
@@ -93,6 +88,6 @@ export function MovieCard({ movie, priority = false }: MovieCardProps) {
           </p>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }

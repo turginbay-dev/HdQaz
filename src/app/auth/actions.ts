@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { getSiteUrl } from "@/lib/site-url";
+import { getClientIpFromHeaders, verifyTurnstileToken } from "@/lib/turnstile";
 
 function getEmailPassword(formData: FormData) {
   const email = String(formData.get("email") ?? "")
@@ -66,6 +67,14 @@ export async function signInWithPassword(formData: FormData) {
 
   if (!config.configured) {
     redirect("/login?error=supabase_not_configured");
+  }
+
+  const headersList = await headers();
+  const turnstileToken = String(formData.get("cf-turnstile-response") ?? "");
+  const turnstile = await verifyTurnstileToken(turnstileToken, getClientIpFromHeaders(headersList));
+
+  if (!turnstile.success) {
+    redirect(turnstile.errorCode === "not_configured" ? "/login?error=captcha_not_configured" : "/login?error=captcha_failed");
   }
 
   const { email, password } = getEmailPassword(formData);

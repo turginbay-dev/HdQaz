@@ -1,4 +1,5 @@
 import { getCatalogLabel, getMovieLanguageLabel } from "@/lib/movie-taxonomy";
+import { contentTypeLabels } from "@/features/content/format";
 import type { Movie } from "@/types/movie";
 
 function normalizeSearchValue(value: string) {
@@ -11,6 +12,8 @@ function getMovieSearchText(movie: Movie) {
     movie.originalTitle,
     movie.description,
     movie.slug,
+    movie.type ?? "",
+    movie.type ? contentTypeLabels[movie.type] : "",
     String(movie.year),
     movie.runtime,
     movie.rating,

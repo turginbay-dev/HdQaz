@@ -299,6 +299,7 @@ function applyContentFilters(records: Content[], filters: ContentListFilters = {
       return [
         content.title,
         content.country,
+        String(content.year),
         content.dubber?.name,
         ...content.genres.map((genre) => genre.name)
       ].some((value) => value?.toLowerCase().includes(query));
@@ -482,7 +483,7 @@ export async function listGenres() {
 }
 
 export async function listDubbers(options: { includeInactive?: boolean } = {}) {
-  const supabase = getOptionalContentReadClient(true);
+  const supabase = getOptionalContentReadClient(options.includeInactive);
 
   if (!supabase) {
     return [];

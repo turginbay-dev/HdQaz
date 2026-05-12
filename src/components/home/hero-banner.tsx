@@ -1,21 +1,21 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useMotionValue, useScroll, useTransform } from "framer-motion";
-import { Info, Play } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { Info } from "lucide-react";
 import { LogoMark } from "@/components/layout/site-logo";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieImage } from "@/components/movie/movie-image";
 import { PremiumButton } from "@/components/ui/premium-button";
-import { contentStatusLabels, contentTypeLabels, formatEpisodeCount, isEpisodicType } from "@/features/content/format";
-import { formatMovieLanguages } from "@/lib/movie-taxonomy";
+import { WatchButton } from "@/components/ui/watch-button";
+import { contentStatusLabels, contentTypeLabels } from "@/features/content/format";
 import type { Movie } from "@/types/movie";
 
 type HeroBannerProps = {
   movie: Movie;
 };
 
-const dust = Array.from({ length: 22 }, (_, index) => ({
+const dust = Array.from({ length: 8 }, (_, index) => ({
   id: index,
   left: `${6 + ((index * 17) % 88)}%`,
   top: `${14 + ((index * 23) % 66)}%`,
@@ -26,16 +26,7 @@ const dust = Array.from({ length: 22 }, (_, index) => ({
 export function HeroBanner({ movie }: HeroBannerProps) {
   const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Movie";
   const statusLabel = movie.status ? contentStatusLabels[movie.status] : movie.isNewRelease ? "Жаңа" : "Аяқталған";
-  const countLabel = isEpisodicType(movie.type) ? formatEpisodeCount(movie.episodeCount) || "Сериялар" : movie.runtime;
   const ref = useRef<HTMLElement | null>(null);
-  const pointerX = useMotionValue(0.5);
-  const pointerY = useMotionValue(0.5);
-  const bgX = useTransform(pointerX, [0, 1], ["-1.5%", "1.5%"]);
-  const bgY = useTransform(pointerY, [0, 1], ["-1%", "1%"]);
-  const posterRotateY = useTransform(pointerX, [0, 1], [-8, 8]);
-  const posterRotateX = useTransform(pointerY, [0, 1], [6, -6]);
-  const posterY = useTransform(pointerY, [0, 1], [-10, 10]);
-
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"]
@@ -45,20 +36,10 @@ export function HeroBanner({ movie }: HeroBannerProps) {
   const opacity = useTransform(scrollYProgress, [0, 0.74], [1, 0]);
 
   return (
-    <section
-      ref={ref}
-      className="hero-vignette relative min-h-[100svh] overflow-hidden"
-      onMouseMove={(event) => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        pointerX.set((event.clientX - rect.left) / rect.width);
-        pointerY.set((event.clientY - rect.top) / rect.height);
-      }}
-    >
+    <section ref={ref} className="hero-vignette relative min-h-[100svh] overflow-hidden">
       <motion.div
         className="absolute inset-0 scale-[1.08]"
-        style={{ x: bgX, y: imageY }}
-        animate={{ scale: [1.08, 1.115, 1.08] }}
-        transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+        style={{ y: imageY }}
       >
         <MovieImage
           src={movie.backdropUrl}
@@ -71,22 +52,17 @@ export function HeroBanner({ movie }: HeroBannerProps) {
         />
       </motion.div>
 
-      <motion.div
-        className="absolute inset-0 bg-[radial-gradient(ellipse_at_68%_30%,rgba(255,180,92,0.2),transparent_32%),radial-gradient(ellipse_at_24%_18%,rgba(143,183,255,0.18),transparent_34%)]"
-        style={{ y: bgY }}
-      />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_68%_30%,rgba(255,180,92,0.2),transparent_32%),radial-gradient(ellipse_at_24%_18%,rgba(143,183,255,0.18),transparent_34%)]" />
       <div className="absolute inset-0 bg-gradient-to-r from-black via-black/[0.66] to-black/[0.18]" />
       <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-black/[0.2] to-black/[0.42]" />
       <div className="cinematic-fog" />
       <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-[var(--background)] to-transparent" />
 
       {dust.map((item) => (
-        <motion.span
+        <span
           key={item.id}
           className="absolute h-px rounded-full bg-white/[0.18]"
           style={{ left: item.left, top: item.top, width: item.width }}
-          animate={{ opacity: [0.04, 0.32, 0.04], x: [0, 22, 0], y: [0, -8, 0] }}
-          transition={{ duration: 6.2, delay: item.delay, repeat: Infinity, ease: "easeInOut" }}
         />
       ))}
 
@@ -141,10 +117,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.34 }}
           >
-            <PremiumButton href={`/watch/${movie.slug}`} className="hero-watch-button min-w-40">
-              <Play className="h-4 w-4 fill-current" />
-              Қазір көру
-            </PremiumButton>
+            <WatchButton href={`/watch/${movie.slug}`} className="min-w-40" />
             <PremiumButton href={`/${movie.slug}`} variant="glass" className="min-w-40">
               <Info className="h-4 w-4" />
               Толығырақ
@@ -154,7 +127,6 @@ export function HeroBanner({ movie }: HeroBannerProps) {
 
         <motion.div
           className="relative mx-auto hidden w-full max-w-[360px] pb-8 lg:block"
-          style={{ rotateX: posterRotateX, rotateY: posterRotateY, y: posterY, transformPerspective: 1000 }}
           initial={{ opacity: 0, x: 40, filter: "blur(14px)" }}
           animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
           transition={{ duration: 0.9, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
@@ -177,25 +149,6 @@ export function HeroBanner({ movie }: HeroBannerProps) {
         </motion.div>
       </motion.div>
 
-      <motion.div
-        className="absolute bottom-6 left-1/2 z-10 grid w-[min(92vw,780px)] -translate-x-1/2 grid-cols-3 gap-2 sm:bottom-8 sm:gap-3"
-        initial={{ opacity: 0, y: 26 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, delay: 0.55 }}
-      >
-        {[
-          ["4K", "Кино сапасы"],
-          [countLabel, isEpisodicType(movie.type) ? "Серия" : "Ұзақтығы"],
-          [movie.dubber?.name ?? formatMovieLanguages(movie.languages, "short"), "Дыбыстама"]
-        ].map(([value, label]) => (
-          <div key={label} className="glass rounded-2xl px-4 py-3 text-center">
-            <p className="text-lg font-semibold text-white">{value}</p>
-            <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-zinc-500 sm:text-[11px]">
-              {label}
-            </p>
-          </div>
-        ))}
-      </motion.div>
     </section>
   );
 }

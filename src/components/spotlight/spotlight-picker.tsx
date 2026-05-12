@@ -5,14 +5,13 @@ import Link from "next/link";
 import {
   AnimatePresence,
   motion,
-  useAnimationControls,
-  useMotionValue,
-  useTransform
+  useAnimationControls
 } from "framer-motion";
-import { Play, Shuffle, Sparkles } from "lucide-react";
+import { Shuffle, Sparkles } from "lucide-react";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieImage } from "@/components/movie/movie-image";
 import { PremiumButton } from "@/components/ui/premium-button";
+import { WatchButton } from "@/components/ui/watch-button";
 import { contentStatusLabels, contentTypeLabels, formatEpisodeCount, isEpisodicType } from "@/features/content/format";
 import type { Movie } from "@/types/movie";
 
@@ -37,11 +36,6 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
     viewportWidth: 0
   });
   const selectedMovie = movies[selectedIndex];
-  const pointerX = useMotionValue(0.5);
-  const pointerY = useMotionValue(0.5);
-  const rotateY = useTransform(pointerX, [0, 1], [-5, 5]);
-  const rotateX = useTransform(pointerY, [0, 1], [3, -3]);
-
   const loopedMovies = useMemo(
     () => Array.from({ length: LOOP_COUNT }, () => movies).flat(),
     [movies]
@@ -144,14 +138,7 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
     : selectedMovie.runtime;
 
   return (
-    <section
-      className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(140deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] px-4 py-5 shadow-[0_30px_120px_rgba(0,0,0,0.44)] backdrop-blur-3xl sm:px-6 sm:py-7 lg:px-8"
-      onMouseMove={(event) => {
-        const rect = event.currentTarget.getBoundingClientRect();
-        pointerX.set((event.clientX - rect.left) / rect.width);
-        pointerY.set((event.clientY - rect.top) / rect.height);
-      }}
-    >
+    <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(140deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] px-4 py-5 shadow-[0_30px_120px_rgba(0,0,0,0.44)] backdrop-blur-3xl sm:px-6 sm:py-7 lg:px-8">
       <AnimatePresence mode="wait">
         <motion.div
           key={selectedMovie.backdropUrl}
@@ -228,7 +215,6 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
                       opacity: active ? 1 : 0.48,
                       y: active ? -8 : 8
                     }}
-                    whileHover={{ scale: 1.04, opacity: 1, y: -12 }}
                     transition={{ type: "spring", stiffness: 220, damping: 24 }}
                   >
                     <MovieImage
@@ -249,7 +235,6 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
 
         <motion.div
           className="relative rounded-[30px] border border-white/[0.12] bg-black/[0.34] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.44)] backdrop-blur-3xl"
-          style={{ rotateX, rotateY, transformPerspective: 900 }}
         >
           <AnimatePresence mode="wait">
             <motion.div
@@ -298,13 +283,7 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
               </div>
 
               <div className="mt-5 flex gap-2">
-                <PremiumButton
-                  href={`/watch/${selectedMovie.slug}`}
-                  className="hero-watch-button flex-1"
-                >
-                  <Play className="h-4 w-4 fill-current" />
-                  Көру
-                </PremiumButton>
+                <WatchButton href={`/watch/${selectedMovie.slug}`} className="flex-1" />
                 <Link
                   href={`/${selectedMovie.slug}`}
                   className="glass-button inline-flex min-h-12 items-center justify-center rounded-full px-4 text-sm font-semibold text-white"

@@ -20,7 +20,9 @@ const errorMessages: Record<string, string> = {
   email_signin_failed: "Email немесе пароль дұрыс емес.",
   email_signup_failed: "Email арқылы тіркелу орындалмады. Supabase Email provider баптауын тексеріңіз.",
   google_oauth_failed: "Google арқылы кіру басталмады. Supabase Google provider баптауын тексеріңіз.",
-  auth_callback_failed: "Google callback аяқталмады. Redirect URL баптауын тексеріңіз."
+  auth_callback_failed: "Google callback аяқталмады. Redirect URL баптауын тексеріңіз.",
+  captcha_failed: "Қауіпсіздік тексерісі өтпеді. CAPTCHA-ны қайта орындап көріңіз.",
+  captcha_not_configured: "Cloudflare Turnstile толық бапталмаған. Site key және secret key мәндерін тексеріңіз."
 };
 
 const statusMessages: Record<string, string> = {

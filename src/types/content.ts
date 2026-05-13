@@ -45,6 +45,8 @@ export type Episode = {
   thumbnailUrl?: string | null;
   hlsUrl: string;
   durationMinutes?: number | null;
+  introStartSeconds?: number | null;
+  introEndSeconds?: number | null;
   isPublished: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -65,6 +67,8 @@ export type Content = {
   ageRating?: string | null;
   durationMinutes?: number | null;
   hlsUrl?: string | null;
+  introStartSeconds?: number | null;
+  introEndSeconds?: number | null;
   dubberId?: string | null;
   dubber?: Dubber | null;
   genres: Genre[];
@@ -90,6 +94,8 @@ export type ContentInput = {
   ageRating?: string | null;
   durationMinutes?: number | null;
   hlsUrl?: string | null;
+  introStartSeconds?: number | null;
+  introEndSeconds?: number | null;
   dubberId?: string | null;
   genreIds: string[];
   isPublished?: boolean;
@@ -105,5 +111,7 @@ export type EpisodeInput = {
   thumbnailUrl?: string | null;
   hlsUrl: string;
   durationMinutes?: number | null;
+  introStartSeconds?: number | null;
+  introEndSeconds?: number | null;
   isPublished?: boolean;
 };

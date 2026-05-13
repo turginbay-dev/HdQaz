@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { HlsPlayer } from "@/components/player/hls-player";
 import { GlassPanel } from "@/components/glass/glass-panel";
 import { MovieBadge } from "@/components/movie/movie-badge";
-import { contentStatusLabels, contentTypeLabels, isEpisodicType } from "@/features/content/format";
+import { contentStatusLabels, contentTypeLabels, isEpisodicContent } from "@/features/content/format";
 import { getMovieBySlug } from "@/features/movies/queries";
 import { getMovieImageSrc } from "@/lib/movie-images";
 
@@ -22,7 +22,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
     notFound();
   }
 
-  if (isEpisodicType(content.type)) {
+  if (isEpisodicContent(content)) {
     const firstEpisode = content.episodes?.[0];
 
     if (!firstEpisode) {
@@ -40,6 +40,16 @@ export default async function WatchPage({ params }: WatchPageProps) {
 
   const typeLabel = content.type ? contentTypeLabels[content.type] : "Movie";
   const statusLabel = content.status ? contentStatusLabels[content.status] : "Аяқталған";
+  const skipIntro =
+    typeof content.introStartSeconds === "number" &&
+    typeof content.introEndSeconds === "number" &&
+    content.introEndSeconds > content.introStartSeconds
+      ? {
+          startSeconds: content.introStartSeconds,
+          endSeconds: content.introEndSeconds,
+          label: "Интроны өткізу"
+        }
+      : null;
 
   return (
     <main className="min-h-screen px-4 pb-20 pt-24 sm:px-6 lg:px-8">
@@ -48,6 +58,8 @@ export default async function WatchPage({ params }: WatchPageProps) {
           poster={getMovieImageSrc(content.backdropUrl, "backdrop")}
           src={streamUrl}
           languages={content.languages}
+          progressKey={`movie:${content.slug}`}
+          skipIntro={skipIntro}
         />
 
         <GlassPanel className="mt-5 p-4 sm:p-5">

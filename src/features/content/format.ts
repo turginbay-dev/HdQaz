@@ -13,8 +13,44 @@ export const contentStatusLabels: Record<ContentStatus, string> = {
   ongoing: "Жалғасуда"
 };
 
+export type ContentReleaseFormat = "episodic" | "feature";
+
+export const contentReleaseFormatLabels: Record<ContentReleaseFormat, string> = {
+  episodic: "Сериялар",
+  feature: "Толық метражды"
+};
+
+export function canHaveEpisodes(type: ContentType | undefined) {
+  return type === "anime" || type === "dorama" || type === "series";
+}
+
 export function isEpisodicType(type: ContentType | undefined) {
-  return type === "dorama" || type === "series" || type === "anime";
+  return type === "series";
+}
+
+export function isEpisodicContent(content: {
+  episodeCount?: number | null;
+  episodes?: Array<unknown> | null;
+  hlsUrl?: string | null;
+  type?: ContentType | null;
+}) {
+  if (!content.type) {
+    return false;
+  }
+
+  if (isEpisodicType(content.type)) {
+    return true;
+  }
+
+  if (!canHaveEpisodes(content.type)) {
+    return false;
+  }
+
+  if (content.hlsUrl) {
+    return false;
+  }
+
+  return true;
 }
 
 export function formatDurationMinutes(value?: number | null) {

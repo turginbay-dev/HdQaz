@@ -1,8 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 import Hls, { type ErrorData, type Level } from "hls.js";
-import { Loader2, Maximize, Minimize, Pause, Play, RotateCcw, RotateCw, Volume2, VolumeX } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  ChevronRight,
+  Loader2,
+  Maximize,
+  Minimize,
+  Pause,
+  Play,
+  RotateCcw,
+  RotateCw,
+  Settings,
+  Volume2,
+  VolumeX
+} from "lucide-react";
+import { cn } from "@/lib/cn";
 import { formatMovieLanguages } from "@/lib/movie-taxonomy";
 import type { MovieLanguageId } from "@/lib/movie-taxonomy";
 
@@ -10,6 +25,17 @@ type HlsPlayerProps = {
   src: string;
   poster: string;
   languages: MovieLanguageId[];
+  progressKey?: string;
+  skipIntro?: {
+    endSeconds: number;
+    label?: string;
+    startSeconds?: number;
+  } | null;
+  nextEpisode?: {
+    href: string;
+    label?: string;
+    title?: string;
+  } | null;
 };
 
 type QualityLevel = {
@@ -18,11 +44,27 @@ type QualityLevel = {
   label: string;
 };
 
+type Toast = {
+  id: number;
+  message: string;
+};
+
+type ActiveMenu = "quality" | "settings" | "speed" | null;
+
+type SavedPlaybackProgress = {
+  completed?: boolean;
+  durationSeconds: number;
+  positionSeconds: number;
+  updatedAt: number;
+};
+
 type WebKitFullscreenVideo = HTMLVideoElement & {
   webkitEnterFullscreen?: () => void;
   webkitExitFullscreen?: () => void;
   webkitSupportsFullscreen?: boolean;
 };
+
+const playbackSpeeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 function formatTime(value: number) {
   if (!Number.isFinite(value) || value <= 0) {
@@ -39,6 +81,10 @@ function formatTime(value: number) {
   }
 
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatSpeed(value: number) {
+  return value === 1 ? "1x" : `${value}x`;
 }
 
 function getSelectableQualityLevels(levels: Level[]): QualityLevel[] {
@@ -85,6 +131,17 @@ function getBufferedEnd(video: HTMLVideoElement) {
   return video.buffered.end(video.buffered.length - 1);
 }
 
+function hashString(value: string) {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+
+  return Math.abs(hash).toString(36);
+}
+
 function isHlsManifestUrl(value: string) {
   return value.toLowerCase().split(/[?#]/)[0].endsWith(".m3u8");
 }
@@ -93,12 +150,67 @@ function getVideoDuration(video: HTMLVideoElement) {
   return Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
 }
 
-export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
+function isTypingTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+
+  return (
+    target.isContentEditable ||
+    tagName === "a" ||
+    tagName === "button" ||
+    tagName === "input" ||
+    tagName === "select" ||
+    tagName === "textarea"
+  );
+}
+
+function readSavedProgress(storageKey: string): SavedPlaybackProgress | null {
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as Partial<SavedPlaybackProgress>;
+
+    if (
+      typeof parsed.positionSeconds !== "number" ||
+      typeof parsed.durationSeconds !== "number" ||
+      typeof parsed.updatedAt !== "number"
+    ) {
+      return null;
+    }
+
+    return {
+      completed: parsed.completed,
+      durationSeconds: parsed.durationSeconds,
+      positionSeconds: parsed.positionSeconds,
+      updatedAt: parsed.updatedAt
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, nextEpisode }: HlsPlayerProps) {
   const playerRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const usingHlsJsRef = useRef(false);
   const streamReadyRef = useRef(false);
+  const controlsHideTimerRef = useRef<number | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  const seekPulseTimerRef = useRef<number | null>(null);
+  const singleTapTimerRef = useRef<number | null>(null);
+  const lastTapRef = useRef({ time: 0, x: 0, y: 0 });
+  const lastSavedAtRef = useRef(0);
+  const manualLevelRef = useRef(-1);
+  const resumeAppliedRef = useRef(false);
+
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(false);
@@ -111,9 +223,40 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
   const [currentLevel, setCurrentLevel] = useState(-1);
   const [fullscreen, setFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [activeMenu, setActiveMenu] = useState<ActiveMenu>(null);
+  const [scrubbing, setScrubbing] = useState(false);
+  const [cinemaMode, setCinemaMode] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [seekPulse, setSeekPulse] = useState<"backward" | "forward" | null>(null);
+
+  const progressStorageKey = useMemo(() => {
+    return `hdqaz:player-progress:${progressKey ?? hashString(src)}`;
+  }, [progressKey, src]);
 
   const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
   const bufferedPercent = duration > 0 ? Math.min(100, (bufferedEnd / duration) * 100) : 0;
+  const volumePercent = muted ? 0 : Math.round(volume * 100);
+  const activeAutoQuality = qualityLevels.find((level) => level.index === currentLevel)?.label;
+  const selectedQuality = qualityLevels.find((level) => level.index === manualLevel)?.label;
+  const qualityLabel = manualLevel === -1 ? (activeAutoQuality ? `Auto · ${activeAutoQuality}` : "Auto") : selectedQuality ?? "Auto";
+  const durationLabel = duration > 0 ? formatTime(duration) : loading ? "..." : "--:--";
+  const visibleChrome = controlsVisible || !playing || loading || Boolean(error) || Boolean(activeMenu) || scrubbing;
+  const skipIntroStart = skipIntro?.startSeconds ?? 0;
+  const showSkipIntro =
+    Boolean(skipIntro) &&
+    currentTime >= skipIntroStart &&
+    currentTime < (skipIntro?.endSeconds ?? 0) &&
+    (skipIntro?.endSeconds ?? 0) > skipIntroStart;
+  const showNextEpisode = Boolean(nextEpisode && duration > 0 && currentTime >= Math.max(duration - 45, duration * 0.92));
+  const progressStyle = {
+    "--buffered": `${bufferedPercent}%`,
+    "--progress": `${progressPercent}%`
+  } as CSSProperties;
+  const volumeStyle = {
+    "--volume": `${volumePercent}%`
+  } as CSSProperties;
 
   useEffect(() => {
     const video = videoRef.current;
@@ -131,6 +274,12 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
     setQualityLevels([]);
     setManualLevel(-1);
     setCurrentLevel(-1);
+    setActiveMenu(null);
+    setScrubbing(false);
+    setSeekPulse(null);
+    manualLevelRef.current = -1;
+    lastSavedAtRef.current = 0;
+    resumeAppliedRef.current = false;
     hlsRef.current = null;
     usingHlsJsRef.current = false;
     streamReadyRef.current = false;
@@ -145,6 +294,7 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
 
       return () => {
         streamReadyRef.current = false;
+        persistPlaybackProgress(true);
         video.removeAttribute("src");
         video.load();
       };
@@ -189,6 +339,7 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
         setDuration(getVideoDuration(video));
         setLoading(false);
         setError(null);
+        restorePlaybackProgress(video);
       };
 
       const handleLevelSwitched = (_event: string, data: { level: number }) => {
@@ -199,6 +350,16 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
         console.error("[HlsPlayer] ERROR", data);
 
         if (!data.fatal) {
+          return;
+        }
+
+        if (manualLevelRef.current !== -1 && streamReadyRef.current) {
+          manualLevelRef.current = -1;
+          setManualLevel(-1);
+          hls.currentLevel = -1;
+          hls.nextLoadLevel = -1;
+          showToast("Auto quality fallback");
+          hls.startLoad();
           return;
         }
 
@@ -232,6 +393,7 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
 
       return () => {
         window.clearTimeout(manifestTimeout);
+        persistPlaybackProgress(true);
         hls.off(Hls.Events.MEDIA_ATTACHED, handleMediaAttached);
         hls.off(Hls.Events.MANIFEST_PARSED, handleManifestParsed);
         hls.off(Hls.Events.LEVEL_SWITCHED, handleLevelSwitched);
@@ -251,6 +413,7 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
 
       return () => {
         streamReadyRef.current = false;
+        persistPlaybackProgress(true);
         video.removeAttribute("src");
         video.load();
       };
@@ -274,6 +437,16 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
   useEffect(() => {
     const video = videoRef.current;
 
+    if (!video) {
+      return;
+    }
+
+    video.playbackRate = playbackRate;
+  }, [playbackRate, src]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
     const syncFullscreen = () => {
       setFullscreen(Boolean(document.fullscreenElement));
     };
@@ -291,8 +464,118 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
     };
   }, []);
 
-  async function togglePlayback() {
+  useEffect(() => {
+    window.clearTimeout(controlsHideTimerRef.current ?? undefined);
+
+    if (playing && !loading && !error && !activeMenu && !scrubbing) {
+      controlsHideTimerRef.current = window.setTimeout(() => {
+        setControlsVisible(false);
+      }, 2600);
+    } else {
+      setControlsVisible(true);
+    }
+
+    return () => {
+      window.clearTimeout(controlsHideTimerRef.current ?? undefined);
+    };
+  }, [activeMenu, error, loading, playing, scrubbing]);
+
+  useEffect(() => {
+    const closeMenus = (event: PointerEvent) => {
+      const player = playerRef.current;
+
+      if (!player || player.contains(event.target as Node)) {
+        return;
+      }
+
+      setActiveMenu(null);
+    };
+
+    document.addEventListener("pointerdown", closeMenus);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeMenus);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const player = playerRef.current;
+
+      if (!player || isTypingTarget(event.target)) {
+        return;
+      }
+
+      const target = event.target as Node | null;
+      const activeInPlayer = Boolean(target && player.contains(target));
+      const playerHovered = player.matches(":hover");
+      const playerFullscreen = document.fullscreenElement === player;
+
+      if (!activeInPlayer && !playerHovered && !playerFullscreen) {
+        return;
+      }
+
+      if (event.key === "Escape" && activeMenu) {
+        event.preventDefault();
+        setActiveMenu(null);
+        return;
+      }
+
+      if (event.code === "Space" || event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        void togglePlayback(true);
+        return;
+      }
+
+      if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        void toggleFullscreen(true);
+        return;
+      }
+
+      if (event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        toggleMute(true);
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        seekBy(-10, true);
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        seekBy(10, true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeMenu, error, loading, muted, playing, volume]);
+
+  useEffect(() => {
+    const saveCurrentProgress = () => persistPlaybackProgress(true);
+
+    window.addEventListener("pagehide", saveCurrentProgress);
+
+    return () => {
+      saveCurrentProgress();
+      window.removeEventListener("pagehide", saveCurrentProgress);
+      window.clearTimeout(toastTimerRef.current ?? undefined);
+      window.clearTimeout(seekPulseTimerRef.current ?? undefined);
+      window.clearTimeout(singleTapTimerRef.current ?? undefined);
+    };
+  }, [progressStorageKey]);
+
+  async function togglePlayback(announce = false) {
     const video = videoRef.current;
+
+    revealControls();
 
     if (!video) {
       return;
@@ -308,12 +591,18 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
         await video.play();
         setPlaying(true);
         setError(null);
+        if (announce) {
+          showToast("Ойнату");
+        }
       } catch {
         setError("Ойнату басталмады. HLS URL қолжетімді екенін тексеріңіз.");
       }
     } else {
       video.pause();
       setPlaying(false);
+      if (announce) {
+        showToast("Пауза");
+      }
     }
   }
 
@@ -324,9 +613,14 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
       return;
     }
 
-    setCurrentTime(video.currentTime);
-    setDuration(getVideoDuration(video));
+    const nextCurrentTime = video.currentTime;
+    const nextDuration = getVideoDuration(video);
+
+    setCurrentTime(nextCurrentTime);
+    setDuration(nextDuration);
     setBufferedEnd(getBufferedEnd(video));
+    persistPlaybackProgress();
+
     if (streamReadyRef.current) {
       setLoading(video.readyState < 3 && !video.paused);
     }
@@ -342,10 +636,13 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
 
     video.currentTime = nextTime;
     setCurrentTime(nextTime);
+    persistPlaybackProgress(true);
   }
 
-  function seekBy(seconds: number) {
+  function seekBy(seconds: number, announce = false) {
     const video = videoRef.current;
+
+    revealControls();
 
     if (!video) {
       return;
@@ -356,10 +653,30 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
 
     video.currentTime = nextTime;
     setCurrentTime(nextTime);
+    persistPlaybackProgress(true);
+    pulseSeek(seconds > 0 ? "forward" : "backward");
+
+    if (announce) {
+      showToast(seconds > 0 ? "+10 сек" : "-10 сек");
+    }
   }
 
-  function toggleMute() {
+  function skipIntroSegment() {
+    const endSeconds = skipIntro?.endSeconds;
+
+    if (!endSeconds) {
+      return;
+    }
+
+    seek(String(endSeconds));
+    revealControls();
+    showToast("Интро өткізілді");
+  }
+
+  function toggleMute(announce = false) {
     const video = videoRef.current;
+
+    revealControls();
 
     if (!video) {
       return;
@@ -367,11 +684,17 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
 
     video.muted = !video.muted;
     setMuted(video.muted);
+
+    if (announce) {
+      showToast(video.muted ? "Дыбыс өшірулі" : "Дыбыс қосулы");
+    }
   }
 
   function changeVolume(value: string) {
     const nextVolume = Number(value);
     const video = videoRef.current;
+
+    revealControls();
 
     if (!video || !Number.isFinite(nextVolume)) {
       return;
@@ -391,16 +714,40 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
       return;
     }
 
+    manualLevelRef.current = nextLevel;
     setManualLevel(nextLevel);
+    setActiveMenu(null);
 
     if (hls) {
       hls.currentLevel = nextLevel;
     }
+
+    const nextLabel = nextLevel === -1 ? "Auto quality" : qualityLevels.find((level) => level.index === nextLevel)?.label;
+    showToast(nextLabel ?? "Quality updated");
   }
 
-  async function toggleFullscreen() {
+  function changeSpeed(nextSpeed: number) {
+    const video = videoRef.current;
+
+    if (!Number.isFinite(nextSpeed)) {
+      return;
+    }
+
+    if (video) {
+      video.playbackRate = nextSpeed;
+    }
+
+    setPlaybackRate(nextSpeed);
+    setActiveMenu(null);
+    revealControls();
+    showToast(`Speed ${formatSpeed(nextSpeed)}`);
+  }
+
+  async function toggleFullscreen(announce = false) {
     const player = playerRef.current;
     const video = videoRef.current as WebKitFullscreenVideo | null;
+
+    revealControls();
 
     if (!player || !video) {
       return;
@@ -409,18 +756,27 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
+        if (announce) {
+          showToast("Толық экран жабылды");
+        }
         return;
       }
 
       if (fullscreen && video.webkitExitFullscreen) {
         video.webkitExitFullscreen();
         setFullscreen(false);
+        if (announce) {
+          showToast("Толық экран жабылды");
+        }
         return;
       }
 
       if (player.requestFullscreen) {
         try {
           await player.requestFullscreen();
+          if (announce) {
+            showToast("Толық экран");
+          }
           return;
         } catch (requestError) {
           if (!video.webkitEnterFullscreen) {
@@ -432,6 +788,9 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
       if (video.webkitEnterFullscreen) {
         video.webkitEnterFullscreen();
         setFullscreen(true);
+        if (announce) {
+          showToast("Толық экран");
+        }
       } else {
         setError("Толық экран режимі бұл браузерде қолжетімсіз.");
       }
@@ -443,6 +802,7 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
   function retryStream() {
     setError(null);
     setLoading(true);
+    revealControls();
     hlsRef.current?.startLoad();
 
     if (streamReadyRef.current) {
@@ -455,215 +815,537 @@ export function HlsPlayer({ src, poster, languages }: HlsPlayerProps) {
     videoRef.current?.load();
   }
 
-  const activeAutoQuality = qualityLevels.find((level) => level.index === currentLevel)?.label;
-  const selectedQuality = qualityLevels.find((level) => level.index === manualLevel)?.label;
-  const qualityLabel = manualLevel === -1 ? (activeAutoQuality ? `Auto · ${activeAutoQuality}` : "Auto") : selectedQuality ?? "Auto";
-  const durationLabel = duration > 0 ? formatTime(duration) : loading ? "..." : "--:--";
+  function persistPlaybackProgress(force = false) {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    const videoDuration = getVideoDuration(video);
+    const positionSeconds = video.currentTime;
+
+    if (!videoDuration || !Number.isFinite(positionSeconds)) {
+      return;
+    }
+
+    const now = Date.now();
+
+    if (!force && now - lastSavedAtRef.current < 5000) {
+      return;
+    }
+
+    lastSavedAtRef.current = now;
+
+    try {
+      window.localStorage.setItem(
+        progressStorageKey,
+        JSON.stringify({
+          completed: positionSeconds / videoDuration >= 0.95,
+          durationSeconds: Math.round(videoDuration),
+          positionSeconds: Math.round(positionSeconds),
+          updatedAt: now
+        } satisfies SavedPlaybackProgress)
+      );
+    } catch {
+      // Local progress is a comfort feature; playback should never depend on storage.
+    }
+  }
+
+  function restorePlaybackProgress(video: HTMLVideoElement) {
+    if (resumeAppliedRef.current) {
+      return;
+    }
+
+    const saved = readSavedProgress(progressStorageKey);
+    const videoDuration = getVideoDuration(video);
+
+    if (
+      !saved ||
+      saved.completed ||
+      saved.positionSeconds < 8 ||
+      (videoDuration > 0 && saved.positionSeconds > videoDuration - 20)
+    ) {
+      resumeAppliedRef.current = true;
+      return;
+    }
+
+    video.currentTime = saved.positionSeconds;
+    setCurrentTime(saved.positionSeconds);
+    resumeAppliedRef.current = true;
+    showToast(`Жалғасты: ${formatTime(saved.positionSeconds)}`);
+  }
+
+  function revealControls() {
+    setControlsVisible(true);
+    window.clearTimeout(controlsHideTimerRef.current ?? undefined);
+
+    if (playing && !loading && !error && !activeMenu && !scrubbing) {
+      controlsHideTimerRef.current = window.setTimeout(() => {
+        setControlsVisible(false);
+      }, 2600);
+    }
+  }
+
+  function showToast(message: string) {
+    window.clearTimeout(toastTimerRef.current ?? undefined);
+    setToast({ id: Date.now(), message });
+    toastTimerRef.current = window.setTimeout(() => setToast(null), 1800);
+  }
+
+  function pulseSeek(direction: "backward" | "forward") {
+    window.clearTimeout(seekPulseTimerRef.current ?? undefined);
+    setSeekPulse(direction);
+    seekPulseTimerRef.current = window.setTimeout(() => setSeekPulse(null), 520);
+  }
+
+  function toggleMenu(menu: Exclude<ActiveMenu, null>) {
+    revealControls();
+    setActiveMenu((current) => (current === menu ? null : menu));
+  }
+
+  function toggleCinemaMode() {
+    setCinemaMode((current) => {
+      const nextValue = !current;
+      showToast(nextValue ? "Cinema mode" : "Cinema mode off");
+      return nextValue;
+    });
+    setActiveMenu(null);
+    revealControls();
+  }
+
+  function handleMediaPointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    const player = playerRef.current;
+    const surface = event.currentTarget;
+
+    player?.focus({ preventScroll: true });
+    revealControls();
+
+    if (loading || error) {
+      return;
+    }
+
+    const rect = surface.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const now = Date.now();
+    const lastTap = lastTapRef.current;
+    const isDoubleTap = now - lastTap.time < 320 && Math.abs(x - lastTap.x) < 90 && Math.abs(y - lastTap.y) < 90;
+
+    if (isDoubleTap) {
+      window.clearTimeout(singleTapTimerRef.current ?? undefined);
+      lastTapRef.current = { time: 0, x: 0, y: 0 };
+
+      if (x < rect.width * 0.42) {
+        seekBy(-10, true);
+        return;
+      }
+
+      if (x > rect.width * 0.58) {
+        seekBy(10, true);
+        return;
+      }
+
+      void toggleFullscreen(true);
+      return;
+    }
+
+    lastTapRef.current = { time: now, x, y };
+    window.clearTimeout(singleTapTimerRef.current ?? undefined);
+    singleTapTimerRef.current = window.setTimeout(() => {
+      void togglePlayback(false);
+    }, 240);
+  }
 
   return (
-    <section
-      ref={playerRef}
-      className="cinema-player-shell group relative overflow-hidden rounded-[30px] border border-white/[0.14] bg-black shadow-[0_34px_130px_rgba(0,0,0,0.72)]"
-    >
-      <video
-        ref={videoRef}
-        poster={poster}
-        className="cinema-player-video relative z-0 aspect-video w-full bg-black object-contain"
-        crossOrigin="anonymous"
-        playsInline
-        preload="metadata"
-        onClick={togglePlayback}
-        onDoubleClick={toggleFullscreen}
-        onCanPlay={() => {
-          if (!usingHlsJsRef.current) {
-            streamReadyRef.current = true;
-            setLoading(false);
-          } else if (streamReadyRef.current) {
-            setLoading(false);
-          }
-          syncVideoState();
-        }}
-        onDurationChange={syncVideoState}
-        onLoadedMetadata={() => {
-          if (!usingHlsJsRef.current) {
-            streamReadyRef.current = true;
-          }
-          syncVideoState();
-        }}
-        onError={() => {
-          setLoading(false);
-          setError("Видео жүктелмеді. HLS URL және CORS баптауын тексеріңіз.");
-        }}
-        onPlay={() => {
-          setPlaying(true);
-          setLoading(false);
-        }}
-        onPause={() => setPlaying(false)}
-        onProgress={syncVideoState}
-        onTimeUpdate={syncVideoState}
-        onVolumeChange={() => {
-          const video = videoRef.current;
+    <>
+      {cinemaMode ? <div className="fixed inset-0 z-20 bg-black/72 backdrop-blur-md transition-opacity" aria-hidden="true" /> : null}
 
-          if (video) {
-            setMuted(video.muted);
-            setVolume(video.volume);
-          }
-        }}
-        onWaiting={() => setLoading(true)}
-      />
-
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.52)_0%,transparent_28%,transparent_48%,rgba(0,0,0,0.88)_100%)]" />
-      <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_140px_rgba(0,0,0,0.66)]" />
-
-      <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-3 sm:left-5 sm:right-5 sm:top-5">
-        <div className="glass inline-flex max-w-[calc(100%-4rem)] items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold text-white">
-          <span className="truncate text-zinc-300">{formatMovieLanguages(languages, "short")}</span>
-        </div>
-        <div className="glass hidden rounded-full px-3 py-2 text-xs font-semibold text-zinc-200 sm:block">
-          {qualityLabel}
-        </div>
-      </div>
-
-      {loading && !error ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-          <div className="glass flex h-16 w-16 items-center justify-center rounded-full text-white">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        </div>
-      ) : null}
-
-      {!playing && !loading && !error ? (
-        <button
-          className="glass absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white transition hover:scale-105"
-          aria-label="Ойнату"
-          onClick={togglePlayback}
-          type="button"
+      <div className={cn("cinema-player-frame relative", cinemaMode && "z-30")}>
+        <section
+          ref={playerRef}
+          className={cn(
+            "cinema-player-shell group relative isolate overflow-hidden rounded-[24px] border border-white/[0.14] bg-black outline-none transition-[border-radius,box-shadow,transform] duration-500 sm:rounded-[30px]",
+            playing && !visibleChrome && "cursor-none"
+          )}
+          tabIndex={0}
+          aria-label="HdQaz video player"
+          onFocusCapture={revealControls}
+          onPointerMove={revealControls}
         >
-          <Play className="ml-1 h-8 w-8 fill-current" />
-        </button>
-      ) : null}
+          <video
+            ref={videoRef}
+            poster={poster}
+            className="cinema-player-video relative z-0 aspect-video w-full bg-black object-contain"
+            crossOrigin="anonymous"
+            playsInline
+            preload="metadata"
+            onCanPlay={() => {
+              if (!usingHlsJsRef.current) {
+                streamReadyRef.current = true;
+                setLoading(false);
+              } else if (streamReadyRef.current) {
+                setLoading(false);
+              }
+              restorePlaybackProgress(videoRef.current as HTMLVideoElement);
+              syncVideoState();
+            }}
+            onDurationChange={syncVideoState}
+            onLoadedMetadata={() => {
+              const video = videoRef.current;
 
-      {error ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/62 px-4 backdrop-blur-sm">
-          <div className="glass-strong max-w-md rounded-[28px] p-5 text-center">
-            <p className="text-sm font-semibold text-white">{error}</p>
-            <button
-              className="hero-watch-button mt-4 inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold"
-              onClick={retryStream}
-              type="button"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Қайта қосу
-            </button>
-          </div>
-        </div>
-      ) : null}
+              if (!video) {
+                return;
+              }
 
-      <div className="cinema-player-controls absolute inset-x-2 bottom-2 sm:inset-x-5 sm:bottom-5">
-        <div className="glass-strong rounded-[26px] p-3 sm:rounded-[30px] sm:px-4">
-          <div className="relative mb-2 flex h-5 items-center">
-            <div className="absolute left-0 right-0 h-1 overflow-hidden rounded-full bg-white/15">
-              <div className="h-full rounded-full bg-white/25" style={{ width: `${bufferedPercent}%` }} />
-              <div
-                className="absolute inset-y-0 left-0 rounded-full bg-[var(--accent)]"
-                style={{ width: `${progressPercent}%` }}
-              />
+              if (!usingHlsJsRef.current) {
+                streamReadyRef.current = true;
+              }
+
+              restorePlaybackProgress(video);
+              syncVideoState();
+            }}
+            onError={() => {
+              setLoading(false);
+              setError("Видео жүктелмеді. HLS URL және CORS баптауын тексеріңіз.");
+            }}
+            onPlay={() => {
+              setPlaying(true);
+              setLoading(false);
+            }}
+            onPause={() => {
+              setPlaying(false);
+              persistPlaybackProgress(true);
+            }}
+            onProgress={syncVideoState}
+            onTimeUpdate={syncVideoState}
+            onVolumeChange={() => {
+              const video = videoRef.current;
+
+              if (video) {
+                setMuted(video.muted);
+                setVolume(video.volume);
+              }
+            }}
+            onWaiting={() => setLoading(true)}
+          />
+
+          <div
+            className="absolute inset-0 z-10"
+            aria-hidden="true"
+            onPointerUp={handleMediaPointerUp}
+          />
+
+          <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.62)_0%,rgba(0,0,0,0.1)_25%,rgba(0,0,0,0.04)_48%,rgba(0,0,0,0.9)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 z-10 shadow-[inset_0_0_160px_rgba(0,0,0,0.74)]" />
+
+          <div
+            className={cn(
+              "cinema-player-topbar absolute left-3 right-3 top-3 z-30 flex items-start justify-between gap-3 transition duration-300 sm:left-5 sm:right-5 sm:top-5",
+              visibleChrome ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+            )}
+          >
+            <div className="cinema-badge inline-flex max-w-[calc(100%-4rem)] items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_14px_rgba(217,183,111,0.65)]" />
+              <span className="truncate">{formatMovieLanguages(languages, "short")}</span>
             </div>
-            <input
-              className="cinema-range relative z-10 w-full"
-              aria-label="Көру уақыты"
-              type="range"
-              min={0}
-              max={duration || 0}
-              step="0.1"
-              value={Math.min(currentTime, duration || currentTime)}
-              onChange={(event) => seek(event.target.value)}
-            />
+            <div className="cinema-badge hidden sm:inline-flex">{qualityLabel}</div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-2">
-              <button
-                className="glass-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
-                aria-label="10 секунд артқа"
-                onClick={() => seekBy(-10)}
-                type="button"
-              >
-                <RotateCcw className="h-4 w-4" />
-                <span className="absolute text-[10px] font-bold leading-none">10</span>
-              </button>
-
-              <button
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-black shadow-[0_14px_38px_rgba(255,255,255,0.18)] transition hover:scale-105"
-                aria-label={playing ? "Пауза" : "Ойнату"}
-                onClick={togglePlayback}
-                type="button"
-              >
-                {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
-              </button>
-
-              <button
-                className="glass-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
-                aria-label="10 секунд алға"
-                onClick={() => seekBy(10)}
-                type="button"
-              >
-                <RotateCw className="h-4 w-4" />
-                <span className="absolute text-[10px] font-bold leading-none">10</span>
-              </button>
-
-              <div className="min-w-0 pl-1 text-xs font-semibold text-zinc-300">
-                {formatTime(currentTime)} / {durationLabel}
+          {loading && !error ? (
+            <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-black/18">
+              <div className="cinema-loader" aria-label={streamReadyRef.current ? "Буферизация" : "Жүктелуде"}>
+                <Loader2 className="h-6 w-6 animate-spin" />
               </div>
             </div>
+          ) : null}
 
-            <div className="flex items-center justify-between gap-2 sm:ml-auto sm:justify-end">
-              <button
-                className="glass-button flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
-                aria-label={muted ? "Дыбысты қосу" : "Дыбысты өшіру"}
-                onClick={toggleMute}
-                type="button"
-              >
-                {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </button>
+          <button
+            className={cn(
+              "cinema-center-play absolute left-1/2 top-1/2 z-40 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white",
+              !playing && !loading && !error ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
+            )}
+            aria-label="Ойнату"
+            onClick={() => void togglePlayback(false)}
+            type="button"
+          >
+            <Play className="ml-1 h-7 w-7 fill-current sm:h-8 sm:w-8" />
+          </button>
 
-              <input
-                className="cinema-range hidden w-24 sm:block"
-                aria-label="Дыбыс деңгейі"
-                type="range"
-                min={0}
-                max={1}
-                step="0.01"
-                value={muted ? 0 : volume}
-                onChange={(event) => changeVolume(event.target.value)}
-              />
+          {seekPulse ? (
+            <div
+              className={cn(
+                "cinema-seek-pulse pointer-events-none absolute top-1/2 z-40 -translate-y-1/2",
+                seekPulse === "backward" ? "left-[18%]" : "right-[18%]"
+              )}
+              aria-hidden="true"
+            >
+              {seekPulse === "backward" ? <RotateCcw className="h-5 w-5" /> : <RotateCw className="h-5 w-5" />}
+              <span>10</span>
+            </div>
+          ) : null}
 
-              <select
-                className="glass-button h-11 min-w-[96px] rounded-full bg-black/30 px-3 text-xs font-semibold text-white outline-none"
-                aria-label="Сапа"
-                value={String(manualLevel)}
-                onChange={(event) => changeQuality(event.target.value)}
-              >
-                <option value="-1">Auto</option>
-                {qualityLevels.map((level) => (
-                  <option key={level.index} value={level.index}>
-                    {level.label}
-                  </option>
-                ))}
-              </select>
+          {toast ? (
+            <div key={toast.id} className="cinema-toast absolute left-1/2 top-[18%] z-50 -translate-x-1/2" aria-live="polite">
+              {toast.message}
+            </div>
+          ) : null}
 
-              <button
-                className="glass-button flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
-                aria-label={fullscreen ? "Толық экраннан шығу" : "Толық экран"}
-                onClick={toggleFullscreen}
-                type="button"
-              >
-                {fullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-              </button>
+          {error ? (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-md">
+              <div className="cinema-error-panel max-w-md rounded-[26px] p-5 text-center sm:p-6">
+                <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-red-300/20 bg-red-500/12 text-red-100">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <p className="text-sm font-semibold leading-6 text-white">{error}</p>
+                <button
+                  className="hero-watch-button mt-4 inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold"
+                  onClick={retryStream}
+                  type="button"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Қайта қосу
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {showSkipIntro || showNextEpisode ? (
+            <div
+              className={cn(
+                "absolute right-4 z-40 flex flex-col items-end gap-2 transition duration-300 sm:right-6",
+                visibleChrome ? "bottom-32 sm:bottom-36" : "bottom-6",
+                visibleChrome ? "opacity-100" : "opacity-95"
+              )}
+            >
+              {showSkipIntro ? (
+                <button className="cinema-action-pill" onClick={skipIntroSegment} type="button">
+                  {skipIntro?.label ?? "Интроны өткізу"}
+                </button>
+              ) : null}
+              {showNextEpisode && nextEpisode ? (
+                <a className="cinema-action-pill inline-flex items-center gap-2" href={nextEpisode.href}>
+                  <span className="max-w-[12rem] truncate">{nextEpisode.label ?? "Келесі серия"}</span>
+                  <ChevronRight className="h-4 w-4" />
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div
+            className={cn(
+              "cinema-player-controls absolute inset-x-2 bottom-2 z-50 transition duration-300 sm:inset-x-5 sm:bottom-5",
+              visibleChrome ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"
+            )}
+          >
+            <div className="cinema-control-bar">
+              <div className={cn("cinema-progress-shell", scrubbing && "is-scrubbing")} style={progressStyle}>
+                <div className="cinema-progress-track" aria-hidden="true">
+                  <div className="cinema-progress-buffered" />
+                  <div className="cinema-progress-played" />
+                </div>
+                <input
+                  className="cinema-progress-range"
+                  aria-label="Көру уақыты"
+                  aria-valuetext={`${formatTime(currentTime)} / ${durationLabel}`}
+                  type="range"
+                  min={0}
+                  max={duration || 0}
+                  step="0.1"
+                  value={Math.min(currentTime, duration || currentTime)}
+                  onBlur={() => setScrubbing(false)}
+                  onChange={(event) => seek(event.target.value)}
+                  onPointerDown={() => setScrubbing(true)}
+                  onPointerUp={() => setScrubbing(false)}
+                />
+              </div>
+
+              <div className="cinema-controls-row">
+                <div className="cinema-main-controls">
+                  <button
+                    className="cinema-control-button cinema-skip-button"
+                    aria-label="10 секунд артқа"
+                    onClick={() => seekBy(-10, true)}
+                    type="button"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    <span>10</span>
+                  </button>
+
+                  <button
+                    className="cinema-primary-button"
+                    aria-label={playing ? "Пауза" : "Ойнату"}
+                    onClick={() => void togglePlayback(false)}
+                    type="button"
+                  >
+                    {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
+                  </button>
+
+                  <button
+                    className="cinema-control-button cinema-skip-button"
+                    aria-label="10 секунд алға"
+                    onClick={() => seekBy(10, true)}
+                    type="button"
+                  >
+                    <RotateCw className="h-4 w-4" />
+                    <span>10</span>
+                  </button>
+
+                  <div className="cinema-time">
+                    {formatTime(currentTime)} <span>/</span> {durationLabel}
+                  </div>
+                </div>
+
+                <div className="cinema-secondary-controls">
+                  <div className="cinema-volume" style={volumeStyle}>
+                    <button
+                      className="cinema-control-button"
+                      aria-label={muted ? "Дыбысты қосу" : "Дыбысты өшіру"}
+                      onClick={() => toggleMute(true)}
+                      type="button"
+                    >
+                      {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                    </button>
+
+                    <div className="cinema-volume-shell">
+                      <div className="cinema-volume-track" aria-hidden="true" />
+                      <input
+                        className="cinema-volume-range"
+                        aria-label="Дыбыс деңгейі"
+                        type="range"
+                        min={0}
+                        max={1}
+                        step="0.01"
+                        value={muted ? 0 : volume}
+                        onChange={(event) => changeVolume(event.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <button
+                      className="cinema-menu-trigger min-w-[78px] px-3"
+                      aria-label="Сапа"
+                      aria-expanded={activeMenu === "quality"}
+                      aria-haspopup="menu"
+                      onClick={() => toggleMenu("quality")}
+                      type="button"
+                    >
+                      {qualityLabel}
+                    </button>
+
+                    {activeMenu === "quality" ? (
+                      <div className="cinema-menu right-0 w-48" role="menu" aria-label="Сапа таңдауы">
+                        <button
+                          className={cn("cinema-menu-item", manualLevel === -1 && "is-active")}
+                          role="menuitemradio"
+                          aria-checked={manualLevel === -1}
+                          onClick={() => changeQuality("-1")}
+                          type="button"
+                        >
+                          <span>Auto</span>
+                          <span className="cinema-menu-meta">{activeAutoQuality ?? "Best"}</span>
+                          {manualLevel === -1 ? <Check className="h-4 w-4" /> : null}
+                        </button>
+                        {qualityLevels.map((level) => (
+                          <button
+                            key={level.index}
+                            className={cn("cinema-menu-item", manualLevel === level.index && "is-active")}
+                            role="menuitemradio"
+                            aria-checked={manualLevel === level.index}
+                            onClick={() => changeQuality(String(level.index))}
+                            type="button"
+                          >
+                            <span>{level.label}</span>
+                            <span className="cinema-menu-meta">{level.height >= 1080 ? "Full HD" : "HD"}</span>
+                            {manualLevel === level.index ? <Check className="h-4 w-4" /> : null}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="relative">
+                    <button
+                      className="cinema-menu-trigger px-3"
+                      aria-label="Ойнату жылдамдығы"
+                      aria-expanded={activeMenu === "speed"}
+                      aria-haspopup="menu"
+                      onClick={() => toggleMenu("speed")}
+                      type="button"
+                    >
+                      {formatSpeed(playbackRate)}
+                    </button>
+
+                    {activeMenu === "speed" ? (
+                      <div className="cinema-menu right-0 w-40" role="menu" aria-label="Ойнату жылдамдығы">
+                        {playbackSpeeds.map((speed) => (
+                          <button
+                            key={speed}
+                            className={cn("cinema-menu-item", playbackRate === speed && "is-active")}
+                            role="menuitemradio"
+                            aria-checked={playbackRate === speed}
+                            onClick={() => changeSpeed(speed)}
+                            type="button"
+                          >
+                            <span>{formatSpeed(speed)}</span>
+                            {playbackRate === speed ? <Check className="h-4 w-4" /> : null}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="relative">
+                    <button
+                      className="cinema-control-button"
+                      aria-label="Плеер баптаулары"
+                      aria-expanded={activeMenu === "settings"}
+                      aria-haspopup="menu"
+                      onClick={() => toggleMenu("settings")}
+                      type="button"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </button>
+
+                    {activeMenu === "settings" ? (
+                      <div className="cinema-menu right-0 w-56" role="menu" aria-label="Плеер баптаулары">
+                        <button
+                          className={cn("cinema-menu-item", cinemaMode && "is-active")}
+                          role="menuitemcheckbox"
+                          aria-checked={cinemaMode}
+                          onClick={toggleCinemaMode}
+                          type="button"
+                        >
+                          <span>Cinema mode</span>
+                          <span className="cinema-toggle-dot" aria-hidden="true" />
+                        </button>
+                        <div className="cinema-menu-status">
+                          <span>Auto fallback</span>
+                          <span>On</span>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <button
+                    className="cinema-control-button"
+                    aria-label={fullscreen ? "Толық экраннан шығу" : "Толық экран"}
+                    onClick={() => void toggleFullscreen(false)}
+                    type="button"
+                  >
+                    {fullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
-    </section>
+    </>
   );
 }

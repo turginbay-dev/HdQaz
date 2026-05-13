@@ -24,6 +24,8 @@ export type Movie = {
   ageRating?: string | null;
   durationMinutes?: number | null;
   hlsUrl?: string | null;
+  introStartSeconds?: number | null;
+  introEndSeconds?: number | null;
   dubberId?: string | null;
   dubber?: Dubber | null;
   contentGenres?: Genre[];

@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/api/auth";
 import { handleApiError, ok } from "@/lib/api/responses";
+import { isEpisodicContent } from "@/features/content/format";
 import { listContents } from "@/features/content/repository";
 import { listContentRequests } from "@/features/requests/repository";
 
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
         total: contents.length,
         published: contents.filter((content) => content.isPublished).length,
         drafts: contents.filter((content) => !content.isPublished).length,
-        episodic: contents.filter((content) => content.type !== "movie").length
+        episodic: contents.filter((content) => isEpisodicContent(content)).length
       },
       requests: {
         total: requests.length,

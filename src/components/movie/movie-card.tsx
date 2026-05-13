@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Play, Radio } from "lucide-react";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieImage } from "@/components/movie/movie-image";
-import { contentStatusLabels, contentTypeLabels, formatDurationMinutes, formatEpisodeCount, isEpisodicType } from "@/features/content/format";
+import { contentStatusLabels, contentTypeLabels, formatDurationMinutes, formatEpisodeCount, isEpisodicContent } from "@/features/content/format";
 import type { Movie } from "@/types/movie";
 
 type MovieCardProps = {
@@ -15,7 +15,7 @@ type MovieCardProps = {
 export function MovieCard({ movie, priority = false }: MovieCardProps) {
   const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Movie";
   const statusLabel = movie.status ? contentStatusLabels[movie.status] : movie.isNewRelease ? "Жаңа" : "Аяқталған";
-  const detailLine = isEpisodicType(movie.type)
+  const detailLine = isEpisodicContent(movie)
     ? formatEpisodeCount(movie.episodeCount) || "Сериялар жақында"
     : formatDurationMinutes(movie.durationMinutes) || movie.runtime;
 

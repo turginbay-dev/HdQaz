@@ -7,7 +7,7 @@ import { MovieImage } from "@/components/movie/movie-image";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieRow } from "@/components/movie/movie-row";
 import { WatchButton } from "@/components/ui/watch-button";
-import { contentStatusLabels, contentTypeLabels, isEpisodicType } from "@/features/content/format";
+import { contentStatusLabels, contentTypeLabels, isEpisodicContent } from "@/features/content/format";
 import { getAllMovies, getMovieBySlug, getTrendingMovies } from "@/features/movies/queries";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +29,7 @@ export default async function ContentPage({ params }: ContentPageProps) {
   const typeLabel = content.type ? contentTypeLabels[content.type] : "Movie";
   const statusLabel = content.status ? contentStatusLabels[content.status] : "Аяқталған";
   const episodes = content.episodes ?? [];
+  const contentIsEpisodic = isEpisodicContent(content);
 
   return (
     <main className="min-h-screen pb-20">
@@ -78,10 +79,10 @@ export default async function ContentPage({ params }: ContentPageProps) {
               </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                {!isEpisodicType(content.type) ? (
-                  <WatchButton href={`/watch/${content.slug}`} />
-                ) : episodes[0] ? (
+                {contentIsEpisodic && episodes[0] ? (
                   <WatchButton href={`/watch/${content.slug}/${episodes[0].slug}`} />
+                ) : !contentIsEpisodic ? (
+                  <WatchButton href={`/watch/${content.slug}`} />
                 ) : null}
                 <button className="glass-button inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white">
                   <Plus className="h-4 w-4" />
@@ -150,7 +151,7 @@ export default async function ContentPage({ params }: ContentPageProps) {
           </GlassPanel>
         ) : null}
 
-        {isEpisodicType(content.type) ? (
+        {contentIsEpisodic ? (
           <section className="mb-14">
             <div className="mb-5">
               <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Episodes</h2>

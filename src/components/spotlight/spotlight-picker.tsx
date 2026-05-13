@@ -12,7 +12,7 @@ import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieImage } from "@/components/movie/movie-image";
 import { PremiumButton } from "@/components/ui/premium-button";
 import { WatchButton } from "@/components/ui/watch-button";
-import { contentStatusLabels, contentTypeLabels, formatEpisodeCount, isEpisodicType } from "@/features/content/format";
+import { contentStatusLabels, contentTypeLabels, formatEpisodeCount, isEpisodicContent } from "@/features/content/format";
 import type { Movie } from "@/types/movie";
 
 type SpotlightPickerProps = {
@@ -133,9 +133,11 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
 
   const selectedTypeLabel = selectedMovie.type ? contentTypeLabels[selectedMovie.type] : "Movie";
   const selectedStatusLabel = selectedMovie.status ? contentStatusLabels[selectedMovie.status] : "Аяқталған";
-  const selectedRuntime = isEpisodicType(selectedMovie.type)
+  const selectedIsEpisodic = isEpisodicContent(selectedMovie);
+  const selectedRuntime = selectedIsEpisodic
     ? formatEpisodeCount(selectedMovie.episodeCount) || "Сериялар"
     : selectedMovie.runtime;
+  const selectedFirstEpisode = selectedMovie.episodes?.[0];
 
   return (
     <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(140deg,rgba(255,255,255,0.08),rgba(255,255,255,0.025))] px-4 py-5 shadow-[0_30px_120px_rgba(0,0,0,0.44)] backdrop-blur-3xl sm:px-6 sm:py-7 lg:px-8">
@@ -283,7 +285,14 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
               </div>
 
               <div className="mt-5 flex gap-2">
-                <WatchButton href={`/watch/${selectedMovie.slug}`} className="flex-1" />
+                <WatchButton
+                  href={
+                    selectedIsEpisodic && selectedFirstEpisode
+                      ? `/watch/${selectedMovie.slug}/${selectedFirstEpisode.slug}`
+                      : `/watch/${selectedMovie.slug}`
+                  }
+                  className="flex-1"
+                />
                 <Link
                   href={`/${selectedMovie.slug}`}
                   className="glass-button inline-flex min-h-12 items-center justify-center rounded-full px-4 text-sm font-semibold text-white"

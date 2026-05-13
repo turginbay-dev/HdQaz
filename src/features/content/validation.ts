@@ -1,4 +1,4 @@
-import { isEpisodicType } from "@/features/content/format";
+import { canHaveEpisodes, isEpisodicType } from "@/features/content/format";
 import type { ContentInput, ContentStatus, ContentType, DubberInput, EpisodeInput } from "@/types/content";
 
 type ValidationResult<T> =
@@ -98,12 +98,42 @@ function optionalUrl(
   return value ?? null;
 }
 
+function validateIntroWindow(
+  errors: Record<string, string>,
+  startSeconds: number | undefined,
+  endSeconds: number | undefined
+) {
+  if (startSeconds === undefined && endSeconds === undefined) {
+    return;
+  }
+
+  if (startSeconds === undefined || endSeconds === undefined) {
+    errors.introStartSeconds = "Intro start and end must be filled together.";
+    errors.introEndSeconds = "Intro start and end must be filled together.";
+    return;
+  }
+
+  if (!Number.isInteger(startSeconds) || startSeconds < 0) {
+    errors.introStartSeconds = "Intro start must be a non-negative whole number.";
+  }
+
+  if (!Number.isInteger(endSeconds) || endSeconds <= 0) {
+    errors.introEndSeconds = "Intro end must be a positive whole number.";
+  }
+
+  if (Number.isInteger(startSeconds) && Number.isInteger(endSeconds) && endSeconds <= startSeconds) {
+    errors.introEndSeconds = "Intro end must be greater than intro start.";
+  }
+}
+
 export function parseContentInput(payload: Record<string, unknown>): ValidationResult<ContentInput> {
   const errors: Record<string, string> = {};
   const type = asString(payload.type) as ContentType | undefined;
   const status = asString(payload.status) as ContentStatus | undefined;
   const year = asNumber(payload.year);
   const durationMinutes = asNumber(payload.durationMinutes);
+  const introStartSeconds = asNumber(payload.introStartSeconds);
+  const introEndSeconds = asNumber(payload.introEndSeconds);
   const genreIds = asStringArray(payload.genreIds);
   const hlsUrl = asNullableString(payload.hlsUrl);
   const title = requireString(payload, "title", errors);
@@ -158,7 +188,19 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
   }
 
   if (type && isEpisodicType(type) && hlsUrl) {
-    errors.hlsUrl = "Use episodes for dorama, series, and anime streams.";
+    errors.hlsUrl = "Use episodes for series streams.";
+  }
+
+  validateIntroWindow(errors, introStartSeconds, introEndSeconds);
+
+  if (
+    type &&
+    canHaveEpisodes(type) &&
+    !hlsUrl &&
+    (introStartSeconds !== undefined || introEndSeconds !== undefined)
+  ) {
+    errors.introStartSeconds = "Use episode-level intro times for episodic content.";
+    errors.introEndSeconds = "Use episode-level intro times for episodic content.";
   }
 
   if (Object.keys(errors).length > 0) {
@@ -183,6 +225,8 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
       ageRating: asNullableString(payload.ageRating) ?? null,
       durationMinutes: durationMinutes ?? null,
       hlsUrl: hlsUrl ?? null,
+      introStartSeconds: introStartSeconds ?? null,
+      introEndSeconds: introEndSeconds ?? null,
       dubberId: asNullableString(payload.dubberId) ?? null,
       genreIds: genreIds ?? [],
       isPublished: asBoolean(payload.isPublished) ?? false
@@ -236,6 +280,8 @@ export function parseEpisodeInput(payload: Record<string, unknown>): ValidationR
   const slug = asNullableString(payload.slug);
   const thumbnailUrl = optionalUrl(payload, "thumbnailUrl", errors);
   const durationMinutes = asNumber(payload.durationMinutes);
+  const introStartSeconds = asNumber(payload.introStartSeconds);
+  const introEndSeconds = asNumber(payload.introEndSeconds);
 
   if (episodeNumber === undefined || !Number.isInteger(episodeNumber) || episodeNumber <= 0) {
     errors.episodeNumber = "Episode number must be a positive whole number.";
@@ -257,6 +303,8 @@ export function parseEpisodeInput(payload: Record<string, unknown>): ValidationR
     errors.durationMinutes = "Must be a positive whole number.";
   }
 
+  validateIntroWindow(errors, introStartSeconds, introEndSeconds);
+
   if (Object.keys(errors).length > 0) {
     return {
       data: null,
@@ -273,6 +321,8 @@ export function parseEpisodeInput(payload: Record<string, unknown>): ValidationR
       thumbnailUrl,
       hlsUrl: hlsUrl ?? "",
       durationMinutes: durationMinutes ?? null,
+      introStartSeconds: introStartSeconds ?? null,
+      introEndSeconds: introEndSeconds ?? null,
       isPublished: asBoolean(payload.isPublished) ?? false
     },
     errors: null

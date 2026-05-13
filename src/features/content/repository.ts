@@ -4,7 +4,7 @@ import { normalizeMovieImageUrl } from "@/lib/movie-images";
 import { getOptionalAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { movies } from "@/features/movies/data";
-import { formatDurationMinutes, formatEpisodeCount, slugifyContent } from "@/features/content/format";
+import { formatDurationMinutes, formatEpisodeCount, isEpisodicContent, slugifyContent } from "@/features/content/format";
 import type { Content, ContentInput, ContentStatus, ContentType, Dubber, DubberInput, Episode, EpisodeInput, Genre } from "@/types/content";
 import type { MovieRecord } from "@/types/backend";
 
@@ -32,6 +32,8 @@ type ContentRow = {
   age_rating: string | null;
   duration_minutes: number | null;
   hls_url: string | null;
+  intro_start_seconds: number | null;
+  intro_end_seconds: number | null;
   dubber_id: string | null;
   is_published: boolean;
   created_at: string;
@@ -48,6 +50,8 @@ type EpisodeRow = {
   thumbnail_url: string | null;
   hls_url: string;
   duration_minutes: number | null;
+  intro_start_seconds: number | null;
+  intro_end_seconds: number | null;
   is_published: boolean;
   created_at: string;
   updated_at: string;
@@ -176,6 +180,8 @@ function rowToEpisode(row: EpisodeRow): Episode {
     thumbnailUrl: row.thumbnail_url,
     hlsUrl: row.hls_url,
     durationMinutes: row.duration_minutes,
+    introStartSeconds: row.intro_start_seconds,
+    introEndSeconds: row.intro_end_seconds,
     isPublished: row.is_published,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -207,6 +213,8 @@ function rowToContent(
     ageRating: row.age_rating,
     durationMinutes: row.duration_minutes,
     hlsUrl: row.hls_url,
+    introStartSeconds: row.intro_start_seconds,
+    introEndSeconds: row.intro_end_seconds,
     dubberId: row.dubber_id,
     dubber: relations.dubber ?? null,
     genres: relations.genres ?? [],
@@ -234,6 +242,8 @@ function contentToRow(input: ContentInput): ContentRowPatch {
     age_rating: input.ageRating ?? null,
     duration_minutes: input.durationMinutes ?? null,
     hls_url: input.hlsUrl ?? null,
+    intro_start_seconds: input.introStartSeconds ?? null,
+    intro_end_seconds: input.introEndSeconds ?? null,
     dubber_id: input.dubberId ?? null,
     is_published: input.isPublished ?? false
   };
@@ -250,6 +260,8 @@ function episodeToRow(input: EpisodeInput, contentId: string): EpisodeRowPatch {
     thumbnail_url: input.thumbnailUrl ?? null,
     hls_url: input.hlsUrl,
     duration_minutes: input.durationMinutes ?? null,
+    intro_start_seconds: input.introStartSeconds ?? null,
+    intro_end_seconds: input.introEndSeconds ?? null,
     is_published: input.isPublished ?? false
   };
 }
@@ -285,6 +297,8 @@ function seedContents(): Content[] {
     ageRating: null,
     durationMinutes: null,
     hlsUrl: movie.streams.master,
+    introStartSeconds: null,
+    introEndSeconds: null,
     dubberId: null,
     dubber: null,
     genres: movie.genres.map((name) => ({
@@ -704,9 +718,9 @@ export async function deleteEpisode(contentSlug: string, episodeId: string) {
 
 export function contentToMovieRecord(content: Content): MovieRecord {
   const genreNames = content.genres.map((genre) => genre.name);
-  const runtime = content.type === "movie"
-    ? formatDurationMinutes(content.durationMinutes) || "Кино"
-    : formatEpisodeCount(content.episodeCount) || "Сериялар жақында";
+  const runtime = isEpisodicContent(content)
+    ? formatEpisodeCount(content.episodeCount) || "Сериялар жақында"
+    : formatDurationMinutes(content.durationMinutes) || "Кино";
 
   return {
     id: content.id,
@@ -727,6 +741,8 @@ export function contentToMovieRecord(content: Content): MovieRecord {
     ageRating: content.ageRating,
     durationMinutes: content.durationMinutes,
     hlsUrl: content.hlsUrl,
+    introStartSeconds: content.introStartSeconds,
+    introEndSeconds: content.introEndSeconds,
     dubberId: content.dubberId,
     dubber: content.dubber,
     contentGenres: content.genres,

@@ -59,10 +59,21 @@ create table if not exists public.contents (
   age_rating text,
   duration_minutes integer check (duration_minutes is null or duration_minutes > 0),
   hls_url text,
+  intro_start_seconds integer,
+  intro_end_seconds integer,
   dubber_id uuid references public.dubbers(id) on delete set null,
   is_published boolean not null default false,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint contents_intro_window_check check (
+    (intro_start_seconds is null and intro_end_seconds is null)
+    or (
+      intro_start_seconds is not null
+      and intro_end_seconds is not null
+      and intro_start_seconds >= 0
+      and intro_end_seconds > intro_start_seconds
+    )
+  )
 );
 
 create table if not exists public.episodes (
@@ -75,9 +86,20 @@ create table if not exists public.episodes (
   thumbnail_url text,
   hls_url text not null,
   duration_minutes integer check (duration_minutes is null or duration_minutes > 0),
+  intro_start_seconds integer,
+  intro_end_seconds integer,
   is_published boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  constraint episodes_intro_window_check check (
+    (intro_start_seconds is null and intro_end_seconds is null)
+    or (
+      intro_start_seconds is not null
+      and intro_end_seconds is not null
+      and intro_start_seconds >= 0
+      and intro_end_seconds > intro_start_seconds
+    )
+  ),
   unique (content_id, episode_number),
   unique (content_id, slug)
 );

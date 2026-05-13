@@ -3,13 +3,16 @@
 import { useMemo, useState } from "react";
 import { Check, Eye, Film, ImageIcon, ListVideo, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import {
+  canHaveEpisodes,
+  contentReleaseFormatLabels,
   contentStatusLabels,
   contentTypeLabels,
   formatDurationMinutes,
   formatEpisodeCount,
-  isEpisodicType,
+  isEpisodicContent,
   slugifyContent
 } from "@/features/content/format";
+import type { ContentReleaseFormat } from "@/features/content/format";
 import type { Content, ContentStatus, ContentType, Dubber, Episode, Genre } from "@/types/content";
 
 type AdminContent = {
@@ -17,6 +20,7 @@ type AdminContent = {
   title: string;
   slug: string;
   type: ContentType;
+  releaseFormat: ContentReleaseFormat;
   description: string;
   posterUrl: string;
   bannerUrl: string;
@@ -27,6 +31,8 @@ type AdminContent = {
   ageRating: string;
   durationMinutes: string;
   hlsUrl: string;
+  introStartSeconds: string;
+  introEndSeconds: string;
   dubberId: string;
   genreIds: string[];
   isPublished: boolean;
@@ -40,6 +46,8 @@ type EpisodeDraft = {
   hlsUrl: string;
   thumbnailUrl: string;
   durationMinutes: string;
+  introStartSeconds: string;
+  introEndSeconds: string;
   isPublished: boolean;
 };
 
@@ -94,6 +102,11 @@ const typeFilterOptions: Array<{ label: string; value: ContentType | "all" }> = 
   { label: "Series", value: "series" }
 ];
 
+const releaseFormatOptions: Array<{ label: string; value: ContentReleaseFormat }> = [
+  { label: contentReleaseFormatLabels.feature, value: "feature" },
+  { label: contentReleaseFormatLabels.episodic, value: "episodic" }
+];
+
 const statusFilterOptions: Array<{ label: string; value: ContentStatus | "all" }> = [
   { label: "All", value: "all" },
   { label: "Ongoing", value: "ongoing" },
@@ -107,6 +120,7 @@ function createEmptyContent(): AdminContent {
     title: "",
     slug: "",
     type: "movie",
+    releaseFormat: "feature",
     description: "",
     posterUrl: "",
     bannerUrl: "",
@@ -117,6 +131,8 @@ function createEmptyContent(): AdminContent {
     ageRating: "",
     durationMinutes: "",
     hlsUrl: "",
+    introStartSeconds: "",
+    introEndSeconds: "",
     dubberId: "",
     genreIds: [],
     isPublished: false,
@@ -132,6 +148,8 @@ function createEmptyEpisode(nextNumber = 1): EpisodeDraft {
     hlsUrl: "",
     thumbnailUrl: "",
     durationMinutes: "",
+    introStartSeconds: "",
+    introEndSeconds: "",
     isPublished: true
   };
 }
@@ -155,12 +173,25 @@ function sortEpisodes(episodes: Episode[]) {
   return [...episodes].sort((left, right) => left.episodeNumber - right.episodeNumber);
 }
 
+function getReleaseFormat(content: Content): ContentReleaseFormat {
+  return isEpisodicContent(content) ? "episodic" : "feature";
+}
+
+function supportsReleaseFormatSwitch(type: ContentType) {
+  return type === "anime" || type === "dorama";
+}
+
+function isEpisodicDraft(content: AdminContent) {
+  return content.releaseFormat === "episodic";
+}
+
 function toAdminContent(content: Content): AdminContent {
   return {
     id: content.id,
     title: content.title,
     slug: content.slug,
     type: content.type,
+    releaseFormat: getReleaseFormat(content),
     description: content.description,
     posterUrl: content.posterUrl,
     bannerUrl: content.bannerUrl,
@@ -171,6 +202,8 @@ function toAdminContent(content: Content): AdminContent {
     ageRating: content.ageRating ?? "",
     durationMinutes: content.durationMinutes ? String(content.durationMinutes) : "",
     hlsUrl: content.hlsUrl ?? "",
+    introStartSeconds: content.introStartSeconds !== null && content.introStartSeconds !== undefined ? String(content.introStartSeconds) : "",
+    introEndSeconds: content.introEndSeconds !== null && content.introEndSeconds !== undefined ? String(content.introEndSeconds) : "",
     dubberId: content.dubberId ?? "",
     genreIds: content.genres.map((genre) => genre.id),
     isPublished: content.isPublished,
@@ -186,6 +219,8 @@ function toEpisodeDraft(episode: Episode): EpisodeDraft {
     hlsUrl: episode.hlsUrl,
     thumbnailUrl: episode.thumbnailUrl ?? "",
     durationMinutes: episode.durationMinutes ? String(episode.durationMinutes) : "",
+    introStartSeconds: episode.introStartSeconds !== null && episode.introStartSeconds !== undefined ? String(episode.introStartSeconds) : "",
+    introEndSeconds: episode.introEndSeconds !== null && episode.introEndSeconds !== undefined ? String(episode.introEndSeconds) : "",
     isPublished: episode.isPublished
   };
 }
@@ -258,6 +293,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
     ? Math.max(...contentDraft.episodes.map((episode) => episode.episodeNumber)) + 1
     : 1;
   const activeSlug = editingSlug ?? contentDraft.slug;
+  const draftIsEpisodic = isEpisodicDraft(contentDraft);
   const canSaveContent =
     Boolean(
       contentDraft.title &&
@@ -269,10 +305,11 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         contentDraft.year
     ) &&
     contentDraft.genreIds.length > 0 &&
-    (!isEpisodicType(contentDraft.type) ? Boolean(contentDraft.hlsUrl) : true);
+    (!draftIsEpisodic ? Boolean(contentDraft.hlsUrl) : true);
   const canSaveEpisode =
     Boolean(contentDraft.id && activeSlug && episodeDraft.episodeNumber && episodeDraft.hlsUrl) &&
-    isEpisodicType(contentDraft.type);
+    draftIsEpisodic &&
+    canHaveEpisodes(contentDraft.type);
   const canSaveDubber = Boolean(dubberDraft.name && dubberDraft.slug);
 
   function updateContentField<T extends keyof AdminContent>(field: T, value: AdminContent[T]) {
@@ -286,9 +323,27 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         next.slug = slugifyContent(String(value));
       }
 
-      if (field === "type" && isEpisodicType(value as ContentType)) {
+      if (field === "type") {
+        const nextType = value as ContentType;
+
+        if (nextType === "series") {
+          next.releaseFormat = "episodic";
+          next.hlsUrl = "";
+          next.durationMinutes = "";
+          next.introStartSeconds = "";
+          next.introEndSeconds = "";
+        } else if (nextType === "movie") {
+          next.releaseFormat = "feature";
+        } else if (!supportsReleaseFormatSwitch(nextType)) {
+          next.releaseFormat = "feature";
+        }
+      }
+
+      if (field === "releaseFormat" && value === "episodic") {
         next.hlsUrl = "";
         next.durationMinutes = "";
+        next.introStartSeconds = "";
+        next.introEndSeconds = "";
       }
 
       return next;
@@ -446,8 +501,10 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         year: Number(contentDraft.year),
         status: contentDraft.status,
         ageRating: contentDraft.ageRating || null,
-        durationMinutes: contentDraft.durationMinutes ? Number(contentDraft.durationMinutes) : null,
-        hlsUrl: contentDraft.hlsUrl || null,
+        durationMinutes: !draftIsEpisodic && contentDraft.durationMinutes ? Number(contentDraft.durationMinutes) : null,
+        hlsUrl: !draftIsEpisodic ? contentDraft.hlsUrl || null : null,
+        introStartSeconds: !draftIsEpisodic && contentDraft.introStartSeconds ? Number(contentDraft.introStartSeconds) : null,
+        introEndSeconds: !draftIsEpisodic && contentDraft.introEndSeconds ? Number(contentDraft.introEndSeconds) : null,
         dubberId: contentDraft.dubberId || null,
         genreIds: contentDraft.genreIds,
         isPublished: contentDraft.isPublished
@@ -512,6 +569,8 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         hlsUrl: episodeDraft.hlsUrl,
         thumbnailUrl: episodeDraft.thumbnailUrl || null,
         durationMinutes: episodeDraft.durationMinutes ? Number(episodeDraft.durationMinutes) : null,
+        introStartSeconds: episodeDraft.introStartSeconds ? Number(episodeDraft.introStartSeconds) : null,
+        introEndSeconds: episodeDraft.introEndSeconds ? Number(episodeDraft.introEndSeconds) : null,
         isPublished: episodeDraft.isPublished
       };
       const response = await fetch(
@@ -624,6 +683,27 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
               { label: "Series", value: "series" }
             ]}
           />
+          {supportsReleaseFormatSwitch(contentDraft.type) ? (
+            <div className="md:col-span-2">
+              <span className="text-sm font-medium text-zinc-300">Форматы</span>
+              <div className="mt-2 flex flex-wrap gap-2 rounded-[26px] border border-white/10 bg-white/[0.04] p-2">
+                {releaseFormatOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    className={
+                      contentDraft.releaseFormat === option.value
+                        ? "rounded-full border border-[rgba(217,183,111,0.38)] bg-[rgba(217,183,111,0.16)] px-4 py-2 text-sm font-semibold text-[var(--accent)]"
+                        : "glass-button rounded-full px-4 py-2 text-sm font-semibold text-zinc-300"
+                    }
+                    onClick={() => updateContentField("releaseFormat", option.value)}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <AdminSelect
             label="Статус"
             value={contentDraft.status}
@@ -652,7 +732,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
             onChange={(value) => updateContentField("ageRating", value)}
             placeholder="16+"
           />
-          {!isEpisodicType(contentDraft.type) ? (
+          {!draftIsEpisodic ? (
             <AdminInput
               label="Ұзақтығы, минут"
               value={contentDraft.durationMinutes}
@@ -687,13 +767,27 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
               ...availableDubbers.map((dubber) => ({ label: dubber.name, value: dubber.id }))
             ]}
           />
-          {!isEpisodicType(contentDraft.type) ? (
-            <div className="md:col-span-2">
+          {!draftIsEpisodic ? (
+            <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <AdminInput
+                  label="HLS URL"
+                  value={contentDraft.hlsUrl}
+                  onChange={(value) => updateContentField("hlsUrl", value)}
+                  placeholder="https://cdn.example.com/video/master.m3u8"
+                />
+              </div>
               <AdminInput
-                label="Movie HLS URL"
-                value={contentDraft.hlsUrl}
-                onChange={(value) => updateContentField("hlsUrl", value)}
-                placeholder="https://cdn.example.com/movie/master.m3u8"
+                label="Интро басталуы, сек"
+                value={contentDraft.introStartSeconds}
+                onChange={(value) => updateContentField("introStartSeconds", value)}
+                placeholder="75"
+              />
+              <AdminInput
+                label="Интро аяқталуы, сек"
+                value={contentDraft.introEndSeconds}
+                onChange={(value) => updateContentField("introEndSeconds", value)}
+                placeholder="165"
               />
             </div>
           ) : null}
@@ -739,7 +833,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
           </p>
         ) : null}
 
-        {isEpisodicType(contentDraft.type) ? (
+        {draftIsEpisodic ? (
           <section className="mt-8 border-t border-white/10 pt-7">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -840,6 +934,20 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                       onChange={(value) => setEpisodeDraft((current) => ({ ...current, durationMinutes: value }))}
                       placeholder="64"
                     />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <AdminInput
+                        label="Интро басталуы, сек"
+                        value={episodeDraft.introStartSeconds}
+                        onChange={(value) => setEpisodeDraft((current) => ({ ...current, introStartSeconds: value }))}
+                        placeholder="75"
+                      />
+                      <AdminInput
+                        label="Интро аяқталуы, сек"
+                        value={episodeDraft.introEndSeconds}
+                        onChange={(value) => setEpisodeDraft((current) => ({ ...current, introEndSeconds: value }))}
+                        placeholder="165"
+                      />
+                    </div>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <AdminToggle
@@ -897,7 +1005,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
             {contentDraft.year || "Жыл"} · {contentDraft.country || "Ел"}
           </p>
           <p className="mt-1 text-sm text-zinc-500">
-            {isEpisodicType(contentDraft.type)
+            {draftIsEpisodic
               ? formatEpisodeCount(contentDraft.episodes.length) || "Сериялар жоқ"
               : formatDurationMinutes(Number(contentDraft.durationMinutes)) || "Ұзақтығы жоқ"}
           </p>
@@ -1037,11 +1145,12 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         <section className="glass rounded-[30px] p-5">
           <h3 className="mb-4 font-semibold text-white">Architecture checklist</h3>
           {[
-            "Movie HLS URL тек movie түрінде сақталады",
-            "Dorama, series және anime сериялары бөлек episodes кестесінде",
+            "Movie әрдайым толық метражды HLS URL арқылы сақталады",
+            "Anime және dorama толық метражды немесе сериялы форматта сақтала алады",
+            "Series сериялары бөлек episodes кестесінде сақталады",
             "Episode slug бос болса episode_number арқылы толады",
             "Public беттер published контент пен published серияларды ғана көрсетеді",
-            "Бір dorama бір detail page және бір episode list алады"
+            "Толық метражды anime/dorama watch page-қа, сериялы формат episode list-ке өтеді"
           ].map((item) => (
             <div key={item} className="flex items-center gap-3 border-t border-white/10 py-3 first:border-t-0 first:pt-0">
               <Check className="h-4 w-4 text-[var(--accent)]" />
@@ -1082,48 +1191,53 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         </div>
 
         <div className="grid gap-3">
-          {filteredContents.map((item) => (
-            <article
-              key={item.id}
-              className="glass flex flex-col gap-4 rounded-[26px] p-3 sm:flex-row sm:items-center"
-            >
-              <img
-                src={item.posterUrl}
-                alt={item.title}
-                className="h-28 w-20 rounded-2xl object-cover"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="mb-2 flex flex-wrap gap-2">
-                  <StatusPill active label={contentTypeLabels[item.type]} />
-                  <StatusPill active={item.status !== "announced"} label={contentStatusLabels[item.status]} />
-                  <StatusPill active={item.isPublished} label={item.isPublished ? "Published" : "Draft"} />
+          {filteredContents.map((item) => {
+            const itemIsEpisodic = isEpisodicContent(item);
+
+            return (
+              <article
+                key={item.id}
+                className="glass flex flex-col gap-4 rounded-[26px] p-3 sm:flex-row sm:items-center"
+              >
+                <img
+                  src={item.posterUrl}
+                  alt={item.title}
+                  className="h-28 w-20 rounded-2xl object-cover"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    <StatusPill active label={contentTypeLabels[item.type]} />
+                    <StatusPill active label={itemIsEpisodic ? contentReleaseFormatLabels.episodic : contentReleaseFormatLabels.feature} />
+                    <StatusPill active={item.status !== "announced"} label={contentStatusLabels[item.status]} />
+                    <StatusPill active={item.isPublished} label={item.isPublished ? "Published" : "Draft"} />
+                  </div>
+                  <h3 className="truncate font-semibold text-white">{item.title}</h3>
+                  <p className="mt-1 truncate text-sm text-zinc-500">
+                    {item.year} · {item.country || "Ел жоқ"} · {item.dubber?.name ?? "Даббер жоқ"}
+                  </p>
+                  <p className="mt-1 truncate text-xs text-zinc-600">
+                    {item.genres.map((genre) => genre.name).join(", ")}
+                  </p>
                 </div>
-                <h3 className="truncate font-semibold text-white">{item.title}</h3>
-                <p className="mt-1 truncate text-sm text-zinc-500">
-                  {item.year} · {item.country || "Ел жоқ"} · {item.dubber?.name ?? "Даббер жоқ"}
-                </p>
-                <p className="mt-1 truncate text-xs text-zinc-600">
-                  {item.genres.map((genre) => genre.name).join(", ")}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="glass hidden h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold text-zinc-300 sm:flex">
-                  {isEpisodicType(item.type) ? <ListVideo className="h-4 w-4" /> : <Film className="h-4 w-4" />}
-                  {isEpisodicType(item.type)
-                    ? formatEpisodeCount(item.episodeCount) || "0 серия"
-                    : formatDurationMinutes(item.durationMinutes) || "Movie"}
+                <div className="flex items-center gap-2">
+                  <div className="glass hidden h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold text-zinc-300 sm:flex">
+                    {itemIsEpisodic ? <ListVideo className="h-4 w-4" /> : <Film className="h-4 w-4" />}
+                    {itemIsEpisodic
+                      ? formatEpisodeCount(item.episodeCount) || "0 серия"
+                      : formatDurationMinutes(item.durationMinutes) || "Movie"}
+                  </div>
+                  <button
+                    className="glass-button inline-flex h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white"
+                    onClick={() => startEditContent(item)}
+                    type="button"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </button>
                 </div>
-                <button
-                  className="glass-button inline-flex h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white"
-                  onClick={() => startEditContent(item)}
-                  type="button"
-                >
-                  <Pencil className="h-4 w-4" />
-                  Edit
-                </button>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       </section>
     </div>

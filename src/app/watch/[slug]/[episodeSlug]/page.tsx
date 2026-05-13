@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Play } from "lucide-react";
 import { HlsPlayer } from "@/components/player/hls-player";
 import { GlassPanel } from "@/components/glass/glass-panel";
 import { MovieBadge } from "@/components/movie/movie-badge";
-import { contentStatusLabels, contentTypeLabels, isEpisodicType } from "@/features/content/format";
+import { contentStatusLabels, contentTypeLabels, isEpisodicContent } from "@/features/content/format";
 import { getMovieBySlug } from "@/features/movies/queries";
 import { getMovieImageSrc } from "@/lib/movie-images";
 
@@ -21,7 +21,7 @@ export default async function EpisodeWatchPage({ params }: EpisodeWatchPageProps
   const { episodeSlug, slug } = await params;
   const content = await getMovieBySlug(slug);
 
-  if (!content || !isEpisodicType(content.type)) {
+  if (!content || !isEpisodicContent(content)) {
     notFound();
   }
 
@@ -37,6 +37,16 @@ export default async function EpisodeWatchPage({ params }: EpisodeWatchPageProps
   const nextEpisode = episodeIndex < episodes.length - 1 ? episodes[episodeIndex + 1] : null;
   const typeLabel = content.type ? contentTypeLabels[content.type] : "Series";
   const statusLabel = content.status ? contentStatusLabels[content.status] : "Жалғасуда";
+  const skipIntro =
+    typeof episode.introStartSeconds === "number" &&
+    typeof episode.introEndSeconds === "number" &&
+    episode.introEndSeconds > episode.introStartSeconds
+      ? {
+          startSeconds: episode.introStartSeconds,
+          endSeconds: episode.introEndSeconds,
+          label: "Интроны өткізу"
+        }
+      : null;
 
   return (
     <main className="min-h-screen px-4 pb-20 pt-24 sm:px-6 lg:px-8">
@@ -45,6 +55,17 @@ export default async function EpisodeWatchPage({ params }: EpisodeWatchPageProps
           poster={getMovieImageSrc(episode.thumbnailUrl ?? content.backdropUrl, "backdrop")}
           src={episode.hlsUrl}
           languages={content.languages}
+          progressKey={`episode:${content.slug}:${episode.slug}`}
+          skipIntro={skipIntro}
+          nextEpisode={
+            nextEpisode
+              ? {
+                  href: `/watch/${content.slug}/${nextEpisode.slug}`,
+                  label: "Келесі серия",
+                  title: nextEpisode.title ?? `${nextEpisode.episodeNumber}-серия`
+                }
+              : null
+          }
         />
 
         <GlassPanel className="mt-5 p-4 sm:p-5">

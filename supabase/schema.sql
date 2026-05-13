@@ -139,6 +139,7 @@ begin
 end;
 $$;
 
+
 drop trigger if exists sync_request_vote_count_insert on public.request_votes;
 create trigger sync_request_vote_count_insert
 after insert on public.request_votes

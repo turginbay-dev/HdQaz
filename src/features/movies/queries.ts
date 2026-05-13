@@ -80,6 +80,34 @@ export function getTrendingMovies(records: Movie[]) {
   return records;
 }
 
+export function getRelatedMovies(records: Movie[], current: Movie, limit = 10) {
+  const currentGenres = new Set(current.genres);
+  const currentCatalogs = new Set(current.catalogs);
+  const currentLanguages = new Set(current.languages);
+
+  const scoredMovies = records
+    .filter((movie) => movie.id !== current.id)
+    .map((movie, index) => {
+      const genreMatches = movie.genres.filter((genre) => currentGenres.has(genre)).length;
+      const catalogMatches = movie.catalogs.filter((catalog) => currentCatalogs.has(catalog)).length;
+      const languageMatches = movie.languages.filter((language) => currentLanguages.has(language)).length;
+      const sameType = movie.type && current.type && movie.type === current.type ? 1 : 0;
+      const sameDubber = current.dubberId && movie.dubberId === current.dubberId ? 1 : 0;
+      const score = sameType * 5 + genreMatches * 4 + catalogMatches * 2 + languageMatches + sameDubber * 2;
+
+      return { index, movie, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((item) => item.movie);
+
+  const fallbackMovies = records.filter(
+    (movie) => movie.id !== current.id && !scoredMovies.some((relatedMovie) => relatedMovie.id === movie.id)
+  );
+
+  return [...scoredMovies, ...fallbackMovies].slice(0, limit);
+}
+
 export function getDubbedMovies(records: Movie[]) {
   return getMoviesByCatalog(records, "kazakh-dubbed");
 }

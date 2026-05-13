@@ -8,7 +8,8 @@ import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieRow } from "@/components/movie/movie-row";
 import { WatchButton } from "@/components/ui/watch-button";
 import { contentStatusLabels, contentTypeLabels, isEpisodicContent } from "@/features/content/format";
-import { getAllMovies, getMovieBySlug, getTrendingMovies } from "@/features/movies/queries";
+import { getAllMovies, getMovieBySlug, getRelatedMovies } from "@/features/movies/queries";
+import type { Movie } from "@/types/movie";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function ContentPage({ params }: ContentPageProps) {
   const statusLabel = content.status ? contentStatusLabels[content.status] : "Аяқталған";
   const episodes = content.episodes ?? [];
   const contentIsEpisodic = isEpisodicContent(content);
+  const relatedMovies = getRelatedMovies(movies, content, 12);
 
   return (
     <main className="min-h-screen pb-20">
@@ -106,51 +108,6 @@ export default async function ContentPage({ params }: ContentPageProps) {
       </section>
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        {content.dubber ? (
-          <GlassPanel className="mb-10 p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-4">
-                {content.dubber.logoUrl ? (
-                  <img
-                    src={content.dubber.logoUrl}
-                    alt={content.dubber.name}
-                    className="h-14 w-14 rounded-2xl object-cover"
-                  />
-                ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(217,183,111,0.16)] text-[var(--accent)]">
-                    <Radio className="h-6 w-6" />
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">Даббер</p>
-                  <h2 className="truncate text-xl font-semibold text-white">{content.dubber.name}</h2>
-                  {content.dubber.description ? (
-                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-zinc-400">{content.dubber.description}</p>
-                  ) : null}
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  ["Telegram", content.dubber.telegramUrl],
-                  ["VK", content.dubber.vkUrl],
-                  ["Support", content.dubber.supportUrl],
-                  ["Chat", content.dubber.chatUrl]
-                ].map(([label, href]) =>
-                  href ? (
-                    <Link
-                      key={label}
-                      href={href}
-                      className="glass-button rounded-full px-4 py-2 text-sm font-semibold text-white"
-                    >
-                      {label}
-                    </Link>
-                  ) : null
-                )}
-              </div>
-            </div>
-          </GlassPanel>
-        ) : null}
-
         {contentIsEpisodic ? (
           <section className="mb-14">
             <div className="mb-5">
@@ -186,9 +143,71 @@ export default async function ContentPage({ params }: ContentPageProps) {
           </section>
         ) : null}
 
-        <MovieRow title="Ұқсас контент" movies={getTrendingMovies(movies).filter((item) => item.id !== content.id)} />
+        {content.dubber ? (
+          <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+            <div className="min-w-0">
+              <MovieRow
+                title="Ұқсас контент"
+                href={content.genres[0] ? { pathname: "/catalog", query: { genre: content.genres[0] } } : "/catalog"}
+                movies={relatedMovies}
+              />
+            </div>
+            <CompactDubberPanel dubber={content.dubber} />
+          </section>
+        ) : (
+          <MovieRow
+            title="Ұқсас контент"
+            href={content.genres[0] ? { pathname: "/catalog", query: { genre: content.genres[0] } } : "/catalog"}
+            movies={relatedMovies}
+          />
+        )}
       </div>
     </main>
+  );
+}
+
+function CompactDubberPanel({ dubber }: { dubber: NonNullable<Movie["dubber"]> }) {
+  return (
+    <GlassPanel className="p-4 lg:sticky lg:top-24">
+      <div className="flex min-w-0 items-center gap-3">
+        {dubber.logoUrl ? (
+          <img
+            src={dubber.logoUrl}
+            alt={dubber.name}
+            className="h-11 w-11 shrink-0 rounded-xl object-cover"
+          />
+        ) : (
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[rgba(217,183,111,0.16)] text-[var(--accent)]">
+            <Radio className="h-5 w-5" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Даббер</p>
+          <h2 className="truncate text-base font-semibold text-white">{dubber.name}</h2>
+        </div>
+      </div>
+      {dubber.description ? (
+        <p className="mt-3 line-clamp-2 text-sm leading-6 text-zinc-400">{dubber.description}</p>
+      ) : null}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {[
+          ["Telegram", dubber.telegramUrl],
+          ["VK", dubber.vkUrl],
+          ["Support", dubber.supportUrl],
+          ["Chat", dubber.chatUrl]
+        ].map(([label, href]) =>
+          href ? (
+            <Link
+              key={label}
+              href={href}
+              className="glass-button rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+            >
+              {label}
+            </Link>
+          ) : null
+        )}
+      </div>
+    </GlassPanel>
   );
 }
 

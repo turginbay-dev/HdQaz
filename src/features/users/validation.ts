@@ -42,8 +42,14 @@ export function parseProfilePatch(payload: Record<string, unknown>): ValidationR
   const displayName = asString(payload.displayName);
   const avatarUrl = payload.avatarUrl === null ? null : asString(payload.avatarUrl);
 
-  if (displayName && (displayName.length < 2 || displayName.length > 80)) {
-    errors.displayName = "Must be between 2 and 80 characters.";
+  if ("displayName" in payload) {
+    if (!displayName) {
+      errors.displayName = "Required.";
+    } else if (displayName.length < 2 || displayName.length > 40) {
+      errors.displayName = "Must be between 2 and 40 characters.";
+    } else if (!/^[\p{L}\p{N}_ -]+$/u.test(displayName)) {
+      errors.displayName = "Use letters, numbers, spaces, underscore, or dash.";
+    }
   }
 
   if (typeof avatarUrl === "string" && !isUrl(avatarUrl)) {

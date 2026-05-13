@@ -229,6 +229,7 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
       introEndSeconds: introEndSeconds ?? null,
       dubberId: asNullableString(payload.dubberId) ?? null,
       genreIds: genreIds ?? [],
+      isPremium: asBoolean(payload.isPremium) ?? false,
       isPublished: asBoolean(payload.isPublished) ?? false
     },
     errors: null

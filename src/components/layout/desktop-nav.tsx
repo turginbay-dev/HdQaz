@@ -9,7 +9,11 @@ import { SiteLogo } from "@/components/layout/site-logo";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
 import { cn } from "@/lib/cn";
 
-export function DesktopNav() {
+type DesktopNavProps = {
+  isPremium?: boolean;
+};
+
+export function DesktopNav({ isPremium = false }: DesktopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -211,7 +215,7 @@ export function DesktopNav() {
             className="glass-button flex h-11 items-center gap-2 rounded-full border-[rgba(217,183,111,0.32)] px-4 text-sm font-semibold tracking-[0.012em] text-white shadow-[0_0_34px_rgba(217,183,111,0.1)] hover:shadow-[0_0_46px_rgba(217,183,111,0.2)]"
           >
             <Crown className="h-4 w-4 text-[var(--accent)]" />
-            Premium
+            {isPremium ? "Premium" : "Premium қосу"}
           </Link>
 
           <Link

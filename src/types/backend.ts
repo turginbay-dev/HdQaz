@@ -36,7 +36,9 @@ export type UserProfile = {
   email?: string | null;
   displayName?: string | null;
   avatarUrl?: string | null;
+  defaultAvatarKey?: string | null;
   role: "user" | "admin";
+  isAdmin?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -53,6 +55,15 @@ export type WatchProgress = {
 
 export type WatchlistItem = {
   userId: string;
+  movieId?: string;
   movieSlug: string;
   createdAt?: string;
+};
+
+export type UserSubscriptionStatus = {
+  isPremium: boolean;
+  plan: "free" | "premium";
+  status: "inactive" | "active" | "trialing" | "past_due" | "canceled";
+  startsAt?: string | null;
+  endsAt?: string | null;
 };

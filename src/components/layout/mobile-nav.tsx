@@ -8,7 +8,11 @@ import { Crown, Menu, Search, User, X } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
 
-export function MobileNav() {
+type MobileNavProps = {
+  isPremium?: boolean;
+};
+
+export function MobileNav({ isPremium = false }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -280,7 +284,9 @@ export function MobileNav() {
                   </span>
                   <div>
                     <p className="text-sm font-bold tracking-[-0.008em] text-white">HdQaz Premium</p>
-                    <p className="mt-1 text-sm font-medium leading-5 tracking-[0.004em] text-zinc-400">1080p және Premium мүмкіндіктер</p>
+                    <p className="mt-1 text-sm font-medium leading-5 tracking-[0.004em] text-zinc-400">
+                      {isPremium ? "Premium белсенді" : "1080p және Premium мүмкіндіктер"}
+                    </p>
                   </div>
                 </div>
               </Link>

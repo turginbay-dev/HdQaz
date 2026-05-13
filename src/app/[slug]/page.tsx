@@ -1,14 +1,20 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { Calendar, Clapperboard, Globe2, Play, Plus, Radio } from "lucide-react";
+import { Calendar, Clapperboard, Crown, Eye, Globe2, Play, Radio } from "lucide-react";
+import { AdminStatsPills } from "@/components/engagement/admin-stats-pills";
+import { CommentsSection } from "@/components/engagement/comments-section";
+import { MovieEngagementActions } from "@/components/engagement/movie-engagement-actions";
 import { GlassPanel } from "@/components/glass/glass-panel";
 import { MovieImage } from "@/components/movie/movie-image";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieRow } from "@/components/movie/movie-row";
 import { WatchButton } from "@/components/ui/watch-button";
 import { contentStatusLabels, contentTypeLabels, isEpisodicContent } from "@/features/content/format";
+import { getEngagementState, getMovieEngagementStats, listMovieComments } from "@/features/engagement/repository";
 import { getAllMovies, getMovieBySlug, getRelatedMovies } from "@/features/movies/queries";
+import { getViewerContext } from "@/features/users/session";
+import { formatViewLabel } from "@/lib/formatters";
 import type { Movie } from "@/types/movie";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +27,7 @@ type ContentPageProps = {
 
 export default async function ContentPage({ params }: ContentPageProps) {
   const { slug } = await params;
-  const [content, movies] = await Promise.all([getMovieBySlug(slug), getAllMovies()]);
+  const [content, movies, viewer] = await Promise.all([getMovieBySlug(slug), getAllMovies(), getViewerContext()]);
 
   if (!content) {
     notFound();
@@ -32,6 +38,11 @@ export default async function ContentPage({ params }: ContentPageProps) {
   const episodes = content.episodes ?? [];
   const contentIsEpisodic = isEpisodicContent(content);
   const relatedMovies = getRelatedMovies(movies, content, 12);
+  const [engagementState, comments, stats] = await Promise.all([
+    getEngagementState(viewer.user?.id, content.id),
+    listMovieComments(content.id, { isAdmin: viewer.isAdmin }),
+    getMovieEngagementStats(content.id)
+  ]);
 
   return (
     <main className="min-h-screen pb-20">
@@ -55,6 +66,7 @@ export default async function ContentPage({ params }: ContentPageProps) {
                 <MovieBadge label={typeLabel} />
                 <MovieBadge label={statusLabel} />
                 {content.dubber?.name ? <MovieBadge label={content.dubber.name} /> : null}
+                {content.isPremium ? <MovieBadge label="Premium" /> : null}
               </div>
               <h1 className="text-5xl font-bold tracking-[-0.028em] text-white sm:text-7xl">
                 {content.title}
@@ -79,6 +91,10 @@ export default async function ContentPage({ params }: ContentPageProps) {
                 <InfoTile icon={<Clapperboard className="h-4 w-4" />} label="Түрі" value={typeLabel} />
                 <InfoTile icon={<Radio className="h-4 w-4" />} label="Статус" value={statusLabel} />
               </div>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-zinc-200 backdrop-blur-2xl">
+                <Eye className="h-3.5 w-3.5 text-[var(--accent)]" />
+                {formatViewLabel(stats.views)}
+              </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
                 {contentIsEpisodic && episodes[0] ? (
@@ -86,11 +102,20 @@ export default async function ContentPage({ params }: ContentPageProps) {
                 ) : !contentIsEpisodic ? (
                   <WatchButton href={`/watch/${content.slug}`} />
                 ) : null}
-                <button className="glass-button inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-bold tracking-[0.014em] text-white">
-                  <Plus className="h-4 w-4" />
-                  Тізімге қосу
-                </button>
+                <MovieEngagementActions
+                  initialLiked={engagementState.isLiked}
+                  initialWatchlisted={engagementState.isWatchlisted}
+                  isAuthenticated={Boolean(viewer.user)}
+                  movieSlug={content.slug}
+                />
               </div>
+              {content.isPremium ? (
+                <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[rgba(217,183,111,0.24)] bg-[rgba(217,183,111,0.1)] px-3 py-1.5 text-xs font-bold text-[var(--accent)]">
+                  <Crown className="h-3.5 w-3.5" />
+                  Premium
+                </div>
+              ) : null}
+              {viewer.isAdmin ? <div className="mt-4"><AdminStatsPills stats={stats} /></div> : null}
             </div>
 
             <GlassPanel className="hidden p-4 lg:block">
@@ -142,6 +167,16 @@ export default async function ContentPage({ params }: ContentPageProps) {
             )}
           </section>
         ) : null}
+
+        <div className="mb-14">
+          <CommentsSection
+            comments={comments}
+            currentUserId={viewer.user?.id ?? null}
+            isAdmin={viewer.isAdmin}
+            isAuthenticated={Boolean(viewer.user)}
+            movieSlug={content.slug}
+          />
+        </div>
 
         {content.dubber ? (
           <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">

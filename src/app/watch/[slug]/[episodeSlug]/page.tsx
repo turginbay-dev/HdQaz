@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { AdminStatsPills } from "@/components/engagement/admin-stats-pills";
+import { MovieEngagementActions } from "@/components/engagement/movie-engagement-actions";
+import { MovieViewTracker } from "@/components/engagement/movie-view-tracker";
+import { ViewCountPill } from "@/components/engagement/view-count-pill";
 import { HlsPlayer } from "@/components/player/hls-player";
 import { GlassPanel } from "@/components/glass/glass-panel";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { RelatedMoviesPanel } from "@/components/movie/related-movies-panel";
+import { PremiumLockScreen } from "@/components/premium/premium-lock-screen";
 import { contentStatusLabels, contentTypeLabels, isEpisodicContent } from "@/features/content/format";
+import { getEngagementState, getMovieEngagementStats } from "@/features/engagement/repository";
 import { getAllMovies, getMovieBySlug, getRelatedMovies } from "@/features/movies/queries";
+import { getViewerContext } from "@/features/users/session";
 import { getMovieImageSrc } from "@/lib/movie-images";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +27,7 @@ type EpisodeWatchPageProps = {
 
 export default async function EpisodeWatchPage({ params }: EpisodeWatchPageProps) {
   const { episodeSlug, slug } = await params;
-  const [content, movies] = await Promise.all([getMovieBySlug(slug), getAllMovies()]);
+  const [content, movies, viewer] = await Promise.all([getMovieBySlug(slug), getAllMovies(), getViewerContext()]);
 
   if (!content || !isEpisodicContent(content)) {
     notFound();
@@ -39,6 +46,11 @@ export default async function EpisodeWatchPage({ params }: EpisodeWatchPageProps
   const typeLabel = content.type ? contentTypeLabels[content.type] : "Series";
   const statusLabel = content.status ? contentStatusLabels[content.status] : "Жалғасуда";
   const relatedMovies = getRelatedMovies(movies, content, 6);
+  const [engagementState, stats] = await Promise.all([
+    getEngagementState(viewer.user?.id, content.id),
+    getMovieEngagementStats(content.id)
+  ]);
+  const canWatch = !content.isPremium || viewer.premium.isPremium || viewer.isAdmin;
   const skipIntro =
     typeof episode.introStartSeconds === "number" &&
     typeof episode.introEndSeconds === "number" &&
@@ -61,22 +73,29 @@ export default async function EpisodeWatchPage({ params }: EpisodeWatchPageProps
           }
         >
           <div className="min-w-0">
-            <HlsPlayer
-              poster={getMovieImageSrc(episode.thumbnailUrl ?? content.backdropUrl, "backdrop")}
-              src={episode.hlsUrl}
-              languages={content.languages}
-              progressKey={`episode:${content.slug}:${episode.slug}`}
-              skipIntro={skipIntro}
-              nextEpisode={
-                nextEpisode
-                  ? {
-                      href: `/watch/${content.slug}/${nextEpisode.slug}`,
-                      label: "Келесі серия",
-                      title: nextEpisode.title ?? `${nextEpisode.episodeNumber}-серия`
-                    }
-                  : null
-              }
-            />
+            {canWatch ? (
+              <>
+                <MovieViewTracker movieSlug={content.slug} />
+                <HlsPlayer
+                  poster={getMovieImageSrc(episode.thumbnailUrl ?? content.backdropUrl, "backdrop")}
+                  src={episode.hlsUrl}
+                  languages={content.languages}
+                  progressKey={`episode:${content.slug}:${episode.slug}`}
+                  skipIntro={skipIntro}
+                  nextEpisode={
+                    nextEpisode
+                      ? {
+                          href: `/watch/${content.slug}/${nextEpisode.slug}`,
+                          label: "Келесі серия",
+                          title: nextEpisode.title ?? `${nextEpisode.episodeNumber}-серия`
+                        }
+                      : null
+                  }
+                />
+              </>
+            ) : (
+              <PremiumLockScreen backdropUrl={content.backdropUrl} title={content.title} />
+            )}
 
             <GlassPanel className="mt-5 p-4 sm:p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -86,21 +105,34 @@ export default async function EpisodeWatchPage({ params }: EpisodeWatchPageProps
                     <MovieBadge label={statusLabel} />
                     {content.dubber?.name ? <MovieBadge label={content.dubber.name} /> : null}
                     <MovieBadge label={`${episode.episodeNumber}-серия`} />
+                    {content.isPremium ? <MovieBadge label="Premium" /> : null}
                   </div>
                   <h1 className="text-2xl font-bold tracking-[-0.018em] text-white">
                     {content.title} - {episode.episodeNumber}-серия
                   </h1>
+                  <div className="mt-2">
+                    <ViewCountPill views={stats.views} />
+                  </div>
                   {episode.title ? (
                     <p className="mt-2 text-base font-semibold tracking-[0.006em] text-[var(--accent)]">{episode.title}</p>
                   ) : null}
                   <p className="mt-2 max-w-3xl text-sm font-medium leading-6 tracking-[0.004em] text-zinc-300">
                     {episode.description || content.description}
                   </p>
+                  {viewer.isAdmin ? <div className="mt-3"><AdminStatsPills stats={stats} /></div> : null}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-3">
+                  <MovieEngagementActions
+                    initialLiked={engagementState.isLiked}
+                    initialWatchlisted={engagementState.isWatchlisted}
+                    isAuthenticated={Boolean(viewer.user)}
+                    movieSlug={content.slug}
+                  />
+                  <div className="flex flex-wrap gap-2">
                   <EpisodeNavLink episode={previousEpisode} slug={content.slug} direction="previous" />
                   <EpisodeNavLink episode={nextEpisode} slug={content.slug} direction="next" />
+                  </div>
                 </div>
               </div>
             </GlassPanel>

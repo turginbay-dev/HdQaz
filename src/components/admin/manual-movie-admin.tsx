@@ -35,6 +35,7 @@ type AdminContent = {
   introEndSeconds: string;
   dubberId: string;
   genreIds: string[];
+  isPremium: boolean;
   isPublished: boolean;
   episodes: Episode[];
 };
@@ -135,6 +136,7 @@ function createEmptyContent(): AdminContent {
     introEndSeconds: "",
     dubberId: "",
     genreIds: [],
+    isPremium: false,
     isPublished: false,
     episodes: []
   };
@@ -206,6 +208,7 @@ function toAdminContent(content: Content): AdminContent {
     introEndSeconds: content.introEndSeconds !== null && content.introEndSeconds !== undefined ? String(content.introEndSeconds) : "",
     dubberId: content.dubberId ?? "",
     genreIds: content.genres.map((genre) => genre.id),
+    isPremium: content.isPremium,
     isPublished: content.isPublished,
     episodes: sortEpisodes(content.episodes)
   };
@@ -507,6 +510,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         introEndSeconds: !draftIsEpisodic && contentDraft.introEndSeconds ? Number(contentDraft.introEndSeconds) : null,
         dubberId: contentDraft.dubberId || null,
         genreIds: contentDraft.genreIds,
+        isPremium: contentDraft.isPremium,
         isPublished: contentDraft.isPublished
       };
       const response = await fetch(editingSlug ? `/api/contents/${encodeURIComponent(editingSlug)}` : "/api/contents", {
@@ -811,6 +815,11 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         />
 
         <div className="mt-5 flex flex-wrap gap-3">
+          <AdminToggle
+            label="Premium"
+            active={contentDraft.isPremium}
+            onClick={() => updateContentField("isPremium", !contentDraft.isPremium)}
+          />
           <AdminToggle
             label="Жарияланған"
             active={contentDraft.isPublished}
@@ -1209,6 +1218,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                     <StatusPill active label={contentTypeLabels[item.type]} />
                     <StatusPill active label={itemIsEpisodic ? contentReleaseFormatLabels.episodic : contentReleaseFormatLabels.feature} />
                     <StatusPill active={item.status !== "announced"} label={contentStatusLabels[item.status]} />
+                    {item.isPremium ? <StatusPill active label="Premium" /> : null}
                     <StatusPill active={item.isPublished} label={item.isPublished ? "Published" : "Draft"} />
                   </div>
                   <h3 className="truncate font-semibold text-white">{item.title}</h3>

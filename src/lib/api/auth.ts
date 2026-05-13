@@ -1,5 +1,5 @@
 import type { User } from "@supabase/supabase-js";
-import { isAdminEmail } from "@/lib/admin-access";
+import { isAdminEmail, isUserAdmin } from "@/lib/admin-access";
 import { ApiError } from "@/lib/api/errors";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 export type AuthContext = {
   user: User | null;
   isAdmin: boolean;
-  adminSource?: "email" | "token";
+  adminSource?: "email" | "profile" | "token";
 };
 
 function getRequestToken(request: Request) {
@@ -39,12 +39,13 @@ export async function getAuthContext(request: Request): Promise<AuthContext> {
 
   const email = user?.email?.toLowerCase();
   const isAllowedAdminEmail = isAdminEmail(email);
+  const isDatabaseAdmin = await isUserAdmin(user);
   const isAdminToken = hasValidAdminToken(request);
 
   return {
     user,
-    isAdmin: isAllowedAdminEmail || isAdminToken,
-    adminSource: isAllowedAdminEmail ? "email" : isAdminToken ? "token" : undefined
+    isAdmin: isAllowedAdminEmail || isDatabaseAdmin || isAdminToken,
+    adminSource: isAllowedAdminEmail ? "email" : isDatabaseAdmin ? "profile" : isAdminToken ? "token" : undefined
   };
 }
 

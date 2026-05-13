@@ -35,6 +35,7 @@ type ContentRow = {
   intro_start_seconds: number | null;
   intro_end_seconds: number | null;
   dubber_id: string | null;
+  is_premium: boolean;
   is_published: boolean;
   created_at: string;
   updated_at: string;
@@ -220,6 +221,7 @@ function rowToContent(
     genres: relations.genres ?? [],
     episodes,
     episodeCount: episodes.length,
+    isPremium: row.is_premium ?? false,
     isPublished: row.is_published,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -245,6 +247,7 @@ function contentToRow(input: ContentInput): ContentRowPatch {
     intro_start_seconds: input.introStartSeconds ?? null,
     intro_end_seconds: input.introEndSeconds ?? null,
     dubber_id: input.dubberId ?? null,
+    is_premium: input.isPremium ?? false,
     is_published: input.isPublished ?? false
   };
 }
@@ -308,6 +311,7 @@ function seedContents(): Content[] {
     })),
     episodes: [],
     episodeCount: 0,
+    isPremium: movie.isPremium,
     isPublished: true
   }));
 }
@@ -757,7 +761,7 @@ export function contentToMovieRecord(content: Content): MovieRecord {
       ...(content.dubber ? ["kazakh-dubbed" as const] : []),
       ...(content.status === "ongoing" ? ["new-releases" as const] : [])
     ],
-    isPremium: false,
+    isPremium: content.isPremium,
     isNewRelease: content.status === "ongoing",
     streams: {
       master: content.hlsUrl ?? content.episodes[0]?.hlsUrl ?? ""

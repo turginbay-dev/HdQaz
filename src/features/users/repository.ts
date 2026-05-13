@@ -1,22 +1,29 @@
 import type { User } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
 import { getOptionalAdminClient } from "@/lib/supabase/admin";
-import type { UserProfile, WatchProgress, WatchlistItem } from "@/types/backend";
+import type { UserProfile, UserSubscriptionStatus, WatchProgress, WatchlistItem } from "@/types/backend";
 
 type ProfileRow = {
   id: string;
-  email: string | null;
   display_name: string | null;
   avatar_url: string | null;
+  default_avatar_key: string | null;
   role: "user" | "admin";
+  is_admin: boolean;
   created_at: string;
   updated_at: string;
 };
 
 type WatchlistRow = {
+  id: string;
   user_id: string;
-  movie_slug: string;
+  movie_id: string;
   created_at: string;
+};
+
+type ContentSlugRow = {
+  id: string;
+  slug: string;
 };
 
 type WatchProgressRow = {
@@ -28,6 +35,15 @@ type WatchProgressRow = {
   completed: boolean;
   updated_at: string;
 };
+
+type SubscriptionRow = {
+  plan: "free" | "premium";
+  status: "inactive" | "active" | "trialing" | "past_due" | "canceled";
+  starts_at: string | null;
+  ends_at: string | null;
+};
+
+const fallbackDisplayName = "HdQaz қолданушысы";
 
 function requireDatabase() {
   const supabase = getOptionalAdminClient();
@@ -44,35 +60,46 @@ function requireDatabase() {
 }
 
 function profileFromUser(user: User): UserProfile {
+  const metadataName =
+    (user.user_metadata?.full_name as string | undefined) ??
+    (user.user_metadata?.name as string | undefined);
+
   return {
     id: user.id,
     email: user.email,
-    displayName:
-      (user.user_metadata?.full_name as string | undefined) ??
-      (user.user_metadata?.name as string | undefined) ??
-      user.email?.split("@")[0] ??
-      "HdQaz қолданушысы",
+    displayName: metadataName ?? fallbackDisplayName,
     avatarUrl: user.user_metadata?.avatar_url as string | undefined,
-    role: "user"
+    defaultAvatarKey: "hdqaz",
+    role: "user",
+    isAdmin: false
   };
 }
 
-function rowToProfile(row: ProfileRow): UserProfile {
+function normalizeDisplayName(value?: string | null) {
+  const trimmed = value?.trim();
+
+  return trimmed && trimmed.length >= 2 ? trimmed : fallbackDisplayName;
+}
+
+function rowToProfile(row: ProfileRow, email?: string | null): UserProfile {
   return {
     id: row.id,
-    email: row.email,
-    displayName: row.display_name,
+    email,
+    displayName: normalizeDisplayName(row.display_name),
     avatarUrl: row.avatar_url,
-    role: row.role,
+    defaultAvatarKey: row.default_avatar_key ?? "hdqaz",
+    role: row.is_admin ? "admin" : row.role,
+    isAdmin: row.is_admin || row.role === "admin",
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
 }
 
-function rowToWatchlist(row: WatchlistRow): WatchlistItem {
+function rowToWatchlist(row: WatchlistRow, slug: string): WatchlistItem {
   return {
     userId: row.user_id,
-    movieSlug: row.movie_slug,
+    movieId: row.movie_id,
+    movieSlug: slug,
     createdAt: row.created_at
   };
 }
@@ -105,25 +132,36 @@ export async function getOrCreateProfile(user: User) {
     return fallback;
   }
 
+  const existing = await supabase
+    .from("user_profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existing.error) {
+    throwDatabaseError(existing.error, "Failed to load profile.");
+  }
+
+  if (existing.data) {
+    return rowToProfile(existing.data as ProfileRow, user.email);
+  }
+
   const { data, error } = await supabase
-    .from("profiles")
-    .upsert(
-      {
-        id: user.id,
-        email: user.email ?? null,
-        display_name: fallback.displayName ?? null,
-        avatar_url: fallback.avatarUrl ?? null
-      },
-      { onConflict: "id" }
-    )
+    .from("user_profiles")
+    .insert({
+      id: user.id,
+      display_name: fallback.displayName ?? null,
+      avatar_url: fallback.avatarUrl ?? null,
+      default_avatar_key: "hdqaz"
+    })
     .select("*")
     .single();
 
   if (error) {
-    throwDatabaseError(error, "Failed to load profile.");
+    throwDatabaseError(error, "Failed to create profile.");
   }
 
-  return rowToProfile(data as ProfileRow);
+  return rowToProfile(data as ProfileRow, user.email);
 }
 
 export async function updateProfile(userId: string, patch: { displayName?: string; avatarUrl?: string | null }) {
@@ -137,7 +175,7 @@ export async function updateProfile(userId: string, patch: { displayName?: strin
     throw new ApiError(400, "empty_patch", "At least one field is required.");
   }
 
-  const { data, error } = await supabase.from("profiles").update(update).eq("id", userId).select("*").single();
+  const { data, error } = await supabase.from("user_profiles").update(update).eq("id", userId).select("*").single();
 
   if (error) {
     throwDatabaseError(error, "Failed to update profile.");
@@ -154,7 +192,7 @@ export async function listWatchlist(userId: string) {
   }
 
   const { data, error } = await supabase
-    .from("watchlist_items")
+    .from("movie_watchlist")
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
@@ -163,16 +201,40 @@ export async function listWatchlist(userId: string) {
     throwDatabaseError(error, "Failed to load watchlist.");
   }
 
-  return ((data ?? []) as WatchlistRow[]).map(rowToWatchlist);
+  const rows = (data ?? []) as WatchlistRow[];
+  const movieIds = rows.map((row) => row.movie_id);
+  const contentResult = movieIds.length > 0
+    ? await supabase.from("contents").select("id, slug").in("id", movieIds)
+    : { data: [], error: null };
+
+  if (contentResult.error) {
+    throwDatabaseError(contentResult.error, "Failed to load watchlist movies.");
+  }
+
+  const slugById = new Map(((contentResult.data ?? []) as ContentSlugRow[]).map((row) => [row.id, row.slug]));
+
+  return rows
+    .map((row) => {
+      const slug = slugById.get(row.movie_id);
+
+      return slug ? rowToWatchlist(row, slug) : null;
+    })
+    .filter((item): item is WatchlistItem => Boolean(item));
 }
 
 export async function addWatchlistItem(userId: string, movieSlug: string) {
   const supabase = requireDatabase();
+  const content = await getContentSlugBySlug(movieSlug);
+
+  if (!content) {
+    throw new ApiError(404, "movie_not_found", "Movie not found.");
+  }
+
   const { data, error } = await supabase
-    .from("watchlist_items")
+    .from("movie_watchlist")
     .insert({
       user_id: userId,
-      movie_slug: movieSlug
+      movie_id: content.id
     })
     .select("*")
     .single();
@@ -181,16 +243,84 @@ export async function addWatchlistItem(userId: string, movieSlug: string) {
     throwDatabaseError(error, "Failed to add watchlist item.");
   }
 
-  return rowToWatchlist(data as WatchlistRow);
+  return rowToWatchlist(data as WatchlistRow, content.slug);
 }
 
 export async function removeWatchlistItem(userId: string, movieSlug: string) {
   const supabase = requireDatabase();
-  const { error } = await supabase.from("watchlist_items").delete().eq("user_id", userId).eq("movie_slug", movieSlug);
+  const content = await getContentSlugBySlug(movieSlug);
+
+  if (!content) {
+    return;
+  }
+
+  const { error } = await supabase.from("movie_watchlist").delete().eq("user_id", userId).eq("movie_id", content.id);
 
   if (error) {
     throwDatabaseError(error, "Failed to remove watchlist item.");
   }
+}
+
+export async function getContentSlugBySlug(slug: string) {
+  const supabase = getOptionalAdminClient();
+
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase.from("contents").select("id, slug").eq("slug", slug).maybeSingle();
+
+  if (error) {
+    throwDatabaseError(error, "Failed to load movie.");
+  }
+
+  return data as ContentSlugRow | null;
+}
+
+export async function getUserPremiumStatus(userId?: string | null): Promise<UserSubscriptionStatus> {
+  if (!userId) {
+    return {
+      isPremium: false,
+      plan: "free",
+      status: "inactive"
+    };
+  }
+
+  const supabase = getOptionalAdminClient();
+
+  if (!supabase) {
+    return {
+      isPremium: false,
+      plan: "free",
+      status: "inactive"
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("user_subscriptions")
+    .select("plan, status, starts_at, ends_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throwDatabaseError(error, "Failed to load subscription.");
+  }
+
+  const subscription = data as SubscriptionRow | null;
+  const isActive =
+    subscription?.plan === "premium" &&
+    (subscription.status === "active" || subscription.status === "trialing") &&
+    (!subscription.ends_at || new Date(subscription.ends_at).getTime() > Date.now());
+
+  return {
+    isPremium: Boolean(isActive),
+    plan: isActive ? "premium" : "free",
+    status: subscription?.status ?? "inactive",
+    startsAt: subscription?.starts_at ?? null,
+    endsAt: subscription?.ends_at ?? null
+  };
 }
 
 export async function listWatchProgress(userId: string, movieSlug?: string) {

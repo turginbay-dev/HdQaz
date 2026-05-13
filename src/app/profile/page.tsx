@@ -1,13 +1,26 @@
-import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Crown, LogOut, Mail, ShieldCheck } from "lucide-react";
+import { Crown, LogOut, Mail, MessageCircle, ShieldCheck } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
+import { ProfileMovieSection } from "@/components/profile/profile-movie-section";
+import { ProfileNameEditor } from "@/components/profile/profile-name-editor";
+import { UserAvatar } from "@/components/user/user-avatar";
+import { listUserComments, listUserMovieIds } from "@/features/engagement/repository";
+import { getAllMovies } from "@/features/movies/queries";
+import { getViewerContext } from "@/features/users/session";
 import { getSupabaseConfig } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/server";
+import { formatKazakhDateTime, formatKazakhRelativeTime } from "@/lib/formatters";
+import type { Movie } from "@/types/movie";
 
 export const metadata = {
   title: "Профиль"
 };
+
+function orderedMovies(ids: string[], movies: Movie[]) {
+  const movieById = new Map(movies.map((movie) => [movie.id, movie]));
+
+  return ids.map((id) => movieById.get(id)).filter((movie): movie is Movie => Boolean(movie));
+}
 
 export default async function ProfilePage() {
   const config = getSupabaseConfig();
@@ -16,44 +29,78 @@ export default async function ProfilePage() {
     redirect("/login?error=supabase_not_configured");
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const viewer = await getViewerContext();
 
-  if (!user) {
+  if (!viewer.user) {
     redirect("/login");
   }
 
-  const name =
-    user.user_metadata?.full_name ??
-    user.user_metadata?.name ??
-    user.email?.split("@")[0] ??
-    "HdQaz қолданушысы";
-  const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
-  const providers = Array.isArray(user.app_metadata?.providers)
-    ? (user.app_metadata.providers as string[])
-    : [user.app_metadata?.provider as string | undefined].filter(Boolean);
-  const authMethod = providers.includes("google") ? "Google" : "Email және пароль";
+  const [movies, watchlistIds, likedIds, comments] = await Promise.all([
+    getAllMovies(),
+    listUserMovieIds("movie_watchlist", viewer.user.id),
+    listUserMovieIds("movie_likes", viewer.user.id),
+    listUserComments(viewer.user.id, 20)
+  ]);
+
+  const watchlistMovies = orderedMovies(watchlistIds, movies);
+  const likedMovies = orderedMovies(likedIds, movies);
+  const displayName = viewer.profile?.displayName?.trim() || "HdQaz қолданушысы";
+  const joinedAt = viewer.profile?.createdAt ?? viewer.user.created_at;
 
   return (
     <main className="ambient-page min-h-screen px-4 pb-20 pt-28 sm:px-6 lg:px-8">
-      <section className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="glass-strong rounded-[34px] p-6">
-          <div className="relative h-24 w-24 overflow-hidden rounded-3xl border border-white/10 bg-white/10">
-            {avatarUrl ? (
-              <Image src={avatarUrl} alt={name} fill sizes="96px" className="object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-white">
-                {name.slice(0, 1).toUpperCase()}
+      <section className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="glass-strong h-fit rounded-[34px] p-6 lg:sticky lg:top-28">
+          <UserAvatar
+            avatarUrl={viewer.profile?.avatarUrl}
+            displayName={displayName}
+            className="h-24 w-24"
+            priority
+            sizes="96px"
+          />
+
+          <div className="mt-5">
+            <ProfileNameEditor initialName={displayName} />
+          </div>
+
+          <p className="mt-4 flex items-center gap-2 text-sm font-medium tracking-[0.004em] text-zinc-400">
+            <Mail className="h-4 w-4" />
+            {viewer.user.email}
+          </p>
+          <p className="mt-2 text-sm font-medium tracking-[0.004em] text-zinc-500">
+            Қосылған күні: {joinedAt ? formatKazakhDateTime(joinedAt) : "Белгісіз"}
+          </p>
+
+          <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(217,183,111,0.16)] text-[var(--accent)]">
+                <Crown className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Premium статус</p>
+                <p className="mt-1 text-base font-bold text-white">
+                  {viewer.premium.isPremium ? "Premium белсенді" : "Free"}
+                </p>
               </div>
+            </div>
+            {viewer.premium.isPremium && viewer.premium.endsAt ? (
+              <p className="mt-3 text-sm text-zinc-400">Жарамды: {formatKazakhDateTime(viewer.premium.endsAt)}</p>
+            ) : (
+              <Link
+                href="/premium"
+                className="glass-button mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full px-4 text-sm font-bold text-white"
+              >
+                Premium қосу
+              </Link>
             )}
           </div>
-          <h1 className="mt-5 text-2xl font-bold tracking-[-0.018em] text-white">{name}</h1>
-          <p className="mt-2 flex items-center gap-2 text-sm font-medium tracking-[0.004em] text-zinc-400">
-            <Mail className="h-4 w-4" />
-            {user.email}
-          </p>
+
+          {viewer.isAdmin ? (
+            <div className="mt-4 flex items-center gap-2 rounded-2xl border border-[rgba(217,183,111,0.24)] bg-[rgba(217,183,111,0.1)] px-4 py-3 text-sm font-semibold text-[var(--accent)]">
+              <ShieldCheck className="h-4 w-4" />
+              Admin
+            </div>
+          ) : null}
 
           <form action={signOut} className="mt-6">
             <button
@@ -66,26 +113,58 @@ export default async function ProfilePage() {
           </form>
         </aside>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="glass rounded-[30px] p-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-[var(--accent)]">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <h2 className="mt-5 text-xl font-bold tracking-[-0.014em] text-white">Аккаунт қосылған</h2>
-            <p className="mt-2 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
-              Кіру әдісі: {authMethod}. Бұл жобада тек email/password және Google қолданылады.
-            </p>
-          </div>
+        <div className="grid gap-6">
+          <ProfileMovieSection title="Менің тізімім" movies={watchlistMovies} variant="watchlist" emptyCta />
+          <ProfileMovieSection title="Ұнағандар" movies={likedMovies} variant="likes" emptyCta />
 
-          <div className="glass rounded-[30px] p-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(217,183,111,0.16)] text-[var(--accent)]">
-              <Crown className="h-6 w-6" />
+          <section className="glass rounded-[30px] p-5 sm:p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-[var(--accent)]">
+                <MessageCircle className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="text-xl font-bold tracking-[-0.018em] text-white">Пікірлерім</h2>
+                <p className="mt-1 text-xs font-medium text-zinc-500">{comments.length} пікір</p>
+              </div>
             </div>
-            <h2 className="mt-5 text-xl font-bold tracking-[-0.014em] text-white">Premium статус</h2>
-            <p className="mt-2 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
-              Келесі кезеңде subscription кестесімен байланыстырамыз.
-            </p>
-          </div>
+
+            {comments.length > 0 ? (
+              <div className="grid gap-3">
+                {comments.map((comment) => (
+                  <Link
+                    key={comment.id}
+                    href={comment.movieSlug ? `/${comment.movieSlug}#comments` : "/catalog"}
+                    className="rounded-[24px] border border-white/10 bg-black/20 p-4 transition hover:border-[rgba(217,183,111,0.32)] hover:bg-white/[0.06]"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-bold text-white">{comment.movieTitle ?? "Контент"}</p>
+                      <time className="text-xs text-zinc-500" dateTime={comment.createdAt} suppressHydrationWarning>
+                        {formatKazakhRelativeTime(comment.createdAt)}
+                      </time>
+                      {comment.isSpoiler ? (
+                        <span className="rounded-full border border-[rgba(217,183,111,0.24)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--accent)]">
+                          Спойлер
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-300">
+                      {comment.isHidden ? "Бұл пікір модерация арқылы жасырылды." : comment.body}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[24px] border border-white/10 bg-black/20 px-5 py-8 text-center">
+                <p className="text-sm font-semibold text-zinc-300">Әзірге ештеңе жоқ</p>
+                <Link
+                  href="/catalog"
+                  className="glass-button mt-4 inline-flex min-h-11 items-center justify-center rounded-full px-4 text-sm font-bold text-white"
+                >
+                  Каталогқа өту
+                </Link>
+              </div>
+            )}
+          </section>
         </div>
       </section>
     </main>

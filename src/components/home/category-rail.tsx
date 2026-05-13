@@ -46,8 +46,8 @@ export function CategoryRail() {
             href={category.href}
             className={
               category.solid
-                ? "relative block overflow-hidden rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black shadow-[0_14px_42px_rgba(255,255,255,0.18)]"
-                : "glass-button block rounded-full px-4 py-2.5 text-sm font-medium text-white"
+                ? "relative block overflow-hidden rounded-full bg-white px-4 py-2.5 text-sm font-bold tracking-[0.012em] text-black shadow-[0_14px_42px_rgba(255,255,255,0.18)]"
+                : "glass-button block rounded-full px-4 py-2.5 text-sm font-semibold tracking-[0.012em] text-white"
             }
           >
             {category.solid && (

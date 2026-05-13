@@ -42,7 +42,7 @@ export function MovieCard({ movie, priority = false }: MovieCardProps) {
           </div>
 
           <div className="absolute left-3 right-3 top-3 flex items-center justify-between">
-            <span className="glass rounded-full px-2.5 py-1 text-[11px] font-semibold text-white">
+            <span className="glass rounded-full px-2.5 py-1 text-[11px] font-bold tracking-[0.012em] text-white">
               {movie.year}
             </span>
             <MovieBadge label={typeLabel} />
@@ -53,17 +53,17 @@ export function MovieCard({ movie, priority = false }: MovieCardProps) {
               <div className="mb-2 flex flex-wrap gap-1.5">
                 <MovieBadge label={statusLabel} />
                 {movie.genres[0] && (
-                  <span className="rounded-full border border-white/10 bg-white/[0.08] px-2.5 py-1 text-[11px] font-semibold text-zinc-200">
+                  <span className="rounded-full border border-white/10 bg-white/[0.08] px-2.5 py-1 text-[11px] font-semibold tracking-[0.01em] text-zinc-200">
                     {movie.genres[0]}
                   </span>
                 )}
               </div>
               <div className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="truncate text-sm font-semibold tracking-tight text-white">
+                  <h3 className="truncate text-sm font-bold tracking-[-0.012em] text-white">
                     {movie.title}
                   </h3>
-                  <p className="mt-1 flex items-center gap-1 text-xs text-zinc-300">
+                  <p className="mt-1 flex items-center gap-1 text-xs font-medium tracking-[0.004em] text-zinc-300">
                     <Radio className="h-3 w-3 text-[var(--accent)]" />
                     {movie.dubber?.name ?? statusLabel} · {detailLine}
                   </p>
@@ -77,13 +77,13 @@ export function MovieCard({ movie, priority = false }: MovieCardProps) {
         </article>
 
         <div className="mt-3 px-1">
-          <h3 className="truncate text-sm font-semibold tracking-tight text-white">
+          <h3 className="truncate text-sm font-bold tracking-[-0.012em] text-white">
             {movie.title}
           </h3>
-          <p className="mt-1 truncate text-xs text-zinc-500">
+          <p className="mt-1 truncate text-xs font-medium tracking-[0.004em] text-zinc-500">
             {typeLabel} · {statusLabel}
           </p>
-          <p className="mt-1 truncate text-[11px] font-medium text-[rgba(217,183,111,0.8)]">
+          <p className="mt-1 truncate text-[11px] font-semibold tracking-[0.008em] text-[rgba(217,183,111,0.82)]">
             {movie.dubber?.name ? `${movie.dubber.name} · ${detailLine}` : detailLine}
           </p>
         </div>

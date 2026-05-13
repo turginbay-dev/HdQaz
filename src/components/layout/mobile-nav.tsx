@@ -114,7 +114,7 @@ export function MobileNav() {
                   <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-[var(--accent)]">
                     <Search className="h-5 w-5" />
                   </span>
-                  <p className="text-base font-semibold text-white">Кино іздеу</p>
+                  <p className="text-base font-bold tracking-[-0.01em] text-white">Кино іздеу</p>
                 </div>
                 <button
                   className="glass-button flex h-10 w-10 items-center justify-center rounded-full text-white"
@@ -131,7 +131,7 @@ export function MobileNav() {
                   <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
                   <input
                     ref={searchInputRef}
-                    className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-zinc-500"
+                    className="min-w-0 flex-1 bg-transparent text-base font-medium tracking-[0.004em] outline-none placeholder:text-zinc-500"
                     aria-label="Кино іздеу"
                     placeholder="Атауы, жанры, жылы"
                     type="search"
@@ -163,7 +163,7 @@ export function MobileNav() {
                 {searchSuggestions.map((suggestion) => (
                   <button
                     key={suggestion}
-                    className="glass-button rounded-full px-3 py-2 text-sm font-medium text-white"
+                    className="glass-button rounded-full px-3 py-2 text-sm font-semibold tracking-[0.01em] text-white"
                     type="button"
                     onClick={() => submitSearch(suggestion)}
                   >
@@ -235,8 +235,8 @@ export function MobileNav() {
                         href={item.href}
                         className={
                           active
-                            ? "flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.12] px-4 py-3 text-base font-semibold text-white"
-                            : "flex items-center justify-between rounded-2xl px-4 py-3 text-base font-medium text-zinc-100 transition hover:bg-white/10"
+                            ? "flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.12] px-4 py-3 text-base font-bold tracking-[-0.006em] text-white"
+                            : "flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold tracking-[-0.006em] text-zinc-100 transition hover:bg-white/10"
                         }
                         onClick={() => setOpen(false)}
                       >
@@ -255,8 +255,8 @@ export function MobileNav() {
                     href="/profile"
                     className={
                       pathname === "/profile"
-                        ? "flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.12] px-4 py-3 text-base font-semibold text-white"
-                        : "flex items-center justify-between rounded-2xl px-4 py-3 text-base font-medium text-zinc-100 transition hover:bg-white/10"
+                        ? "flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.12] px-4 py-3 text-base font-bold tracking-[-0.006em] text-white"
+                        : "flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold tracking-[-0.006em] text-zinc-100 transition hover:bg-white/10"
                     }
                     onClick={() => setOpen(false)}
                   >
@@ -279,8 +279,8 @@ export function MobileNav() {
                     <Crown className="h-5 w-5" />
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-white">HdQaz Premium</p>
-                    <p className="mt-1 text-sm leading-5 text-zinc-400">1080p және Premium мүмкіндіктер</p>
+                    <p className="text-sm font-bold tracking-[-0.008em] text-white">HdQaz Premium</p>
+                    <p className="mt-1 text-sm font-medium leading-5 tracking-[0.004em] text-zinc-400">1080p және Premium мүмкіндіктер</p>
                   </div>
                 </div>
               </Link>

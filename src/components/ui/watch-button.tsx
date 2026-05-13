@@ -13,7 +13,7 @@ export function WatchButton({ className, href, label = "Көру" }: WatchButton
     <Link
       href={href}
       className={cn(
-        "hero-watch-button inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--accent)] sm:min-h-14 sm:px-6",
+        "hero-watch-button inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-5 text-sm font-bold tracking-[0.014em] outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--accent)] sm:min-h-14 sm:px-6",
         className
       )}
     >

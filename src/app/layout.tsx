@@ -1,6 +1,25 @@
 import type { Metadata } from "next";
+import { Manrope, Sora } from "next/font/google";
 import "./globals.css";
 import { SiteShell } from "@/components/layout/site-shell";
+
+const sora = Sora({
+  variable: "--font-sora",
+  subsets: ["latin", "latin-ext"],
+  weight: "variable",
+  display: "swap",
+  fallback: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+  adjustFontFallback: true
+});
+
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"],
+  weight: "variable",
+  display: "swap",
+  fallback: ["ui-sans-serif", "system-ui", "sans-serif"],
+  adjustFontFallback: true
+});
 
 export const metadata: Metadata = {
   title: {
@@ -20,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="kk">
+    <html lang="kk" className={`${sora.variable} ${manrope.variable}`}>
       <body>
         <SiteShell>{children}</SiteShell>
       </body>

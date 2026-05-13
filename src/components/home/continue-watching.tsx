@@ -16,14 +16,14 @@ export function ContinueWatching({ movies }: ContinueWatchingProps) {
       <section>
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
               Continue
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-4xl">
+            <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white sm:text-4xl">
               Жалғастырып көру
             </h2>
           </div>
-          <Link href="/catalog" className="text-sm font-medium text-zinc-400 transition hover:text-white">
+          <Link href="/catalog" className="text-sm font-semibold tracking-[0.01em] text-zinc-400 transition hover:text-white">
             Тарих
           </Link>
         </div>
@@ -52,8 +52,8 @@ export function ContinueWatching({ movies }: ContinueWatchingProps) {
 
               <div className="px-1 pt-3">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="truncate text-base font-semibold text-white">{movie.title}</h3>
-                  <span className="text-xs font-medium text-zinc-500">{progress[index]}%</span>
+                  <h3 className="truncate text-base font-bold tracking-[-0.014em] text-white">{movie.title}</h3>
+                  <span className="text-xs font-semibold tracking-[0.006em] text-zinc-500">{progress[index]}%</span>
                 </div>
                 <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
                   <div

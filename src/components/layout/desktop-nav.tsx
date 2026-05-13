@@ -118,7 +118,7 @@ export function DesktopNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="relative rounded-full px-3.5 py-2 text-sm font-medium text-zinc-300 transition hover:text-white"
+                className="relative rounded-full px-3.5 py-2 text-[0.86rem] font-semibold tracking-[0.012em] text-zinc-300 transition hover:text-white"
               >
                 {active && (
                   <motion.span
@@ -163,7 +163,7 @@ export function DesktopNav() {
                 <>
                   <input
                     ref={searchInputRef}
-                    className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-transparent"
+                    className="min-w-0 flex-1 bg-transparent text-sm tracking-[0.01em] text-white outline-none placeholder:text-transparent"
                     aria-label="Кино іздеу"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
@@ -191,7 +191,7 @@ export function DesktopNav() {
                     <AnimatePresence mode="wait">
                       <motion.span
                         key={searchSuggestions[hintIndex]}
-                        className="pointer-events-none absolute left-10 right-4 truncate text-sm text-zinc-400"
+                        className="pointer-events-none absolute left-10 right-4 truncate text-sm tracking-[0.01em] text-zinc-400"
                         initial={{ opacity: 0, y: 8, filter: "blur(6px)" }}
                         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                         exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
@@ -208,7 +208,7 @@ export function DesktopNav() {
 
           <Link
             href="/premium"
-            className="glass-button flex h-11 items-center gap-2 rounded-full border-[rgba(217,183,111,0.32)] px-4 text-sm font-semibold text-white shadow-[0_0_34px_rgba(217,183,111,0.1)] hover:shadow-[0_0_46px_rgba(217,183,111,0.2)]"
+            className="glass-button flex h-11 items-center gap-2 rounded-full border-[rgba(217,183,111,0.32)] px-4 text-sm font-semibold tracking-[0.012em] text-white shadow-[0_0_34px_rgba(217,183,111,0.1)] hover:shadow-[0_0_46px_rgba(217,183,111,0.2)]"
           >
             <Crown className="h-4 w-4 text-[var(--accent)]" />
             Premium

@@ -72,7 +72,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
       >
         <div className="max-w-4xl">
           <motion.div
-            className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-zinc-200 backdrop-blur-2xl"
+            className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-4 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-zinc-200 backdrop-blur-2xl"
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
@@ -94,7 +94,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
           </motion.div>
 
           <motion.h1
-            className="max-w-4xl font-semibold leading-[0.9] tracking-[-0.055em] text-white [font-size:clamp(4rem,10vw,8.4rem)]"
+            className="max-w-4xl font-bold leading-[0.92] tracking-[var(--tracking-hero)] text-white [font-size:clamp(3.4rem,9.4vw,8.4rem)]"
             initial={{ opacity: 0, y: 24, filter: "blur(12px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             transition={{ duration: 0.9, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
@@ -103,7 +103,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
           </motion.h1>
 
           <motion.p
-            className="mt-6 max-w-2xl text-base leading-7 text-zinc-200 sm:text-lg"
+            className="mt-6 max-w-2xl text-base font-medium leading-7 tracking-[0.006em] text-zinc-200 sm:text-lg sm:leading-8"
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.24 }}

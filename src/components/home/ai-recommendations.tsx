@@ -24,15 +24,15 @@ export function AiRecommendations({ movies }: AiRecommendationsProps) {
 
         <div className="relative mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
               <Brain className="h-3.5 w-3.5" />
               Ұсыныс сигналы
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-4xl">
+            <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white sm:text-4xl">
               Сізге дәл келетін таңдаулар
             </h2>
           </div>
-          <p className="max-w-lg text-sm leading-6 text-zinc-400">
+          <p className="max-w-lg text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
             Көру тарихы, жанр, дыбыстама және жаңа релиз сигналы бойынша.
           </p>
         </div>
@@ -54,7 +54,7 @@ export function AiRecommendations({ movies }: AiRecommendationsProps) {
                   className="object-cover transition duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/[0.82] to-transparent" />
-                <span className="absolute left-3 top-3 glass rounded-full px-3 py-1 text-xs font-semibold text-white">
+                <span className="absolute left-3 top-3 glass rounded-full px-3 py-1 text-xs font-bold tracking-[0.012em] text-white">
                   Сәйкестік {96 - index * 4}%
                 </span>
               </div>
@@ -64,8 +64,8 @@ export function AiRecommendations({ movies }: AiRecommendationsProps) {
                   <MovieBadge label={movie.type ? contentTypeLabels[movie.type] : "Movie"} />
                   <MovieBadge label={movie.status ? contentStatusLabels[movie.status] : "Аяқталған"} />
                 </div>
-                <h3 className="text-lg font-semibold tracking-tight text-white">{movie.title}</h3>
-                <p className="mt-2 flex gap-2 text-sm leading-6 text-zinc-400">
+                <h3 className="text-lg font-bold tracking-[-0.018em] text-white">{movie.title}</h3>
+                <p className="mt-2 flex gap-2 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
                   <Sparkles className="mt-1 h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
                   {reasons[index]}
                 </p>

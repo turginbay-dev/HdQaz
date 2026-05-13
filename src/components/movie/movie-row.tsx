@@ -15,14 +15,14 @@ export function MovieRow({ href = "/catalog", title, movies }: MovieRowProps) {
       <section className="relative">
         <div className="mb-5 flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            <h2 className="text-2xl font-bold tracking-[-0.024em] text-white sm:text-3xl">
               {title}
             </h2>
             <div className="mt-2 h-px w-24 bg-gradient-to-r from-[var(--accent)] to-transparent" />
           </div>
           <Link
             href={href}
-            className="glass-button rounded-full px-4 py-2 text-sm font-medium text-white"
+            className="glass-button rounded-full px-4 py-2 text-sm font-semibold tracking-[0.01em] text-white"
           >
             Барлығы
           </Link>

@@ -11,10 +11,10 @@ export function TopTenRow({ movies }: TopTenRowProps) {
     <Reveal>
       <section>
         <div className="mb-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
             Weekly Chart
           </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-4xl">
+          <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white sm:text-4xl">
             Топ 10
           </h2>
         </div>

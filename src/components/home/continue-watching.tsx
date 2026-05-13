@@ -1,16 +1,77 @@
 import Link from "next/link";
-import { Play } from "lucide-react";
+import { Clock3, Play } from "lucide-react";
 import { MovieImage } from "@/components/movie/movie-image";
 import { Reveal } from "@/components/motion/reveal";
-import type { Movie } from "@/types/movie";
+import type { ContinueWatchingItem } from "@/features/watch-history/types";
 
 type ContinueWatchingProps = {
-  movies: Movie[];
+  isAuthenticated: boolean;
+  items: ContinueWatchingItem[];
 };
 
-const progress = [68, 42, 21];
+function formatRemaining(seconds: number | null) {
+  if (!seconds || seconds <= 0) {
+    return null;
+  }
 
-export function ContinueWatching({ movies }: ContinueWatchingProps) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.max(1, Math.round((seconds % 3600) / 60));
+
+  if (hours > 0) {
+    return `${hours} сағ ${minutes} мин қалды`;
+  }
+
+  return `${minutes} мин қалды`;
+}
+
+function isSameDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function formatLastWatched(value: string) {
+  const date = new Date(value);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const minute = 60 * 1000;
+  const hour = 60 * 60 * 1000;
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  if (diffMs >= 0 && diffMs < hour) {
+    const minutes = Math.max(1, Math.round(diffMs / minute));
+
+    return `${minutes} минут бұрын`;
+  }
+
+  if (diffMs >= 0 && diffMs < 6 * hour) {
+    const hours = Math.max(1, Math.round(diffMs / hour));
+
+    return `${hours} сағат бұрын`;
+  }
+
+  if (isSameDay(date, now)) {
+    return "Бүгін";
+  }
+
+  if (isSameDay(date, yesterday)) {
+    return "Кеше";
+  }
+
+  return new Intl.DateTimeFormat("kk-KZ", {
+    day: "numeric",
+    month: "long"
+  }).format(date);
+}
+
+export function ContinueWatching({ isAuthenticated, items }: ContinueWatchingProps) {
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <Reveal>
       <section>
@@ -24,47 +85,75 @@ export function ContinueWatching({ movies }: ContinueWatchingProps) {
             </h2>
           </div>
           <Link href="/catalog" className="text-sm font-semibold tracking-[0.01em] text-zinc-400 transition hover:text-white">
-            Тарих
+            Каталог
           </Link>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          {movies.map((movie, index) => (
-            <Link
-              key={movie.id}
-              href={`/${movie.slug}#player`}
-              className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_24px_90px_rgba(0,0,0,0.3)] transition duration-500 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.075]"
-            >
-              <div className="relative aspect-video overflow-hidden rounded-[22px]">
-                <MovieImage
-                  src={movie.backdropUrl}
-                  alt={movie.title}
-                  fallback="backdrop"
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 33vw"
-                  className="object-cover transition duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/[0.84] via-black/10 to-transparent" />
-                <span className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-full bg-white text-black shadow-[0_12px_40px_rgba(255,255,255,0.22)]">
-                  <Play className="h-4 w-4 fill-current" />
-                </span>
-              </div>
+        {items.length > 0 ? (
+          <div className="cinema-mask hide-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-6 pt-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+            {items.map((item) => {
+              const remaining = formatRemaining(item.remainingSeconds);
 
-              <div className="px-1 pt-3">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="truncate text-base font-bold tracking-[-0.014em] text-white">{movie.title}</h3>
-                  <span className="text-xs font-semibold tracking-[0.006em] text-zinc-500">{progress[index]}%</span>
-                </div>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-strong)]"
-                    style={{ width: `${progress[index]}%` }}
-                  />
-                </div>
-              </div>
+              return (
+                <Link
+                  key={item.id}
+                  href={`/${item.movie.slug}#player`}
+                  className="group relative w-[20rem] shrink-0 overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_24px_90px_rgba(0,0,0,0.3)] transition duration-500 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.075] sm:w-[23rem]"
+                >
+                  <div className="relative aspect-video overflow-hidden rounded-[22px]">
+                    <MovieImage
+                      src={item.movie.backdropUrl}
+                      alt={item.movie.title}
+                      fallback="backdrop"
+                      fill
+                      sizes="(max-width: 640px) 80vw, 368px"
+                      className="object-cover transition duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/[0.9] via-black/20 to-transparent" />
+                    <span className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-full bg-white text-black shadow-[0_12px_40px_rgba(255,255,255,0.22)]">
+                      <Play className="h-4 w-4 fill-current" />
+                    </span>
+                    <span className="glass absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-bold tracking-[0.01em] text-white">
+                      {item.progressPercent}%
+                    </span>
+                  </div>
+
+                  <div className="px-1 pt-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-base font-bold tracking-[-0.014em] text-white">{item.movie.title}</h3>
+                        <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold tracking-[0.006em] text-zinc-500">
+                          <Clock3 className="h-3.5 w-3.5 text-[var(--accent)]" />
+                          {formatLastWatched(item.lastWatchedAt)}
+                          {remaining ? ` · ${remaining}` : ""}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-[rgba(217,183,111,0.28)] bg-[rgba(217,183,111,0.12)] px-3 py-1 text-xs font-bold text-[var(--accent)]">
+                        Жалғастыру
+                      </span>
+                    </div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-strong)]"
+                        style={{ width: `${item.progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.045] px-5 py-8 text-center shadow-[0_24px_90px_rgba(0,0,0,0.28)]">
+            <p className="text-sm font-semibold text-zinc-300">Көре бастаған контент осында сақталады</p>
+            <Link
+              href="/catalog"
+              className="glass-button mt-4 inline-flex min-h-11 items-center justify-center rounded-full px-4 text-sm font-bold text-white"
+            >
+              Каталогқа өту
             </Link>
-          ))}
-        </div>
+          </div>
+        )}
       </section>
     </Reveal>
   );

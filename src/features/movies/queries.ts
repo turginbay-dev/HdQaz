@@ -126,19 +126,6 @@ export async function getMovieBySlug(slug: string): Promise<MovieRecord | null> 
   return content ? contentToMovieRecord(content) : null;
 }
 
-export function getContinueWatchingMovies(records: Movie[]) {
-  return records.slice(0, 3);
-}
-
-export function getAiRecommendedMovies(records: Movie[]) {
-  const recommendations = getMoviesByCatalog(records, "ai-picks");
-  const fallback = records.filter(
-    (movie) => !recommendations.some((recommendedMovie) => recommendedMovie.id === movie.id)
-  );
-
-  return [...recommendations, ...fallback].slice(0, 3);
-}
-
 export function getTopTenMovies(records: Movie[]) {
   const ranked = getMoviesByCatalog(records, "top-10");
   const fallback = records.filter((movie) => !ranked.some((rankedMovie) => rankedMovie.id === movie.id));

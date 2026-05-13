@@ -6,11 +6,10 @@ import { ContinueWatching } from "@/components/home/continue-watching";
 import { AiRecommendations } from "@/components/home/ai-recommendations";
 import { TopTenRow } from "@/components/home/top-ten-row";
 import { AdminShortcut } from "@/components/home/admin-shortcut";
-import { getCurrentAdminUser } from "@/lib/admin-access";
+import { getViewerContext } from "@/features/users/session";
+import { getMyWatchHistory, getRecommendationsForUser } from "@/features/watch-history/repository";
 import {
-  getAiRecommendedMovies,
   getAllMovies,
-  getContinueWatchingMovies,
   getDubbedMovies,
   getFeaturedMovie,
   getMoviesByGenre,
@@ -23,18 +22,22 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [movies, adminUser] = await Promise.all([getAllMovies(), getCurrentAdminUser()]);
+  const [movies, viewer] = await Promise.all([getAllMovies(), getViewerContext()]);
+  const [continueWatchingItems, recommendations] = await Promise.all([
+    viewer.user ? getMyWatchHistory(viewer.user.id, 10) : Promise.resolve([]),
+    getRecommendationsForUser(viewer.user?.id, 8)
+  ]);
   const featured = getFeaturedMovie(movies);
 
   return (
     <main className="ambient-page">
       <HeroBanner movie={featured} />
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-14 px-4 pb-24 pt-3 sm:px-6 lg:gap-18 lg:px-8">
-        {adminUser ? <AdminShortcut /> : null}
+        {viewer.isAdmin ? <AdminShortcut /> : null}
         <CategoryRail />
-        <ContinueWatching movies={getContinueWatchingMovies(movies)} />
+        <ContinueWatching isAuthenticated={Boolean(viewer.user)} items={continueWatchingItems} />
         <SpotlightPicker movies={getTrendingMovies(movies)} />
-        <AiRecommendations movies={getAiRecommendedMovies(movies)} />
+        <AiRecommendations recommendations={recommendations} />
         <MovieRow title="Трендте" movies={getTrendingMovies(movies)} />
         <TopTenRow movies={getTopTenMovies(movies)} />
         <MovieRow

@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import Hls, { type ErrorData, type Level } from "hls.js";
 import {
   AlertTriangle,
@@ -22,10 +22,11 @@ import { formatMovieLanguages } from "@/lib/movie-taxonomy";
 import type { MovieLanguageId } from "@/lib/movie-taxonomy";
 
 type HlsPlayerProps = {
+  contentId?: string;
+  initialWatchProgress?: InitialWatchProgress | null;
   src: string;
   poster: string;
   languages: MovieLanguageId[];
-  progressKey?: string;
   skipIntro?: {
     endSeconds: number;
     label?: string;
@@ -36,6 +37,15 @@ type HlsPlayerProps = {
     label?: string;
     title?: string;
   } | null;
+};
+
+type InitialWatchProgress = {
+  completed: boolean;
+  contentId: string;
+  durationSeconds: number;
+  lastPositionSeconds: number;
+  progressPercent: number;
+  updatedAt?: string;
 };
 
 type QualityLevel = {
@@ -51,11 +61,11 @@ type Toast = {
 
 type ActiveMenu = "quality" | "settings" | "speed" | null;
 
-type SavedPlaybackProgress = {
-  completed?: boolean;
+type SavedProgressSnapshot = {
+  completed: boolean;
+  contentId: string;
   durationSeconds: number;
-  positionSeconds: number;
-  updatedAt: number;
+  progressSeconds: number;
 };
 
 type WebKitFullscreenVideo = HTMLVideoElement & {
@@ -131,17 +141,6 @@ function getBufferedEnd(video: HTMLVideoElement) {
   return video.buffered.end(video.buffered.length - 1);
 }
 
-function hashString(value: string) {
-  let hash = 0;
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash << 5) - hash + value.charCodeAt(index);
-    hash |= 0;
-  }
-
-  return Math.abs(hash).toString(36);
-}
-
 function isHlsManifestUrl(value: string) {
   return value.toLowerCase().split(/[?#]/)[0].endsWith(".m3u8");
 }
@@ -167,36 +166,20 @@ function isTypingTarget(target: EventTarget | null) {
   );
 }
 
-function readSavedProgress(storageKey: string): SavedPlaybackProgress | null {
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw) as Partial<SavedPlaybackProgress>;
-
-    if (
-      typeof parsed.positionSeconds !== "number" ||
-      typeof parsed.durationSeconds !== "number" ||
-      typeof parsed.updatedAt !== "number"
-    ) {
-      return null;
-    }
-
-    return {
-      completed: parsed.completed,
-      durationSeconds: parsed.durationSeconds,
-      positionSeconds: parsed.positionSeconds,
-      updatedAt: parsed.updatedAt
-    };
-  } catch {
+function initialSnapshot(progress: InitialWatchProgress | null | undefined): SavedProgressSnapshot | null {
+  if (!progress) {
     return null;
   }
+
+  return {
+    completed: progress.completed || progress.progressPercent >= 90,
+    contentId: progress.contentId,
+    durationSeconds: Math.max(0, Math.round(progress.durationSeconds)),
+    progressSeconds: Math.max(0, Math.round(progress.lastPositionSeconds))
+  };
 }
 
-export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, nextEpisode }: HlsPlayerProps) {
+export function HlsPlayer({ contentId, initialWatchProgress, src, poster, languages, skipIntro, nextEpisode }: HlsPlayerProps) {
   const playerRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -207,7 +190,7 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
   const seekPulseTimerRef = useRef<number | null>(null);
   const singleTapTimerRef = useRef<number | null>(null);
   const lastTapRef = useRef({ time: 0, x: 0, y: 0 });
-  const lastSavedAtRef = useRef(0);
+  const lastBackendSaveRef = useRef<SavedProgressSnapshot | null>(initialSnapshot(initialWatchProgress));
   const manualLevelRef = useRef(-1);
   const resumeAppliedRef = useRef(false);
 
@@ -231,10 +214,6 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
   const [toast, setToast] = useState<Toast | null>(null);
   const [seekPulse, setSeekPulse] = useState<"backward" | "forward" | null>(null);
 
-  const progressStorageKey = useMemo(() => {
-    return `hdqaz:player-progress:${progressKey ?? hashString(src)}`;
-  }, [progressKey, src]);
-
   const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
   const bufferedPercent = duration > 0 ? Math.min(100, (bufferedEnd / duration) * 100) : 0;
   const volumePercent = muted ? 0 : Math.round(volume * 100);
@@ -250,6 +229,19 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
     currentTime < (skipIntro?.endSeconds ?? 0) &&
     (skipIntro?.endSeconds ?? 0) > skipIntroStart;
   const showNextEpisode = Boolean(nextEpisode && duration > 0 && currentTime >= Math.max(duration - 45, duration * 0.92));
+  const resumePercent = initialWatchProgress?.progressPercent ?? 0;
+  const hasResumeProgress = Boolean(
+    initialWatchProgress &&
+      initialWatchProgress.lastPositionSeconds > 0 &&
+      resumePercent > 2 &&
+      resumePercent < 90 &&
+      !initialWatchProgress.completed
+  );
+  const resumeBadgeLabel = hasResumeProgress
+    ? `Жалғастыру: ${resumePercent}%`
+    : initialWatchProgress && (initialWatchProgress.completed || resumePercent >= 90)
+      ? "Қайта көру"
+      : null;
   const progressStyle = {
     "--buffered": `${bufferedPercent}%`,
     "--progress": `${progressPercent}%`
@@ -278,7 +270,7 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
     setScrubbing(false);
     setSeekPulse(null);
     manualLevelRef.current = -1;
-    lastSavedAtRef.current = 0;
+    lastBackendSaveRef.current = initialSnapshot(initialWatchProgress);
     resumeAppliedRef.current = false;
     hlsRef.current = null;
     usingHlsJsRef.current = false;
@@ -294,7 +286,7 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
 
       return () => {
         streamReadyRef.current = false;
-        persistPlaybackProgress(true);
+        savePlaybackProgress({ keepalive: true });
         video.removeAttribute("src");
         video.load();
       };
@@ -339,7 +331,6 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
         setDuration(getVideoDuration(video));
         setLoading(false);
         setError(null);
-        restorePlaybackProgress(video);
       };
 
       const handleLevelSwitched = (_event: string, data: { level: number }) => {
@@ -393,7 +384,7 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
 
       return () => {
         window.clearTimeout(manifestTimeout);
-        persistPlaybackProgress(true);
+        savePlaybackProgress({ keepalive: true });
         hls.off(Hls.Events.MEDIA_ATTACHED, handleMediaAttached);
         hls.off(Hls.Events.MANIFEST_PARSED, handleManifestParsed);
         hls.off(Hls.Events.LEVEL_SWITCHED, handleLevelSwitched);
@@ -413,7 +404,7 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
 
       return () => {
         streamReadyRef.current = false;
-        persistPlaybackProgress(true);
+        savePlaybackProgress({ keepalive: true });
         video.removeAttribute("src");
         video.load();
       };
@@ -421,7 +412,7 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
 
     setLoading(false);
     setError("Бұл браузер HLS stream ойната алмайды.");
-  }, [src]);
+  }, [contentId, initialWatchProgress, src]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -559,18 +550,20 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
   }, [activeMenu, error, loading, muted, playing, volume]);
 
   useEffect(() => {
-    const saveCurrentProgress = () => persistPlaybackProgress(true);
+    const saveCurrentProgress = () => savePlaybackProgress({ keepalive: true });
 
     window.addEventListener("pagehide", saveCurrentProgress);
+    window.addEventListener("beforeunload", saveCurrentProgress);
 
     return () => {
       saveCurrentProgress();
       window.removeEventListener("pagehide", saveCurrentProgress);
+      window.removeEventListener("beforeunload", saveCurrentProgress);
       window.clearTimeout(toastTimerRef.current ?? undefined);
       window.clearTimeout(seekPulseTimerRef.current ?? undefined);
       window.clearTimeout(singleTapTimerRef.current ?? undefined);
     };
-  }, [progressStorageKey]);
+  }, [contentId, src]);
 
   async function togglePlayback(announce = false) {
     const video = videoRef.current;
@@ -619,7 +612,6 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
     setCurrentTime(nextCurrentTime);
     setDuration(nextDuration);
     setBufferedEnd(getBufferedEnd(video));
-    persistPlaybackProgress();
 
     if (streamReadyRef.current) {
       setLoading(video.readyState < 3 && !video.paused);
@@ -636,7 +628,6 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
 
     video.currentTime = nextTime;
     setCurrentTime(nextTime);
-    persistPlaybackProgress(true);
   }
 
   function seekBy(seconds: number, announce = false) {
@@ -653,7 +644,6 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
 
     video.currentTime = nextTime;
     setCurrentTime(nextTime);
-    persistPlaybackProgress(true);
     pulseSeek(seconds > 0 ? "forward" : "backward");
 
     if (announce) {
@@ -815,41 +805,94 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
     videoRef.current?.load();
   }
 
-  function persistPlaybackProgress(force = false) {
+  function getProgressSnapshot(): SavedProgressSnapshot | null {
     const video = videoRef.current;
 
-    if (!video) {
-      return;
+    if (!video || !contentId) {
+      return null;
     }
 
     const videoDuration = getVideoDuration(video);
     const positionSeconds = video.currentTime;
 
     if (!videoDuration || !Number.isFinite(positionSeconds)) {
+      return null;
+    }
+
+    const durationSeconds = Math.round(videoDuration);
+    const progressSeconds = Math.max(0, Math.min(durationSeconds, Math.round(positionSeconds)));
+    const percent = durationSeconds > 0 ? Math.min(100, Math.max(0, Math.round((progressSeconds / durationSeconds) * 100))) : 0;
+
+    if (progressSeconds < 30 || percent <= 2) {
+      return null;
+    }
+
+    return {
+      completed: percent >= 90,
+      contentId,
+      durationSeconds,
+      progressSeconds
+    };
+  }
+
+  function hasMeaningfulProgressChange(snapshot: SavedProgressSnapshot) {
+    const previous = lastBackendSaveRef.current;
+
+    if (!previous || previous.contentId !== snapshot.contentId) {
+      return true;
+    }
+
+    if (previous.completed !== snapshot.completed) {
+      return true;
+    }
+
+    return (
+      Math.abs(previous.progressSeconds - snapshot.progressSeconds) >= 10 ||
+      Math.abs(previous.durationSeconds - snapshot.durationSeconds) >= 5
+    );
+  }
+
+  function sendProgress(snapshot: SavedProgressSnapshot, keepalive: boolean) {
+    const body = JSON.stringify({
+      contentId: snapshot.contentId,
+      durationSeconds: snapshot.durationSeconds,
+      progressSeconds: snapshot.progressSeconds
+    });
+
+    if (keepalive && navigator.sendBeacon) {
+      try {
+        const blob = new Blob([body], { type: "application/json" });
+
+        if (navigator.sendBeacon("/api/watch-progress", blob)) {
+          return;
+        }
+      } catch {
+        // Fall through to fetch; progress saving must not affect playback teardown.
+      }
+    }
+
+    void fetch("/api/watch-progress", {
+      body,
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      keepalive,
+      method: "POST"
+    }).catch(() => {
+      // Progress is retried on the next meaningful player lifecycle event.
+    });
+  }
+
+  function savePlaybackProgress(options: { keepalive?: boolean } = {}) {
+    const snapshot = getProgressSnapshot();
+
+    if (!snapshot || !hasMeaningfulProgressChange(snapshot)) {
       return;
     }
 
-    const now = Date.now();
-
-    if (!force && now - lastSavedAtRef.current < 5000) {
-      return;
-    }
-
-    lastSavedAtRef.current = now;
-
-    try {
-      window.localStorage.setItem(
-        progressStorageKey,
-        JSON.stringify({
-          completed: positionSeconds / videoDuration >= 0.95,
-          durationSeconds: Math.round(videoDuration),
-          positionSeconds: Math.round(positionSeconds),
-          updatedAt: now
-        } satisfies SavedPlaybackProgress)
-      );
-    } catch {
-      // Local progress is a comfort feature; playback should never depend on storage.
-    }
+    lastBackendSaveRef.current = snapshot;
+    sendProgress(snapshot, Boolean(options.keepalive));
   }
 
   function restorePlaybackProgress(video: HTMLVideoElement) {
@@ -857,23 +900,29 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
       return;
     }
 
-    const saved = readSavedProgress(progressStorageKey);
+    const saved = initialWatchProgress;
     const videoDuration = getVideoDuration(video);
 
     if (
       !saved ||
+      saved.contentId !== contentId ||
       saved.completed ||
-      saved.positionSeconds < 8 ||
-      (videoDuration > 0 && saved.positionSeconds > videoDuration - 20)
+      saved.progressPercent <= 2 ||
+      saved.progressPercent >= 90 ||
+      saved.lastPositionSeconds <= 0
     ) {
       resumeAppliedRef.current = true;
       return;
     }
 
-    video.currentTime = saved.positionSeconds;
-    setCurrentTime(saved.positionSeconds);
+    if (videoDuration <= 0 || saved.lastPositionSeconds > videoDuration - 20) {
+      return;
+    }
+
+    video.currentTime = saved.lastPositionSeconds;
+    setCurrentTime(saved.lastPositionSeconds);
     resumeAppliedRef.current = true;
-    showToast(`Жалғасты: ${formatTime(saved.positionSeconds)}`);
+    showToast(`Жалғасты: ${formatTime(saved.lastPositionSeconds)}`);
   }
 
   function revealControls() {
@@ -1019,10 +1068,14 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
             }}
             onPause={() => {
               setPlaying(false);
-              persistPlaybackProgress(true);
+              savePlaybackProgress();
             }}
             onProgress={syncVideoState}
             onTimeUpdate={syncVideoState}
+            onEnded={() => {
+              setPlaying(false);
+              savePlaybackProgress();
+            }}
             onVolumeChange={() => {
               const video = videoRef.current;
 
@@ -1055,6 +1108,17 @@ export function HlsPlayer({ src, poster, languages, progressKey, skipIntro, next
             </div>
             <div className="cinema-badge hidden sm:inline-flex">{qualityLabel}</div>
           </div>
+
+          {resumeBadgeLabel ? (
+            <div
+              className={cn(
+                "cinema-badge absolute left-3 top-[4.25rem] z-30 transition duration-300 sm:left-5 sm:top-[4.75rem]",
+                visibleChrome ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0"
+              )}
+            >
+              {resumeBadgeLabel}
+            </div>
+          ) : null}
 
           {loading && !error ? (
             <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-black/18">

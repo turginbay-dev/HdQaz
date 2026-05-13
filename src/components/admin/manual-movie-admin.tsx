@@ -763,7 +763,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
             placeholder="https://..."
           />
           <AdminSelect
-            label="Даббер"
+            label="Дыбыстаушы"
             value={contentDraft.dubberId}
             onChange={(value) => updateContentField("dubberId", value)}
             options={[
@@ -877,7 +877,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                             {episode.title ? ` — ${episode.title}` : ""}
                           </h4>
                           <p className="mt-1 truncate text-xs text-zinc-500">
-                            /watch/{contentDraft.slug}/{episode.slug}
+                            /{contentDraft.slug}?episode={episode.slug}#player
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1032,7 +1032,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h3 className="font-semibold text-white">Дыбыстама топтары</h3>
-              <p className="mt-1 text-xs text-zinc-500">{availableDubbers.length} даббер</p>
+              <p className="mt-1 text-xs text-zinc-500">{availableDubbers.length} дыбыстаушы</p>
             </div>
             <button
               className="glass-button flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
@@ -1146,7 +1146,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                 </div>
               ))
             ) : (
-              <p className="py-3 text-sm text-zinc-500">Әзірге даббер жоқ</p>
+              <p className="py-3 text-sm text-zinc-500">Әзірге дыбыстаушы жоқ</p>
             )}
           </div>
         </section>
@@ -1223,7 +1223,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                   </div>
                   <h3 className="truncate font-semibold text-white">{item.title}</h3>
                   <p className="mt-1 truncate text-sm text-zinc-500">
-                    {item.year} · {item.country || "Ел жоқ"} · {item.dubber?.name ?? "Даббер жоқ"}
+                    {item.year} · {item.country || "Ел жоқ"} · {item.dubber?.name ?? "Дыбыстаушы жоқ"}
                   </p>
                   <p className="mt-1 truncate text-xs text-zinc-600">
                     {item.genres.map((genre) => genre.name).join(", ")}

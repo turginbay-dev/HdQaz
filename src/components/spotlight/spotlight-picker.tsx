@@ -285,14 +285,14 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
               </div>
 
               <div className="mt-5 flex gap-2">
-                <WatchButton
-                  href={
-                    selectedIsEpisodic && selectedFirstEpisode
-                      ? `/watch/${selectedMovie.slug}/${selectedFirstEpisode.slug}`
-                      : `/watch/${selectedMovie.slug}`
-                  }
-                  className="flex-1"
-                />
+	                <WatchButton
+	                  href={
+	                    selectedIsEpisodic && selectedFirstEpisode
+	                      ? `/${selectedMovie.slug}?episode=${encodeURIComponent(selectedFirstEpisode.slug)}#player`
+	                      : `/${selectedMovie.slug}#player`
+	                  }
+	                  className="flex-1"
+	                />
                 <Link
                   href={`/${selectedMovie.slug}`}
                   className="glass-button inline-flex min-h-12 items-center justify-center rounded-full px-4 text-sm font-semibold tracking-[0.01em] text-white"

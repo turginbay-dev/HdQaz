@@ -32,7 +32,7 @@ export function ContinueWatching({ movies }: ContinueWatchingProps) {
           {movies.map((movie, index) => (
             <Link
               key={movie.id}
-              href={`/watch/${movie.slug}`}
+              href={`/${movie.slug}#player`}
               className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_24px_90px_rgba(0,0,0,0.3)] transition duration-500 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.075]"
             >
               <div className="relative aspect-video overflow-hidden rounded-[22px]">

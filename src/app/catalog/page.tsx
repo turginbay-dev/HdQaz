@@ -65,7 +65,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               className="min-w-0 flex-1 bg-transparent text-base font-medium tracking-[0.004em] outline-none placeholder:text-zinc-500"
               defaultValue={selectedQuery ?? ""}
               name="q"
-              placeholder="Атауы, елі, даббері немесе жылы бойынша іздеу"
+              placeholder="Атауы, елі, дыбыстаушысы немесе жылы бойынша іздеу"
               type="search"
             />
           </label>
@@ -103,7 +103,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             </p>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-400">
               {selectedQuery
-                ? "Басқа атау, ел, жыл немесе даббер атауын енгізіп көріңіз."
+                ? "Басқа атау, ел, жыл немесе дыбыстаушы атауын енгізіп көріңіз."
                 : "Админ панельден жарияланған контент бұл жерде автоматты түрде шығады."}
             </p>
           </div>

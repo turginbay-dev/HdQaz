@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Unbounded } from "next/font/google";
 import "./globals.css";
 import { SiteShell } from "@/components/layout/site-shell";
+import { getCanonicalSiteUrl } from "@/lib/site-url";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -22,6 +23,7 @@ const unbounded = Unbounded({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getCanonicalSiteUrl()),
   title: {
     default: "HdQaz",
     template: "%s | HdQaz"

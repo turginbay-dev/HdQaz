@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { listContents } from "@/features/content/repository";
-import { getSiteUrl } from "@/lib/site-url";
+import { getCanonicalSiteUrl } from "@/lib/site-url";
 import type { Content } from "@/types/content";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,7 @@ const staticRoutes = [
 }>;
 
 function buildUrl(path: string) {
-  return new URL(path, getSiteUrl()).toString();
+  return new URL(path, getCanonicalSiteUrl()).toString();
 }
 
 function buildContentUrl(slug: string) {
@@ -70,7 +70,7 @@ function normalizeImageUrl(value?: string | null) {
   }
 
   try {
-    const url = value.startsWith("/") ? new URL(value, getSiteUrl()) : new URL(value);
+    const url = value.startsWith("/") ? new URL(value, getCanonicalSiteUrl()) : new URL(value);
 
     return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
   } catch {

@@ -30,11 +30,11 @@ export function RelatedMoviesPanel({
     <GlassPanel className={cn("p-4 sm:p-5", className)}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
             Формат және жанр
           </p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-white">{title}</h2>
-          <p className="mt-1 truncate text-xs font-medium text-[rgba(217,183,111,0.82)]">{subtitle}</p>
+          <h2 className="mt-1 text-lg font-bold tracking-[-0.014em] text-white">{title}</h2>
+          <p className="mt-1 truncate text-xs font-semibold tracking-[0.006em] text-[rgba(217,183,111,0.82)]">{subtitle}</p>
         </div>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.07] text-[var(--accent)]">
           <Film className="h-5 w-5" />
@@ -75,9 +75,9 @@ function RelatedMovieLink({ movie, priority }: { movie: Movie; priority: boolean
         />
       </div>
       <div className="min-w-0 py-1">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-white">{movie.title}</h3>
-        <p className="mt-1 truncate text-xs text-zinc-400">{metaLine}</p>
-        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[rgba(217,183,111,0.82)]">
+        <h3 className="line-clamp-2 text-sm font-bold leading-5 tracking-[-0.01em] text-white">{movie.title}</h3>
+        <p className="mt-1 truncate text-xs font-medium tracking-[0.004em] text-zinc-400">{metaLine}</p>
+        <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold tracking-[0.006em] text-[rgba(217,183,111,0.82)]">
           <Radio className="h-3 w-3 shrink-0" />
           <span className="truncate">{movie.dubber?.name ? `${movie.dubber.name} · ${detailLine}` : detailLine}</span>
         </p>

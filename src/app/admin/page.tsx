@@ -31,19 +31,19 @@ export default async function AdminPage() {
           <div className="max-w-3xl">
             <Link
               href="/"
-              className="glass-button mb-5 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white"
+              className="glass-button mb-5 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold tracking-[0.01em] text-white"
             >
               <ArrowLeft className="h-4 w-4" />
               Басты бет
             </Link>
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
               <LogoMark className="h-8 w-8 p-0.5" sizes="32px" />
               HdQaz Admin
             </p>
-            <h1 className="mt-3 font-semibold leading-[0.95] tracking-[-0.05em] text-white [font-size:clamp(3rem,7vw,6rem)]">
+            <h1 className="mt-3 font-bold leading-[0.96] tracking-[-0.032em] text-white [font-size:clamp(3rem,6.6vw,6rem)]">
               Контент басқару панелі
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-400">
+            <p className="mt-5 max-w-2xl text-base font-medium leading-7 tracking-[0.004em] text-zinc-400">
               Контент сақтау `/api/contents` backend endpoint арқылы жүреді. Жазу операциялары
               `.env.local` ішіндегі admin email allowlist арқылы қорғалады.
             </p>

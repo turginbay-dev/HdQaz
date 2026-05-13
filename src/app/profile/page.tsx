@@ -44,20 +44,20 @@ export default async function ProfilePage() {
             {avatarUrl ? (
               <Image src={avatarUrl} alt={name} fill sizes="96px" className="object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-white">
+              <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-white">
                 {name.slice(0, 1).toUpperCase()}
               </div>
             )}
           </div>
-          <h1 className="mt-5 text-2xl font-semibold tracking-tight text-white">{name}</h1>
-          <p className="mt-2 flex items-center gap-2 text-sm text-zinc-400">
+          <h1 className="mt-5 text-2xl font-bold tracking-[-0.018em] text-white">{name}</h1>
+          <p className="mt-2 flex items-center gap-2 text-sm font-medium tracking-[0.004em] text-zinc-400">
             <Mail className="h-4 w-4" />
             {user.email}
           </p>
 
           <form action={signOut} className="mt-6">
             <button
-              className="glass-button inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold text-white"
+              className="glass-button inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-bold tracking-[0.014em] text-white"
               type="submit"
             >
               <LogOut className="h-4 w-4" />
@@ -71,8 +71,8 @@ export default async function ProfilePage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-[var(--accent)]">
               <ShieldCheck className="h-6 w-6" />
             </div>
-            <h2 className="mt-5 text-xl font-semibold text-white">Аккаунт қосылған</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-400">
+            <h2 className="mt-5 text-xl font-bold tracking-[-0.014em] text-white">Аккаунт қосылған</h2>
+            <p className="mt-2 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
               Кіру әдісі: {authMethod}. Бұл жобада тек email/password және Google қолданылады.
             </p>
           </div>
@@ -81,8 +81,8 @@ export default async function ProfilePage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(217,183,111,0.16)] text-[var(--accent)]">
               <Crown className="h-6 w-6" />
             </div>
-            <h2 className="mt-5 text-xl font-semibold text-white">Premium статус</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-400">
+            <h2 className="mt-5 text-xl font-bold tracking-[-0.014em] text-white">Premium статус</h2>
+            <p className="mt-2 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
               Келесі кезеңде subscription кестесімен байланыстырамыз.
             </p>
           </div>

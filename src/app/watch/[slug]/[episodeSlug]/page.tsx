@@ -87,13 +87,13 @@ export default async function EpisodeWatchPage({ params }: EpisodeWatchPageProps
                     {content.dubber?.name ? <MovieBadge label={content.dubber.name} /> : null}
                     <MovieBadge label={`${episode.episodeNumber}-серия`} />
                   </div>
-                  <h1 className="text-2xl font-semibold text-white">
+                  <h1 className="text-2xl font-bold tracking-[-0.018em] text-white">
                     {content.title} - {episode.episodeNumber}-серия
                   </h1>
                   {episode.title ? (
-                    <p className="mt-2 text-base font-medium text-[var(--accent)]">{episode.title}</p>
+                    <p className="mt-2 text-base font-semibold tracking-[0.006em] text-[var(--accent)]">{episode.title}</p>
                   ) : null}
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-300">
+                  <p className="mt-2 max-w-3xl text-sm font-medium leading-6 tracking-[0.004em] text-zinc-300">
                     {episode.description || content.description}
                   </p>
                 </div>
@@ -108,10 +108,10 @@ export default async function EpisodeWatchPage({ params }: EpisodeWatchPageProps
             <section className="mt-6">
               <div className="mb-4 flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-semibold tracking-tight text-white">Сериялар</h2>
+                  <h2 className="text-2xl font-bold tracking-[-0.024em] text-white">Сериялар</h2>
                   <div className="mt-2 h-px w-24 bg-gradient-to-r from-[var(--accent)] to-transparent" />
                 </div>
-                <Link href={`/${content.slug}`} className="glass-button rounded-full px-4 py-2 text-sm font-semibold text-white">
+                <Link href={`/${content.slug}`} className="glass-button rounded-full px-4 py-2 text-sm font-semibold tracking-[0.01em] text-white">
                   Detail page
                 </Link>
               </div>
@@ -126,8 +126,8 @@ export default async function EpisodeWatchPage({ params }: EpisodeWatchPageProps
                       href={`/watch/${content.slug}/${item.slug}`}
                       className={
                         active
-                          ? "rounded-2xl border border-[rgba(217,183,111,0.42)] bg-[rgba(217,183,111,0.16)] px-4 py-3 text-sm font-semibold text-[var(--accent)]"
-                          : "glass-button rounded-2xl px-4 py-3 text-sm font-semibold text-white"
+                          ? "rounded-2xl border border-[rgba(217,183,111,0.42)] bg-[rgba(217,183,111,0.16)] px-4 py-3 text-sm font-semibold tracking-[0.01em] text-[var(--accent)]"
+                          : "glass-button rounded-2xl px-4 py-3 text-sm font-semibold tracking-[0.01em] text-white"
                       }
                     >
                       <span className="inline-flex items-center gap-2">
@@ -165,7 +165,7 @@ function EpisodeNavLink({
 
   if (!episode) {
     return (
-      <span className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-zinc-600">
+      <span className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold tracking-[0.01em] text-zinc-600">
         {label}
       </span>
     );
@@ -174,7 +174,7 @@ function EpisodeNavLink({
   return (
     <Link
       href={`/watch/${slug}/${episode.slug}`}
-      className="glass-button inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white"
+      className="glass-button inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold tracking-[0.01em] text-white"
     >
       {direction === "previous" ? <ChevronLeft className="h-4 w-4" /> : null}
       {label}

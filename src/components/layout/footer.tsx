@@ -95,9 +95,9 @@ export function Footer() {
               aria-label="HdQaz басты бет"
             >
               <LogoMark className="h-12 w-12 p-1" sizes="48px" />
-              <span className="text-2xl font-semibold tracking-tight text-white">HdQaz</span>
+              <span className="text-2xl font-bold tracking-[-0.018em] text-white">HdQaz</span>
             </Link>
-            <p className="mt-4 text-sm leading-6 text-zinc-400">
+            <p className="mt-4 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
               Қазақша фильмдер, дорамалар, аниме және сериалдарды ыңғайлы көруге арналған платформа.
             </p>
           </div>

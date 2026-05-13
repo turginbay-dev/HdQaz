@@ -33,14 +33,14 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-end">
           <div className="max-w-3xl">
-            <p className="inline-flex items-center gap-2 text-sm font-medium uppercase tracking-[0.28em] text-[var(--accent)]">
+            <p className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
               <LogoMark className="h-8 w-8 p-0.5" sizes="32px" />
               HdQaz каталогы
             </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-6xl">
+            <h1 className="mt-3 text-4xl font-bold tracking-[-0.026em] text-white sm:text-6xl">
               {selectedQuery ? "Іздеу нәтижелері" : "Барлық контент"}
             </h1>
-            <p className="mt-4 text-base leading-7 text-zinc-300">
+            <p className="mt-4 text-base font-medium leading-7 tracking-[0.004em] text-zinc-300">
               {selectedQuery
                 ? `«${selectedQuery}» бойынша табылған контент.`
                 : "Фильм, дорама, аниме және сериалдар бір таза тізімде көрсетіледі."}
@@ -48,9 +48,9 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           </div>
 
           <div className="glass rounded-[28px] p-5">
-            <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Қазір ашық</p>
-            <p className="mt-2 text-2xl font-semibold text-white">{selectedLabel}</p>
-            <p className="mt-2 text-sm text-zinc-400">{movies.length} контент табылды</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Қазір ашық</p>
+            <p className="mt-2 text-2xl font-bold tracking-[-0.018em] text-white">{selectedLabel}</p>
+            <p className="mt-2 text-sm font-medium tracking-[0.004em] text-zinc-400">{movies.length} контент табылды</p>
           </div>
         </div>
 
@@ -62,7 +62,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           <label className="flex min-h-12 flex-1 items-center gap-3 rounded-2xl bg-black/20 px-4 text-white">
             <Search className="h-5 w-5 shrink-0 text-[var(--accent)]" />
             <input
-              className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-zinc-500"
+              className="min-w-0 flex-1 bg-transparent text-base font-medium tracking-[0.004em] outline-none placeholder:text-zinc-500"
               defaultValue={selectedQuery ?? ""}
               name="q"
               placeholder="Атауы, елі, даббері немесе жылы бойынша іздеу"
@@ -81,7 +81,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               </Link>
             )}
             <button
-              className="hero-watch-button flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold sm:flex-none"
+              className="hero-watch-button flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-bold tracking-[0.014em] sm:flex-none"
               type="submit"
             >
               <Search className="h-4 w-4" />

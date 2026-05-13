@@ -58,14 +58,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       <section className="relative mx-auto grid min-h-[calc(100vh-7rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[minmax(0,1fr)_460px]">
         <div className="max-w-3xl">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-zinc-200 backdrop-blur-2xl">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-zinc-200 backdrop-blur-2xl">
             <LogoMark className="h-6 w-6 p-0.5" sizes="24px" />
             HdQaz Account
           </div>
-          <h1 className="max-w-3xl font-semibold leading-[0.92] tracking-[-0.05em] text-white [font-size:clamp(3.4rem,8vw,7rem)]">
+          <h1 className="max-w-3xl font-bold leading-[0.94] tracking-[-0.032em] text-white [font-size:clamp(3.2rem,7.4vw,7rem)]">
             Бір аккаунт. Барлық қазақша кино.
           </h1>
-          <p className="mt-6 max-w-2xl text-base leading-7 text-zinc-300 sm:text-lg">
+          <p className="mt-6 max-w-2xl text-base font-medium leading-7 tracking-[0.004em] text-zinc-300 sm:text-lg sm:leading-8">
             Email және парольмен немесе Google арқылы кіріп, көру тарихын, Premium статусын және жеке ұсыныстарды сақтаңыз.
           </p>
         </div>
@@ -74,8 +74,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(217,183,111,0.16)] text-[var(--accent)]">
             <ShieldCheck className="h-7 w-7" />
           </div>
-          <h2 className="text-2xl font-semibold tracking-tight text-white">Кіру</h2>
-          <p className="mt-3 text-sm leading-6 text-zinc-400">
+          <h2 className="text-2xl font-bold tracking-[-0.018em] text-white">Кіру</h2>
+          <p className="mt-3 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
             Бұл жобада тек email/password және Google арқылы кіру қолданылады.
           </p>
 

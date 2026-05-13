@@ -56,17 +56,17 @@ export default async function ContentPage({ params }: ContentPageProps) {
                 <MovieBadge label={statusLabel} />
                 {content.dubber?.name ? <MovieBadge label={content.dubber.name} /> : null}
               </div>
-              <h1 className="text-5xl font-semibold tracking-tight text-white sm:text-7xl">
+              <h1 className="text-5xl font-bold tracking-[-0.028em] text-white sm:text-7xl">
                 {content.title}
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-200 sm:text-lg">
+              <p className="mt-4 max-w-2xl text-base font-medium leading-7 tracking-[0.004em] text-zinc-200 sm:text-lg sm:leading-8">
                 {content.description}
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {content.genres.map((genre) => (
                   <span
                     key={genre}
-                    className="glass-button rounded-full px-3 py-1.5 text-xs font-semibold text-white"
+                    className="glass-button rounded-full px-3 py-1.5 text-xs font-semibold tracking-[0.01em] text-white"
                   >
                     {genre}
                   </span>
@@ -86,7 +86,7 @@ export default async function ContentPage({ params }: ContentPageProps) {
                 ) : !contentIsEpisodic ? (
                   <WatchButton href={`/watch/${content.slug}`} />
                 ) : null}
-                <button className="glass-button inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white">
+                <button className="glass-button inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-bold tracking-[0.014em] text-white">
                   <Plus className="h-4 w-4" />
                   Тізімге қосу
                 </button>
@@ -111,7 +111,7 @@ export default async function ContentPage({ params }: ContentPageProps) {
         {contentIsEpisodic ? (
           <section className="mb-14">
             <div className="mb-5">
-              <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Episodes</h2>
+              <h2 className="text-2xl font-bold tracking-[-0.024em] text-white sm:text-3xl">Episodes</h2>
               <div className="mt-2 h-px w-24 bg-gradient-to-r from-[var(--accent)] to-transparent" />
             </div>
             {episodes.length > 0 ? (
@@ -122,13 +122,13 @@ export default async function ContentPage({ params }: ContentPageProps) {
                     href={`/watch/${content.slug}/${episode.slug}`}
                     className="glass group rounded-[24px] p-4 transition hover:border-[rgba(217,183,111,0.35)]"
                   >
-                    <p className="text-sm font-semibold text-[var(--accent)]">
+                    <p className="text-sm font-bold tracking-[0.01em] text-[var(--accent)]">
                       {episode.episodeNumber}-серия
                     </p>
-                    <h3 className="mt-2 line-clamp-2 min-h-10 text-base font-semibold text-white">
+                    <h3 className="mt-2 line-clamp-2 min-h-10 text-base font-bold tracking-[-0.012em] text-white">
                       {episode.title || `${episode.episodeNumber}-серия`}
                     </h3>
-                    <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-zinc-300 transition group-hover:text-white">
+                    <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold tracking-[0.01em] text-zinc-300 transition group-hover:text-white">
                       <Play className="h-4 w-4 fill-current" />
                       Көру
                     </p>

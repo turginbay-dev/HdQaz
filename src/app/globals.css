@@ -14,19 +14,21 @@
   --accent-blue: #8fb7ff;
   --deep-navy: #070b18;
   --type-body: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --type-heading: var(--font-sora), var(--font-manrope), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --type-heading: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --type-ui: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --type-cinematic: var(--font-unbounded), var(--font-manrope), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --tracking-body: 0.004em;
   --tracking-ui: 0.01em;
   --tracking-button: 0.014em;
-  --tracking-heading: -0.026em;
-  --tracking-hero: -0.042em;
+  --tracking-heading: -0.018em;
+  --tracking-cinematic: -0.034em;
   --tracking-label: 0.18em;
 }
 
 @theme inline {
   --font-sans: var(--type-body);
-  --font-display: var(--type-heading);
+  --font-heading: var(--type-heading);
+  --font-cinematic: var(--type-cinematic);
 }
 
 * {
@@ -62,10 +64,16 @@ body {
 
 :where(h1, h2, h3, h4, h5, h6) {
   font-family: var(--type-heading);
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1.04;
   letter-spacing: var(--tracking-heading);
   text-wrap: balance;
+}
+
+.type-cinematic {
+  font-family: var(--type-cinematic);
+  font-weight: 800;
+  letter-spacing: var(--tracking-cinematic);
 }
 
 :where(p, li) {
@@ -96,8 +104,13 @@ a {
 }
 
 button,
-input {
-  font: inherit;
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
 }
 
 ::selection {

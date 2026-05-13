@@ -642,15 +642,15 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
       <section className="glass-strong rounded-[34px] p-5 sm:p-7">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
               Контент
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+            <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white">
               {contentDraft.id ? "Контентті өңдеу" : "Жаңа контент қосу"}
             </h2>
           </div>
           <button
-            className="glass-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white"
+            className="glass-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold tracking-[0.01em] text-white"
             onClick={startNewContent}
             type="button"
           >
@@ -837,13 +837,13 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
           <section className="mt-8 border-t border-white/10 pt-7">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
                   Episodes
                 </p>
-                <h3 className="mt-2 text-xl font-semibold text-white">Сериялар</h3>
+                <h3 className="mt-2 text-xl font-bold tracking-[-0.014em] text-white">Сериялар</h3>
               </div>
               <button
-                className="glass-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white"
+                className="glass-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold tracking-[0.01em] text-white"
                 onClick={() => setEpisodeDraft(createEmptyEpisode(nextEpisodeNumber))}
                 type="button"
               >
@@ -1163,10 +1163,10 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
       <section className="xl:col-span-2">
         <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
               Contents
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">Контент тізімі</h2>
+            <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white">Контент тізімі</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             {typeFilterOptions.map((option) => (

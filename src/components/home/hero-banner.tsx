@@ -94,7 +94,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
           </motion.div>
 
           <motion.h1
-            className="max-w-4xl font-bold leading-[0.92] tracking-[var(--tracking-hero)] text-white [font-size:clamp(3.4rem,9.4vw,8.4rem)]"
+            className="max-w-4xl font-cinematic leading-[0.92] tracking-[var(--tracking-cinematic)] text-white [font-size:clamp(3.4rem,9.4vw,8.4rem)]"
             initial={{ opacity: 0, y: 24, filter: "blur(12px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             transition={{ duration: 0.9, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}

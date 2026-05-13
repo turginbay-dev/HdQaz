@@ -168,14 +168,14 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
         <div className="min-w-0">
           <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
                 <Sparkles className="h-3.5 w-3.5" />
                 Spotlight
               </p>
               <AnimatePresence mode="wait">
                 <motion.h2
                   key={selectedMovie.id}
-                  className="mt-2 max-w-2xl text-3xl font-semibold tracking-[-0.03em] text-white sm:text-5xl"
+                  className="mt-2 max-w-2xl text-3xl font-bold tracking-[-0.026em] text-white sm:text-5xl"
                   initial={{ opacity: 0, y: 14, filter: "blur(8px)" }}
                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                   exit={{ opacity: 0, y: -10, filter: "blur(8px)" }}
@@ -262,24 +262,24 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
                     <MovieBadge label={selectedTypeLabel} />
                     <MovieBadge label={selectedStatusLabel} />
                   </div>
-                  <h3 className="text-2xl font-semibold tracking-tight text-white">
+                  <h3 className="text-2xl font-bold tracking-[-0.02em] text-white">
                     {selectedMovie.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-zinc-400">
+                  <p className="mt-2 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
                     {selectedMovie.year} · {selectedRuntime} · {selectedMovie.dubber?.name ?? selectedStatusLabel}
                   </p>
                 </div>
               </div>
 
-              <p className="mt-4 line-clamp-3 text-sm leading-6 text-zinc-300">
+              <p className="mt-4 line-clamp-3 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-300">
                 {selectedMovie.description}
               </p>
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.06] p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent)]">
                   Atmosphere signal
                 </p>
-                <p className="mt-2 text-sm leading-6 text-zinc-300">
+                <p className="mt-2 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-300">
                   Жанр, дыбыстама және mood rhythm бойынша кешкі көруге лайық.
                 </p>
               </div>
@@ -295,7 +295,7 @@ export function SpotlightPicker({ movies }: SpotlightPickerProps) {
                 />
                 <Link
                   href={`/${selectedMovie.slug}`}
-                  className="glass-button inline-flex min-h-12 items-center justify-center rounded-full px-4 text-sm font-semibold text-white"
+                  className="glass-button inline-flex min-h-12 items-center justify-center rounded-full px-4 text-sm font-semibold tracking-[0.01em] text-white"
                 >
                   Detail
                 </Link>

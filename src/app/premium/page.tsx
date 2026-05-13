@@ -36,10 +36,10 @@ export default function PremiumPage() {
     <main className="mx-auto min-h-screen w-full max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <div className="mx-auto mb-10 max-w-2xl text-center">
         <LogoMark className="mx-auto mb-4 h-20 w-20 p-1.5" sizes="80px" />
-        <p className="text-sm font-medium uppercase tracking-[0.28em] text-[var(--accent)]">
+        <p className="text-sm font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
           HdQaz Premium
         </p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white sm:text-6xl">
+        <h1 className="mt-3 text-4xl font-bold tracking-[-0.026em] text-white sm:text-6xl">
           Қазақша киноны толық сапада көріңіз
         </h1>
       </div>
@@ -51,15 +51,15 @@ export default function PremiumPage() {
             className={plan.featured ? "p-6 ring-1 ring-[var(--accent)]" : "p-6"}
           >
             {plan.featured && (
-              <span className="mb-4 inline-flex rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-black">
+              <span className="mb-4 inline-flex rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-bold tracking-[0.012em] text-black">
                 Ең тиімді
               </span>
             )}
-            <h2 className="text-xl font-semibold text-white">{plan.name}</h2>
-            <p className="mt-3 text-4xl font-semibold tracking-tight text-white">
+            <h2 className="text-xl font-bold tracking-[-0.014em] text-white">{plan.name}</h2>
+            <p className="mt-3 text-4xl font-bold tracking-[-0.02em] text-white">
               {plan.price}
             </p>
-            <button className="mt-6 w-full rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-zinc-200">
+            <button className="mt-6 w-full rounded-full bg-white px-5 py-3 text-sm font-bold tracking-[0.014em] text-black transition hover:bg-zinc-200">
               Таңдау
             </button>
           </GlassPanel>

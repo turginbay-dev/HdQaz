@@ -1,16 +1,7 @@
 import type { Metadata } from "next";
-import { Manrope, Sora } from "next/font/google";
+import { Manrope, Unbounded } from "next/font/google";
 import "./globals.css";
 import { SiteShell } from "@/components/layout/site-shell";
-
-const sora = Sora({
-  variable: "--font-sora",
-  subsets: ["latin", "latin-ext"],
-  weight: "variable",
-  display: "swap",
-  fallback: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
-  adjustFontFallback: true
-});
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -18,6 +9,15 @@ const manrope = Manrope({
   weight: "variable",
   display: "swap",
   fallback: ["ui-sans-serif", "system-ui", "sans-serif"],
+  adjustFontFallback: true
+});
+
+const unbounded = Unbounded({
+  variable: "--font-unbounded",
+  subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"],
+  weight: "variable",
+  display: "swap",
+  fallback: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
   adjustFontFallback: true
 });
 
@@ -39,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="kk" className={`${sora.variable} ${manrope.variable}`}>
+    <html lang="kk" className={`${manrope.variable} ${unbounded.variable}`}>
       <body>
         <SiteShell>{children}</SiteShell>
       </body>

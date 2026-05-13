@@ -80,8 +80,8 @@ export default async function WatchPage({ params }: WatchPageProps) {
                     <MovieBadge label={statusLabel} />
                     {content.dubber?.name ? <MovieBadge label={content.dubber.name} /> : null}
                   </div>
-                  <h1 className="text-2xl font-semibold text-white">{content.title}</h1>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-300">
+                  <h1 className="text-2xl font-bold tracking-[-0.018em] text-white">{content.title}</h1>
+                  <p className="mt-2 max-w-3xl text-sm font-medium leading-6 tracking-[0.004em] text-zinc-300">
                     {content.description}
                   </p>
                 </div>
@@ -90,7 +90,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
                   {["Болашақта көремін", "Көрдім", "Ұнады", "Telegram"].map((item) => (
                     <button
                       key={item}
-                      className="glass-button rounded-full px-4 py-2 text-sm font-medium text-white"
+                      className="glass-button rounded-full px-4 py-2 text-sm font-semibold tracking-[0.01em] text-white"
                     >
                       {item}
                     </button>

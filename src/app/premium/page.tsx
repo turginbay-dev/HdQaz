@@ -23,7 +23,7 @@ export default async function PremiumPage() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <div className="mx-auto mb-10 max-w-3xl text-center">
-        <LogoMark className="mx-auto mb-4 h-20 w-20 p-1.5" sizes="80px" />
+        <LogoMark className="mx-auto mb-4 h-20 w-32 p-2" sizes="128px" />
         <p className="text-sm font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
           HdQaz Premium
         </p>

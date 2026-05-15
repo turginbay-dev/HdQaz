@@ -19,26 +19,28 @@ type SiteLogoProps = {
   variant?: "desktop" | "mobile" | "drawer" | "footer";
 };
 
+const BRAND_LOGO_SRC = "/Logo.PNG";
+
 const logoVariants = {
   desktop: {
-    link: "group inline-flex h-14 w-[4.25rem] items-center justify-center rounded-full transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
-    mark: "h-[52px] w-[52px]",
-    sizes: "52px"
+    link: "group inline-flex h-14 w-[6.25rem] items-center justify-center rounded-[24px] transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
+    mark: "h-[52px] w-[78px] p-1",
+    sizes: "78px"
   },
   mobile: {
-    link: "glass group inline-flex h-14 w-[4.25rem] items-center justify-center rounded-full transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
-    mark: "h-12 w-12",
-    sizes: "48px"
+    link: "glass group inline-flex h-14 w-[6rem] items-center justify-center rounded-[24px] transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
+    mark: "h-12 w-[72px] p-1",
+    sizes: "72px"
   },
   drawer: {
-    link: "group inline-flex h-12 w-12 items-center justify-center rounded-full transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
-    mark: "h-12 w-12 p-0.5",
-    sizes: "48px"
+    link: "group inline-flex h-12 w-[5.5rem] items-center justify-center rounded-[22px] transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
+    mark: "h-12 w-[72px] p-1",
+    sizes: "72px"
   },
   footer: {
-    link: "group inline-flex h-24 w-24 items-center justify-center rounded-full transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
-    mark: "h-24 w-24 p-2",
-    sizes: "96px"
+    link: "group inline-flex h-20 w-32 items-center justify-center rounded-[28px] transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
+    mark: "h-20 w-32 p-2",
+    sizes: "128px"
   }
 } as const;
 
@@ -51,15 +53,15 @@ export function LogoMark({
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/[0.16] bg-white/[0.07] p-1 shadow-[0_16px_48px_rgba(0,0,0,0.42),0_0_34px_rgba(217,183,111,0.18)] ring-1 ring-black/20",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/[0.16] bg-white/[0.07] shadow-[0_16px_48px_rgba(0,0,0,0.42),0_0_34px_rgba(217,183,111,0.18)] ring-1 ring-black/20",
         className
       )}
     >
-      <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_34%_18%,rgba(255,255,255,0.28),transparent_34%),radial-gradient(circle_at_68%_80%,rgba(217,183,111,0.2),transparent_40%)]" />
+      <span className="absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_34%_18%,rgba(255,255,255,0.24),transparent_34%),radial-gradient(circle_at_68%_80%,rgba(217,183,111,0.18),transparent_40%)]" />
       <Image
-        src="/Logo.png"
+        src={BRAND_LOGO_SRC}
         alt=""
-        width={1024}
+        width={1536}
         height={1024}
         priority={priority}
         sizes={sizes}

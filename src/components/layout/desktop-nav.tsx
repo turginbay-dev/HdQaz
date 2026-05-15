@@ -4,16 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
-import { Crown, Search, User, X } from "lucide-react";
+import { Crown, Search, X } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
+import { UserAvatar } from "@/components/user/user-avatar";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
 import { cn } from "@/lib/cn";
 
 type DesktopNavProps = {
+  avatarUrl?: string | null;
+  displayName?: string | null;
   isPremium?: boolean;
 };
 
-export function DesktopNav({ isPremium = false }: DesktopNavProps) {
+export function DesktopNav({ avatarUrl, displayName, isPremium = false }: DesktopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -220,10 +223,15 @@ export function DesktopNav({ isPremium = false }: DesktopNavProps) {
 
           <Link
             href="/profile"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white text-black shadow-[0_14px_45px_rgba(255,255,255,0.16)] transition hover:scale-105"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.08] p-0.5 shadow-[0_14px_45px_rgba(255,255,255,0.12)] transition hover:scale-105"
             aria-label="Профиль"
           >
-            <User className="h-4 w-4" />
+            <UserAvatar
+              avatarUrl={avatarUrl}
+              displayName={displayName}
+              className="h-full w-full"
+              sizes="44px"
+            />
           </Link>
         </div>
       </motion.nav>

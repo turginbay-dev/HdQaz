@@ -14,8 +14,16 @@ export async function SiteShell({ children }: SiteShellProps) {
   return (
     <>
       <Suspense fallback={null}>
-        <DesktopNav isPremium={viewer.premium.isPremium} />
-        <MobileNav isPremium={viewer.premium.isPremium} />
+        <DesktopNav
+          avatarUrl={viewer.profile?.avatarUrl}
+          displayName={viewer.profile?.displayName}
+          isPremium={viewer.premium.isPremium}
+        />
+        <MobileNav
+          avatarUrl={viewer.profile?.avatarUrl}
+          displayName={viewer.profile?.displayName}
+          isPremium={viewer.premium.isPremium}
+        />
       </Suspense>
       {children}
       <Suspense fallback={null}>

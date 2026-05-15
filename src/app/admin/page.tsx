@@ -37,7 +37,7 @@ export default async function AdminPage() {
               Басты бет
             </Link>
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
-              <LogoMark className="h-8 w-8 p-0.5" sizes="32px" />
+              <LogoMark className="h-8 w-12 p-0.5" sizes="48px" />
               HdQaz Admin
             </p>
             <h1 className="mt-3 font-bold leading-[0.96] tracking-[-0.032em] text-white [font-size:clamp(3rem,6.6vw,6rem)]">

@@ -77,7 +77,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            <LogoMark className="h-6 w-6 p-0.5" sizes="24px" />
+            <LogoMark className="h-7 w-11 p-0.5" sizes="44px" />
             HdQaz Original Selection
           </motion.div>
 

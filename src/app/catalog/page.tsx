@@ -34,7 +34,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         <div className="mb-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-end">
           <div className="max-w-3xl">
             <p className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
-              <LogoMark className="h-8 w-8 p-0.5" sizes="32px" />
+              <LogoMark className="h-8 w-12 p-0.5" sizes="48px" />
               HdQaz каталогы
             </p>
             <h1 className="mt-3 text-4xl font-bold tracking-[-0.026em] text-white sm:text-6xl">

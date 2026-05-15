@@ -4,15 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Crown, Menu, Search, User, X } from "lucide-react";
+import { Crown, Menu, Search, X } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
+import { UserAvatar } from "@/components/user/user-avatar";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
 
 type MobileNavProps = {
+  avatarUrl?: string | null;
+  displayName?: string | null;
   isPremium?: boolean;
 };
 
-export function MobileNav({ isPremium = false }: MobileNavProps) {
+export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -265,7 +268,12 @@ export function MobileNav({ isPremium = false }: MobileNavProps) {
                     onClick={() => setOpen(false)}
                   >
                     <span className="inline-flex items-center gap-2">
-                      <User className="h-4 w-4" />
+                      <UserAvatar
+                        avatarUrl={avatarUrl}
+                        displayName={displayName}
+                        className="h-7 w-7"
+                        sizes="28px"
+                      />
                       Профиль
                     </span>
                     {pathname === "/profile" && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}

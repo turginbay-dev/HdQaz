@@ -91,11 +91,10 @@ export function Footer() {
           <div className="max-w-md">
             <Link
               href="/"
-              className="inline-flex items-center gap-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              className="inline-flex items-center rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               aria-label="HdQaz басты бет"
             >
-              <LogoMark className="h-12 w-12 p-1" sizes="48px" />
-              <span className="text-2xl font-bold tracking-[-0.018em] text-white">HdQaz</span>
+              <LogoMark className="h-14 w-[84px] p-1.5" sizes="84px" />
             </Link>
             <p className="mt-4 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
               Қазақша фильмдер, дорамалар, аниме және сериалдарды ыңғайлы көруге арналған платформа.

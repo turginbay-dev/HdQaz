@@ -30,8 +30,12 @@ export const metadata: Metadata = {
   },
   description: "Қазақша дыбыстама және жаңа релиздер қазақша субтитрмен.",
   icons: {
-    icon: [{ url: "/Logo.png", type: "image/png", sizes: "1024x1024" }],
-    apple: [{ url: "/Logo.png", type: "image/png", sizes: "1024x1024" }]
+    icon: [
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-48x48.png", type: "image/png", sizes: "48x48" }
+    ],
+    shortcut: [{ url: "/favicon-48x48.png", type: "image/png", sizes: "48x48" }],
+    apple: [{ url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" }]
   }
 };
 

@@ -59,7 +59,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <section className="relative mx-auto grid min-h-[calc(100vh-7rem)] w-full max-w-6xl items-center gap-8 lg:grid-cols-[minmax(0,1fr)_460px]">
         <div className="max-w-3xl">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-zinc-200 backdrop-blur-2xl">
-            <LogoMark className="h-6 w-6 p-0.5" sizes="24px" />
+            <LogoMark className="h-7 w-11 p-0.5" sizes="44px" />
             HdQaz Account
           </div>
           <h1 className="max-w-3xl font-bold leading-[0.94] tracking-[-0.032em] text-white [font-size:clamp(3.2rem,7.4vw,7rem)]">

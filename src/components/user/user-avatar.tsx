@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { LogoMark } from "@/components/layout/site-logo";
 import { cn } from "@/lib/cn";
 
 type UserAvatarProps = {
@@ -9,6 +8,8 @@ type UserAvatarProps = {
   priority?: boolean;
   sizes?: string;
 };
+
+const DEFAULT_AVATAR_SRC = "/Avatar.PNG";
 
 function getInitials(value?: string | null) {
   const parts = value?.trim().split(/\s+/).filter(Boolean) ?? [];
@@ -29,30 +30,34 @@ export function UserAvatar({
 }: UserAvatarProps) {
   const trimmedAvatar = avatarUrl?.trim();
   const alt = displayName?.trim() || "HdQaz қолданушысы";
+  const frameClassName = cn(
+    "relative inline-flex shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/10 shadow-[0_12px_34px_rgba(0,0,0,0.32)]",
+    className
+  );
 
   if (trimmedAvatar) {
     return (
-      <span
-        className={cn(
-          "relative inline-flex shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/10",
-          className
-        )}
-      >
-        <Image
+      <span className={frameClassName}>
+        <img
           src={trimmedAvatar}
           alt={alt}
-          fill
-          priority={priority}
-          sizes={sizes}
-          className="object-cover"
+          className="h-full w-full object-cover"
+          loading={priority ? "eager" : "lazy"}
         />
       </span>
     );
   }
 
   return (
-    <span className={cn("relative inline-flex shrink-0", className)}>
-      <LogoMark className="h-full w-full p-1" sizes={sizes} priority={priority} />
+    <span className={frameClassName}>
+      <Image
+        src={DEFAULT_AVATAR_SRC}
+        alt={alt}
+        fill
+        priority={priority}
+        sizes={sizes}
+        className="object-cover"
+      />
       <span className="sr-only">{getInitials(displayName)}</span>
     </span>
   );

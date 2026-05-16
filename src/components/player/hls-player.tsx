@@ -59,7 +59,7 @@ type Toast = {
   message: string;
 };
 
-type ActiveMenu = "quality" | "settings" | "speed" | null;
+type ActiveMenu = "settings" | "speed" | null;
 
 type SavedProgressSnapshot = {
   completed: boolean;
@@ -1106,7 +1106,6 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] shadow-[0_0_14px_rgba(217,183,111,0.65)]" />
               <span className="truncate">{formatMovieLanguages(languages, "short")}</span>
             </div>
-            <div className="cinema-badge hidden sm:inline-flex">{qualityLabel}</div>
           </div>
 
           {resumeBadgeLabel ? (
@@ -1149,7 +1148,6 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
               aria-hidden="true"
             >
               {seekPulse === "backward" ? <RotateCcw className="h-5 w-5" /> : <RotateCw className="h-5 w-5" />}
-              <span>10</span>
             </div>
           ) : null}
 
@@ -1237,7 +1235,6 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                     type="button"
                   >
                     <RotateCcw className="h-4 w-4" />
-                    <span>10</span>
                   </button>
 
                   <button
@@ -1256,7 +1253,6 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                     type="button"
                   >
                     <RotateCw className="h-4 w-4" />
-                    <span>10</span>
                   </button>
 
                   <div className="cinema-time">
@@ -1288,49 +1284,6 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                         onChange={(event) => changeVolume(event.target.value)}
                       />
                     </div>
-                  </div>
-
-                  <div className="relative">
-                    <button
-                      className="cinema-menu-trigger min-w-[78px] px-3"
-                      aria-label="Сапа"
-                      aria-expanded={activeMenu === "quality"}
-                      aria-haspopup="menu"
-                      onClick={() => toggleMenu("quality")}
-                      type="button"
-                    >
-                      {qualityLabel}
-                    </button>
-
-                    {activeMenu === "quality" ? (
-                      <div className="cinema-menu right-0 w-48" role="menu" aria-label="Сапа таңдауы">
-                        <button
-                          className={cn("cinema-menu-item", manualLevel === -1 && "is-active")}
-                          role="menuitemradio"
-                          aria-checked={manualLevel === -1}
-                          onClick={() => changeQuality("-1")}
-                          type="button"
-                        >
-                          <span>Auto</span>
-                          <span className="cinema-menu-meta">{activeAutoQuality ?? "Best"}</span>
-                          {manualLevel === -1 ? <Check className="h-4 w-4" /> : null}
-                        </button>
-                        {qualityLevels.map((level) => (
-                          <button
-                            key={level.index}
-                            className={cn("cinema-menu-item", manualLevel === level.index && "is-active")}
-                            role="menuitemradio"
-                            aria-checked={manualLevel === level.index}
-                            onClick={() => changeQuality(String(level.index))}
-                            type="button"
-                          >
-                            <span>{level.label}</span>
-                            <span className="cinema-menu-meta">{level.height >= 1080 ? "Full HD" : "HD"}</span>
-                            {manualLevel === level.index ? <Check className="h-4 w-4" /> : null}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
                   </div>
 
                   <div className="relative">
@@ -1378,6 +1331,35 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
 
                     {activeMenu === "settings" ? (
                       <div className="cinema-menu right-0 w-56" role="menu" aria-label="Плеер баптаулары">
+                        <div className="cinema-menu-status">
+                          <span>Сапа</span>
+                          <span>{qualityLabel}</span>
+                        </div>
+                        <button
+                          className={cn("cinema-menu-item", manualLevel === -1 && "is-active")}
+                          role="menuitemradio"
+                          aria-checked={manualLevel === -1}
+                          onClick={() => changeQuality("-1")}
+                          type="button"
+                        >
+                          <span>Auto</span>
+                          <span className="cinema-menu-meta">{activeAutoQuality ?? "Best"}</span>
+                          {manualLevel === -1 ? <Check className="h-4 w-4" /> : null}
+                        </button>
+                        {qualityLevels.map((level) => (
+                          <button
+                            key={level.index}
+                            className={cn("cinema-menu-item", manualLevel === level.index && "is-active")}
+                            role="menuitemradio"
+                            aria-checked={manualLevel === level.index}
+                            onClick={() => changeQuality(String(level.index))}
+                            type="button"
+                          >
+                            <span>{level.label}</span>
+                            <span className="cinema-menu-meta">{level.height >= 1080 ? "Full HD" : "HD"}</span>
+                            {manualLevel === level.index ? <Check className="h-4 w-4" /> : null}
+                          </button>
+                        ))}
                         <button
                           className={cn("cinema-menu-item", cinemaMode && "is-active")}
                           role="menuitemcheckbox"

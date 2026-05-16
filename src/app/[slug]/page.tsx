@@ -167,13 +167,6 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
           ) : (
             <PremiumLockScreen backdropUrl={content.backdropUrl} title={content.title} />
           )}
-          {contentIsEpisodic ? (
-            <EpisodesSection
-              contentSlug={content.slug}
-              episodes={episodes}
-              selectedEpisodeId={selectedEpisode?.id ?? null}
-            />
-          ) : null}
           <MovieEngagementActions
             initialLiked={engagementState.isLiked}
             initialWatchlisted={engagementState.isWatchlisted}
@@ -182,6 +175,13 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
             stats={stats}
             variant="player-row"
           />
+          {contentIsEpisodic ? (
+            <EpisodesSection
+              contentSlug={content.slug}
+              episodes={episodes}
+              selectedEpisodeId={selectedEpisode?.id ?? null}
+            />
+          ) : null}
         </div>
       </section>
 
@@ -277,7 +277,7 @@ function EpisodesSection({
   selectedEpisodeId: string | null;
 }) {
   return (
-    <section className="mb-14">
+    <section className="mb-14 mt-8 sm:mt-10">
       <div className="mb-5">
         <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
           {formatEpisodeCount(episodes.length) || "Сериялар"}

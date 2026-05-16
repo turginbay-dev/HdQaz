@@ -150,14 +150,14 @@ export function MovieEngagementActions({
 
   if (variant === "player-row") {
     return (
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 px-1">
-        <div className="flex w-full min-w-0 items-center justify-between gap-3 sm:w-auto sm:justify-start sm:gap-5">
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 px-1 sm:gap-x-5">
+        <div className="flex min-w-0 flex-wrap items-center justify-start gap-x-4 gap-y-1.5 sm:gap-x-5">
           <InlineStat icon={<Eye className="h-4 w-4" />} label="Қаралым" value={counts.views} />
           <InlineStat icon={<Heart className="h-4 w-4" />} label="Ұнату" value={counts.likes} />
           <InlineStat icon={<Bookmark className="h-4 w-4" />} label="Тізімге қосқан" value={counts.watchlist} />
         </div>
 
-        <div className="ml-0 flex w-full shrink-0 items-center justify-end gap-2 sm:ml-auto sm:w-auto">
+        <div className="flex shrink-0 items-center justify-end gap-2">
           <button
             className={cn(
               "inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.055] text-zinc-200 shadow-[0_12px_34px_rgba(0,0,0,0.28)] outline-none transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.1] hover:text-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-wait disabled:opacity-70",
@@ -189,7 +189,7 @@ export function MovieEngagementActions({
           </button>
         </div>
 
-        {message ? <p className="basis-full text-xs font-medium tracking-[0.004em] text-[var(--accent)]">{message}</p> : null}
+        {message ? <p className="col-span-2 text-xs font-medium tracking-[0.004em] text-[var(--accent)]">{message}</p> : null}
       </div>
     );
   }
@@ -241,11 +241,11 @@ function InlineStat({
   value: number;
 }) {
   return (
-    <span className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold tracking-[0.004em] text-zinc-300" title={label}>
+    <span className="inline-flex min-h-10 shrink-0 items-center gap-2 text-sm font-semibold tracking-[0.004em] text-zinc-300" title={label}>
       <span className="text-[var(--accent)]" aria-hidden="true">
         {icon}
       </span>
-      <span aria-label={`${label}: ${formatCompactCount(value)}`}>{formatCompactCount(value)}</span>
+      <span className="tabular-nums" aria-label={`${label}: ${formatCompactCount(value)}`}>{formatCompactCount(value)}</span>
     </span>
   );
 }

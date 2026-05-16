@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = "https://hdqaz.online";
+export const CANONICAL_SITE_URL = "https://hdqaz.online";
 
 function normalizeSiteUrl(value?: string | null) {
   const trimmed = value?.trim();
@@ -29,21 +29,11 @@ function getConfiguredSiteUrl() {
 }
 
 export function getCanonicalSiteUrl() {
-  const configuredCanonicalUrl = normalizeSiteUrl(
-    process.env.NEXT_PUBLIC_CANONICAL_SITE_URL ?? process.env.CANONICAL_SITE_URL
-  );
+  return CANONICAL_SITE_URL;
+}
 
-  if (configuredCanonicalUrl) {
-    return configuredCanonicalUrl;
-  }
-
-  const configuredSiteUrl = getConfiguredSiteUrl();
-
-  if (configuredSiteUrl && !isVercelDeploymentUrl(configuredSiteUrl)) {
-    return configuredSiteUrl;
-  }
-
-  return DEFAULT_SITE_URL;
+export function getCanonicalUrl(path = "/") {
+  return new URL(path, CANONICAL_SITE_URL).toString();
 }
 
 export function getSiteUrl() {

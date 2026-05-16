@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronDown, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { LogoMark } from "@/components/layout/site-logo";
@@ -10,12 +11,19 @@ import {
   movieGenres,
   movieLanguages
 } from "@/lib/movie-taxonomy";
+import { getCanonicalUrl } from "@/lib/site-url";
 import { getAllMovies, selectMoviesByFilters } from "@/features/movies/queries";
 import type { Movie } from "@/types/movie";
 import type { ContentType } from "@/types/content";
 
-export const metadata = {
-  title: "Кино әлемі"
+export const metadata: Metadata = {
+  title: "Кино әлемі",
+  alternates: {
+    canonical: getCanonicalUrl("/catalog")
+  },
+  openGraph: {
+    url: getCanonicalUrl("/catalog")
+  }
 };
 
 export const dynamic = "force-dynamic";

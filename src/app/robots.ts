@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getCanonicalSiteUrl } from "@/lib/site-url";
+import { getCanonicalSiteUrl, getCanonicalUrl } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
   const siteUrl = getCanonicalSiteUrl();
@@ -12,7 +12,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin", "/api", "/auth", "/login", "/profile"]
       }
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
+    sitemap: getCanonicalUrl("/sitemap.xml"),
     host: siteUrl
   };
 }

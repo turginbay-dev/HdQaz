@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { EmailPasswordAuthForm } from "@/components/auth/email-password-auth-form";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { LogoMark } from "@/components/layout/site-logo";
+import { getCanonicalUrl } from "@/lib/site-url";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,8 +31,14 @@ const statusMessages: Record<string, string> = {
   check_email: "Аккаунтты растау үшін email поштаңызды тексеріңіз."
 };
 
-export const metadata = {
-  title: "Кіру"
+export const metadata: Metadata = {
+  title: "Кіру",
+  alternates: {
+    canonical: getCanonicalUrl("/login")
+  },
+  openGraph: {
+    url: getCanonicalUrl("/login")
+  }
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {

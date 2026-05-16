@@ -19,19 +19,20 @@ const footerNavigation: FooterLinkItem[] = [
   { label: "Каталог", href: "/catalog" },
   { label: "Дорамалар", href: "/catalog?q=Dorama" },
   { label: "Аниме", href: "/catalog?q=Anime" },
-  { label: "Байланыс", href: "mailto:hello@hdqaz.com" }
+  { label: "Байланыс", href: "mailto:info@hdqaz.online" }
 ];
 
 const supportLinks: FooterLinkItem[] = [
-  { label: "Авторлық құқық", href: "mailto:copyright@hdqaz.com" },
-  { label: "Байланыс", href: "mailto:hello@hdqaz.com" },
-  { label: "Қолдау", href: "mailto:support@hdqaz.com" }
+  { label: "Авторлық құқық", href: "mailto:dmca@hdqaz.online" },
+  { label: "Байланыс", href: "mailto:info@hdqaz.online" },
+  { label: "Қолдау", href: "mailto:support@hdqaz.online" },
+  { label: "Әкімшілік", href: "mailto:admin@hdqaz.online" }
 ];
 
 const socialLinks = [
   { label: "Telegram", href: "https://t.me/hdqaz", icon: Send },
   { label: "Instagram", href: "https://instagram.com/hdqaz", icon: AtSign },
-  { label: "Email", href: "mailto:hello@hdqaz.com", icon: Mail }
+  { label: "Email", href: "mailto:info@hdqaz.online", icon: Mail }
 ];
 
 export function Footer() {

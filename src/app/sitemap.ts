@@ -7,6 +7,9 @@ export const dynamic = "force-dynamic";
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
 
+const CANONICAL_HOST = "hdqaz.online";
+const WWW_HOST = `www.${CANONICAL_HOST}`;
+
 const staticRoutes = [
   {
     path: "/",
@@ -71,6 +74,11 @@ function normalizeImageUrl(value?: string | null) {
 
   try {
     const url = value.startsWith("/") ? new URL(value, getCanonicalSiteUrl()) : new URL(value);
+
+    if (url.hostname === WWW_HOST) {
+      url.protocol = "https:";
+      url.hostname = CANONICAL_HOST;
+    }
 
     return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
   } catch {

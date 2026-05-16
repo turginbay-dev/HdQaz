@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { Calendar, Clapperboard, Crown, Globe2, Play, Radio } from "lucide-react";
@@ -19,6 +20,7 @@ import { getAllMovies, getMovieBySlug, getRelatedMovies } from "@/features/movie
 import { getViewerContext } from "@/features/users/session";
 import { getWatchProgressForContent } from "@/features/watch-history/repository";
 import { getMovieImageSrc } from "@/lib/movie-images";
+import { getCanonicalUrl } from "@/lib/site-url";
 import type { Movie } from "@/types/movie";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +36,20 @@ type ContentPageProps = {
 
 function getSearchParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+export async function generateMetadata({ params }: ContentPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const canonical = getCanonicalUrl(`/${encodeURIComponent(slug)}`);
+
+  return {
+    alternates: {
+      canonical
+    },
+    openGraph: {
+      url: canonical
+    }
+  };
 }
 
 export default async function ContentPage({ params, searchParams }: ContentPageProps) {

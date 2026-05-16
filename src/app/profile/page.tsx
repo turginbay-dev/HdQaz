@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Crown, LogOut, Mail, MessageCircle, ShieldCheck } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
@@ -8,12 +9,19 @@ import { UserAvatar } from "@/components/user/user-avatar";
 import { listUserComments, listUserMovieIds } from "@/features/engagement/repository";
 import { getAllMovies } from "@/features/movies/queries";
 import { getViewerContext } from "@/features/users/session";
+import { getCanonicalUrl } from "@/lib/site-url";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { formatKazakhDateTime, formatKazakhRelativeTime } from "@/lib/formatters";
 import type { Movie } from "@/types/movie";
 
-export const metadata = {
-  title: "Профиль"
+export const metadata: Metadata = {
+  title: "Профиль",
+  alternates: {
+    canonical: getCanonicalUrl("/profile")
+  },
+  openGraph: {
+    url: getCanonicalUrl("/profile")
+  }
 };
 
 function orderedMovies(ids: string[], movies: Movie[]) {

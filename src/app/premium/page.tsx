@@ -1,12 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, Crown, Sparkles } from "lucide-react";
 import { GlassPanel } from "@/components/glass/glass-panel";
 import { LogoMark } from "@/components/layout/site-logo";
 import { getViewerContext } from "@/features/users/session";
 import { formatKazakhDateTime } from "@/lib/formatters";
+import { getCanonicalUrl } from "@/lib/site-url";
 
-export const metadata = {
-  title: "Premium"
+export const metadata: Metadata = {
+  title: "Premium",
+  alternates: {
+    canonical: getCanonicalUrl("/premium")
+  },
+  openGraph: {
+    url: getCanonicalUrl("/premium")
+  }
 };
 
 const benefits = [

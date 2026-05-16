@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import { GlassPanel } from "@/components/glass/glass-panel";
 import { listContentRequests } from "@/features/requests/repository";
+import { getCanonicalUrl } from "@/lib/site-url";
 
-export const metadata = {
-  title: "Сұраныстар"
+export const metadata: Metadata = {
+  title: "Сұраныстар",
+  alternates: {
+    canonical: getCanonicalUrl("/requests")
+  },
+  openGraph: {
+    url: getCanonicalUrl("/requests")
+  }
 };
 
 export const dynamic = "force-dynamic";

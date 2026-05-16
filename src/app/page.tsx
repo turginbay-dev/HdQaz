@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { HeroBanner } from "@/components/home/hero-banner";
 import { MovieRow } from "@/components/movie/movie-row";
 import { ContinueWatching } from "@/components/home/continue-watching";
@@ -17,9 +18,19 @@ import {
   getSubtitleMovies,
   getTopTenMovies
 } from "@/features/movies/queries";
+import { getCanonicalUrl } from "@/lib/site-url";
 import type { Movie } from "@/types/movie";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: getCanonicalUrl("/")
+  },
+  openGraph: {
+    url: getCanonicalUrl("/")
+  }
+};
 
 function prioritizeUnseen(movies: Movie[], seenIds: Set<string>) {
   const unseen = movies.filter((movie) => !seenIds.has(movie.id));

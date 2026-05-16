@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Film, FolderKanban, ShieldAlert, Tags } from "lucide-react";
@@ -6,9 +7,16 @@ import { ManualMovieAdmin } from "@/components/admin/manual-movie-admin";
 import { LogoMark } from "@/components/layout/site-logo";
 import { listContents, listDubbers, listGenres } from "@/features/content/repository";
 import { getCurrentAdminUser } from "@/lib/admin-access";
+import { getCanonicalUrl } from "@/lib/site-url";
 
-export const metadata = {
-  title: "Admin"
+export const metadata: Metadata = {
+  title: "Admin",
+  alternates: {
+    canonical: getCanonicalUrl("/admin")
+  },
+  openGraph: {
+    url: getCanonicalUrl("/admin")
+  }
 };
 
 export default async function AdminPage() {

@@ -189,8 +189,6 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
   const controlsHideTimerRef = useRef<number | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const seekPulseTimerRef = useRef<number | null>(null);
-  const singleTapTimerRef = useRef<number | null>(null);
-  const lastTapRef = useRef({ time: 0, x: 0, y: 0 });
   const lastBackendSaveRef = useRef<SavedProgressSnapshot | null>(initialSnapshot(initialWatchProgress));
   const manualLevelRef = useRef(-1);
   const resumeAppliedRef = useRef(false);
@@ -563,7 +561,6 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
       window.removeEventListener("beforeunload", saveCurrentProgress);
       window.clearTimeout(toastTimerRef.current ?? undefined);
       window.clearTimeout(seekPulseTimerRef.current ?? undefined);
-      window.clearTimeout(singleTapTimerRef.current ?? undefined);
     };
   }, [contentId, src]);
 
@@ -976,6 +973,15 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     setControlsVisible(false);
   }
 
+  function toggleControlsVisibility() {
+    if (visibleChrome) {
+      hideControls();
+      return;
+    }
+
+    revealControls();
+  }
+
   function handleMediaPointerUp(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.pointerType === "mouse" && event.button !== 0) {
       return;
@@ -994,44 +1000,18 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     const rect = surface.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    const now = Date.now();
-    const lastTap = lastTapRef.current;
-    const isDoubleTap = now - lastTap.time < 320 && Math.abs(x - lastTap.x) < 90 && Math.abs(y - lastTap.y) < 90;
+    const centerTap =
+      x >= rect.width * 0.36 &&
+      x <= rect.width * 0.64 &&
+      y >= rect.height * 0.24 &&
+      y <= rect.height * 0.76;
 
-    if (isDoubleTap) {
-      window.clearTimeout(singleTapTimerRef.current ?? undefined);
-      lastTapRef.current = { time: 0, x: 0, y: 0 };
-
-      if (x < rect.width * 0.42) {
-        seekBy(-10, true);
-        return;
-      }
-
-      if (x > rect.width * 0.58) {
-        seekBy(10, true);
-        return;
-      }
-
-      void toggleFullscreen(true);
+    if (centerTap) {
+      void togglePlayback(false);
       return;
     }
 
-    lastTapRef.current = { time: now, x, y };
-    window.clearTimeout(singleTapTimerRef.current ?? undefined);
-    singleTapTimerRef.current = window.setTimeout(() => {
-      const centerTap =
-        x >= rect.width * 0.36 &&
-        x <= rect.width * 0.64 &&
-        y >= rect.height * 0.24 &&
-        y <= rect.height * 0.76;
-
-      if (centerTap) {
-        void togglePlayback(false);
-        return;
-      }
-
-      hideControls();
-    }, 240);
+    toggleControlsVisibility();
   }
 
   return (

@@ -9,9 +9,10 @@ import { GlassPanel } from "@/components/glass/glass-panel";
 import { MovieImage } from "@/components/movie/movie-image";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieRow } from "@/components/movie/movie-row";
+import { EpisodesSection } from "@/components/player/episodes-section";
 import { HlsPlayer } from "@/components/player/hls-player";
 import { PremiumLockScreen } from "@/components/premium/premium-lock-screen";
-import { contentStatusLabels, contentTypeLabels, formatEpisodeCount, isEpisodicContent } from "@/features/content/format";
+import { contentStatusLabels, contentTypeLabels, isEpisodicContent } from "@/features/content/format";
 import { getEngagementState, getMovieEngagementStats, listMovieComments } from "@/features/engagement/repository";
 import { getAllMovies, getMovieBySlug, getRelatedMovies } from "@/features/movies/queries";
 import { getViewerContext } from "@/features/users/session";
@@ -264,63 +265,6 @@ function UnavailablePlayer({ title }: { title: string }) {
         </div>
       </div>
     </GlassPanel>
-  );
-}
-
-function EpisodesSection({
-  contentSlug,
-  episodes,
-  selectedEpisodeId
-}: {
-  contentSlug: string;
-  episodes: NonNullable<Movie["episodes"]>;
-  selectedEpisodeId: string | null;
-}) {
-  return (
-    <section className="mb-14 mt-8 sm:mt-10">
-      <div className="mb-5">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
-          {formatEpisodeCount(episodes.length) || "Сериялар"}
-        </p>
-        <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white sm:text-3xl">Сериялар</h2>
-        <div className="mt-2 h-px w-24 bg-gradient-to-r from-[var(--accent)] to-transparent" />
-      </div>
-
-      {episodes.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {episodes.map((episode) => {
-            const active = episode.id === selectedEpisodeId;
-
-            return (
-              <Link
-                key={episode.id}
-                href={episodePlayerHref(contentSlug, episode.slug)}
-                className={
-                  active
-                    ? "glass group rounded-[24px] border-[rgba(217,183,111,0.45)] bg-[rgba(217,183,111,0.1)] p-4 transition"
-                    : "glass group rounded-[24px] p-4 transition hover:border-[rgba(217,183,111,0.35)]"
-                }
-              >
-                <p className="text-sm font-bold tracking-[0.01em] text-[var(--accent)]">
-                  {episode.episodeNumber}-серия
-                </p>
-                <h3 className="mt-2 line-clamp-2 min-h-10 text-base font-bold tracking-[-0.012em] text-white">
-                  {episode.title || `${episode.episodeNumber}-серия`}
-                </h3>
-                <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold tracking-[0.01em] text-zinc-300 transition group-hover:text-white">
-                  <Play className="h-4 w-4 fill-current" />
-                  Ойнату
-                </p>
-              </Link>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="glass-strong rounded-[30px] p-8 text-center text-lg font-semibold text-white">
-          Сериялар жақында қосылады
-        </div>
-      )}
-    </section>
   );
 }
 

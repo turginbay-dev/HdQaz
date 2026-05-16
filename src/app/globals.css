@@ -792,7 +792,10 @@ select {
   position: absolute;
   bottom: calc(100% + 0.75rem);
   z-index: 70;
-  overflow: hidden;
+  max-height: min(22rem, calc(100svh - 7rem));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 1.15rem;
   background:
@@ -807,6 +810,7 @@ select {
   backdrop-filter: blur(26px) saturate(165%);
   -webkit-backdrop-filter: blur(26px) saturate(165%);
   animation: cinema-menu-in 160ms ease both;
+  -webkit-overflow-scrolling: touch;
 }
 
 .cinema-menu-item {
@@ -1015,6 +1019,10 @@ select {
     text-overflow: ellipsis;
   }
 
+  .cinema-menu {
+    max-height: 7.6rem;
+  }
+
   .cinema-time {
     padding: 0;
     font-size: 0.68rem;
@@ -1141,6 +1149,16 @@ select {
   box-shadow:
     inset 0 0 180px rgba(0, 0, 0, 0.72),
     inset 0 -180px 180px rgba(3, 3, 5, 0.98);
+}
+
+.home-content-flow {
+  position: relative;
+  margin-top: -5rem;
+  padding-top: 6rem;
+  background:
+    linear-gradient(180deg, rgba(3, 3, 5, 0), rgba(3, 3, 5, 0.82) 3.8rem, var(--background) 8.5rem),
+    radial-gradient(ellipse at 22% 0%, rgba(217, 183, 111, 0.08), transparent 32rem),
+    radial-gradient(ellipse at 78% 8%, rgba(143, 183, 255, 0.08), transparent 30rem);
 }
 
 .cinema-sweep {

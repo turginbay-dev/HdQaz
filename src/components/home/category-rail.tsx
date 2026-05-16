@@ -34,7 +34,7 @@ export function CategoryRail() {
   ];
 
   return (
-    <div className="cinema-mask hide-scrollbar -mx-4 flex snap-x gap-2 overflow-x-auto px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+    <div className="cinema-mask performance-rail hide-scrollbar -mx-4 flex snap-x gap-2 overflow-x-auto px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
       {categoryChips.map((category) => (
         <motion.div
           key={category.key}

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Manrope, Unbounded } from "next/font/google";
 import "./globals.css";
+import { AppLoadingScreen } from "@/components/layout/app-loading-screen";
 import { SiteShell } from "@/components/layout/site-shell";
 
 const manrope = Manrope({
@@ -46,7 +48,9 @@ export default function RootLayout({
   return (
     <html lang="kk" className={`${manrope.variable} ${unbounded.variable}`}>
       <body>
-        <SiteShell>{children}</SiteShell>
+        <Suspense fallback={<AppLoadingScreen />}>
+          <SiteShell>{children}</SiteShell>
+        </Suspense>
       </body>
     </html>
   );

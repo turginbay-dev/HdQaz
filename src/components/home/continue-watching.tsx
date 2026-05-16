@@ -90,7 +90,7 @@ export function ContinueWatching({ isAuthenticated, items }: ContinueWatchingPro
         </div>
 
         {items.length > 0 ? (
-          <div className="cinema-mask hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-6 pt-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <div className="cinema-mask performance-rail hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-6 pt-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
             {items.map((item) => {
               const remaining = formatRemaining(item.remainingSeconds);
 
@@ -98,7 +98,7 @@ export function ContinueWatching({ isAuthenticated, items }: ContinueWatchingPro
                 <Link
                   key={item.id}
                   href={`/${item.movie.slug}#player`}
-                  className="group relative w-[82vw] shrink-0 snap-start overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_22px_72px_rgba(0,0,0,0.28)] transition duration-500 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.075] sm:w-[22rem] sm:rounded-[28px] lg:w-[21rem]"
+                  className="continue-card group relative w-[82vw] shrink-0 snap-start overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_22px_72px_rgba(0,0,0,0.28)] transition duration-500 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.075] sm:w-[22rem] sm:rounded-[28px] lg:w-[21rem]"
                 >
                   <div className="relative aspect-video overflow-hidden rounded-[22px]">
                     <MovieImage
@@ -107,7 +107,7 @@ export function ContinueWatching({ isAuthenticated, items }: ContinueWatchingPro
                       fallback="backdrop"
                       fill
                       sizes="(max-width: 640px) 80vw, 368px"
-                      className="object-cover transition duration-700 group-hover:scale-105"
+                      className="continue-card-image object-cover transition duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/[0.9] via-black/20 to-transparent" />
                     <span className="absolute bottom-3 left-3 flex h-11 w-11 items-center justify-center rounded-full bg-white text-black shadow-[0_12px_40px_rgba(255,255,255,0.22)]">

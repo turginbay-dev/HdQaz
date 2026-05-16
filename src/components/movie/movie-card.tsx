@@ -20,10 +20,10 @@ export function MovieCard({ movie, priority = false }: MovieCardProps) {
     : formatDurationMinutes(movie.durationMinutes) || movie.runtime;
 
   return (
-    <div className="group relative transition duration-300 hover:-translate-y-2">
+    <div className="movie-card group relative transition duration-300 hover:-translate-y-2">
       <Link href={`/${movie.slug}`} className="block outline-none">
-        <article className="relative overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] shadow-[0_24px_80px_rgba(0,0,0,0.28)] transition duration-500 group-hover:border-[rgba(217,183,111,0.35)] group-hover:shadow-[0_28px_110px_rgba(217,183,111,0.14)]">
-          <div className="poster-reflection relative aspect-[2/3] overflow-hidden rounded-[24px]">
+        <article className="movie-card-article relative overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] shadow-[0_24px_80px_rgba(0,0,0,0.28)] transition duration-500 group-hover:border-[rgba(217,183,111,0.35)] group-hover:shadow-[0_28px_110px_rgba(217,183,111,0.14)]">
+          <div className="poster-reflection movie-card-poster relative aspect-[2/3] overflow-hidden rounded-[24px]">
             <MovieImage
               src={movie.posterUrl}
               alt={movie.title}
@@ -31,12 +31,12 @@ export function MovieCard({ movie, priority = false }: MovieCardProps) {
               fill
               priority={priority}
               sizes="(max-width: 640px) 42vw, (max-width: 1024px) 24vw, 220px"
-              className="object-cover transition duration-700 ease-out group-hover:scale-110"
+              className="movie-card-image object-cover transition duration-700 ease-out group-hover:scale-110"
             />
           </div>
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-[0.76] transition duration-500 group-hover:opacity-95" />
-          <div className="absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
+          <div className="movie-card-base-overlay absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-[0.76] transition duration-500 group-hover:opacity-95" />
+          <div className="movie-card-hover-layer absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
             <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[rgba(217,183,111,0.18)] to-transparent" />
             <div className="absolute inset-0 ring-1 ring-inset ring-white/10" />
           </div>
@@ -48,8 +48,8 @@ export function MovieCard({ movie, priority = false }: MovieCardProps) {
             <MovieBadge label={typeLabel} />
           </div>
 
-          <div className="absolute inset-x-3 bottom-3 translate-y-4 opacity-0 transition duration-500 group-hover:translate-y-0 group-hover:opacity-100">
-            <div className="glass rounded-[20px] p-3">
+          <div className="movie-card-hover-panel absolute inset-x-3 bottom-3 translate-y-4 opacity-0 transition duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+            <div className="movie-card-detail-glass glass rounded-[20px] p-3">
               <div className="mb-2 flex flex-wrap gap-1.5">
                 <MovieBadge label={statusLabel} />
                 {movie.genres[0] && (

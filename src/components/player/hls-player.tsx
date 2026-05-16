@@ -189,6 +189,9 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
   const controlsHideTimerRef = useRef<number | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const seekPulseTimerRef = useRef<number | null>(null);
+  const qualitySwitchTimerRef = useRef<number | null>(null);
+  const qualitySwitchTargetRef = useRef<number | null>(null);
+  const qualitySwitchSnapshotRef = useRef<{ time: number; wasPlaying: boolean } | null>(null);
   const lastBackendSaveRef = useRef<SavedProgressSnapshot | null>(initialSnapshot(initialWatchProgress));
   const manualLevelRef = useRef(-1);
   const resumeAppliedRef = useRef(false);
@@ -213,6 +216,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
   const [playbackRate, setPlaybackRate] = useState(1);
   const [toast, setToast] = useState<Toast | null>(null);
   const [seekPulse, setSeekPulse] = useState<"backward" | "forward" | null>(null);
+  const [qualitySwitching, setQualitySwitching] = useState(false);
 
   const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
   const bufferedPercent = duration > 0 ? Math.min(100, (bufferedEnd / duration) * 100) : 0;
@@ -221,7 +225,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
   const selectedQuality = qualityLevels.find((level) => level.index === manualLevel)?.label;
   const qualityLabel = manualLevel === -1 ? (activeAutoQuality ? `Auto · ${activeAutoQuality}` : "Auto") : selectedQuality ?? "Auto";
   const durationLabel = duration > 0 ? formatTime(duration) : loading ? "..." : "--:--";
-  const visibleChrome = controlsVisible || !playing || loading || Boolean(error) || Boolean(activeMenu) || scrubbing;
+  const visibleChrome = controlsVisible || !playing || loading || qualitySwitching || Boolean(error) || Boolean(activeMenu) || scrubbing;
   const skipIntroStart = skipIntro?.startSeconds ?? 0;
   const showSkipIntro =
     Boolean(skipIntro) &&
@@ -269,6 +273,10 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     setActiveMenu(null);
     setScrubbing(false);
     setSeekPulse(null);
+    setQualitySwitching(false);
+    window.clearTimeout(qualitySwitchTimerRef.current ?? undefined);
+    qualitySwitchTargetRef.current = null;
+    qualitySwitchSnapshotRef.current = null;
     manualLevelRef.current = -1;
     lastBackendSaveRef.current = initialSnapshot(initialWatchProgress);
     resumeAppliedRef.current = false;
@@ -286,6 +294,9 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
 
       return () => {
         streamReadyRef.current = false;
+        window.clearTimeout(qualitySwitchTimerRef.current ?? undefined);
+        qualitySwitchTargetRef.current = null;
+        qualitySwitchSnapshotRef.current = null;
         savePlaybackProgress({ keepalive: true });
         video.removeAttribute("src");
         video.load();
@@ -335,6 +346,10 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
 
       const handleLevelSwitched = (_event: string, data: { level: number }) => {
         setCurrentLevel(data.level);
+
+        if (qualitySwitchTargetRef.current === -1 || qualitySwitchTargetRef.current === data.level) {
+          finishQualitySwitch();
+        }
       };
 
       const handleError = (_event: string, data: ErrorData) => {
@@ -347,8 +362,9 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
         if (manualLevelRef.current !== -1 && streamReadyRef.current) {
           manualLevelRef.current = -1;
           setManualLevel(-1);
-          hls.currentLevel = -1;
+          hls.nextLevel = -1;
           hls.nextLoadLevel = -1;
+          finishQualitySwitch();
           showToast("Auto quality fallback");
           hls.startLoad();
           return;
@@ -384,6 +400,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
 
       return () => {
         window.clearTimeout(manifestTimeout);
+        window.clearTimeout(qualitySwitchTimerRef.current ?? undefined);
         savePlaybackProgress({ keepalive: true });
         hls.off(Hls.Events.MEDIA_ATTACHED, handleMediaAttached);
         hls.off(Hls.Events.MANIFEST_PARSED, handleManifestParsed);
@@ -393,6 +410,8 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
         hlsRef.current = null;
         usingHlsJsRef.current = false;
         streamReadyRef.current = false;
+        qualitySwitchTargetRef.current = null;
+        qualitySwitchSnapshotRef.current = null;
         video.removeAttribute("src");
         video.load();
       };
@@ -404,6 +423,9 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
 
       return () => {
         streamReadyRef.current = false;
+        window.clearTimeout(qualitySwitchTimerRef.current ?? undefined);
+        qualitySwitchTargetRef.current = null;
+        qualitySwitchSnapshotRef.current = null;
         savePlaybackProgress({ keepalive: true });
         video.removeAttribute("src");
         video.load();
@@ -458,7 +480,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
   useEffect(() => {
     window.clearTimeout(controlsHideTimerRef.current ?? undefined);
 
-    if (playing && !loading && !error && !activeMenu && !scrubbing) {
+    if (playing && !loading && !qualitySwitching && !error && !activeMenu && !scrubbing) {
       controlsHideTimerRef.current = window.setTimeout(() => {
         setControlsVisible(false);
       }, 2600);
@@ -469,7 +491,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     return () => {
       window.clearTimeout(controlsHideTimerRef.current ?? undefined);
     };
-  }, [activeMenu, error, loading, playing, scrubbing]);
+  }, [activeMenu, error, loading, playing, qualitySwitching, scrubbing]);
 
   useEffect(() => {
     const closeMenus = (event: PointerEvent) => {
@@ -561,6 +583,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
       window.removeEventListener("beforeunload", saveCurrentProgress);
       window.clearTimeout(toastTimerRef.current ?? undefined);
       window.clearTimeout(seekPulseTimerRef.current ?? undefined);
+      window.clearTimeout(qualitySwitchTimerRef.current ?? undefined);
     };
   }, [contentId, src]);
 
@@ -695,21 +718,65 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     setMuted(video.muted);
   }
 
+  function finishQualitySwitch() {
+    const video = videoRef.current;
+    const snapshot = qualitySwitchSnapshotRef.current;
+
+    window.clearTimeout(qualitySwitchTimerRef.current ?? undefined);
+    qualitySwitchTimerRef.current = null;
+    qualitySwitchTargetRef.current = null;
+    qualitySwitchSnapshotRef.current = null;
+    setQualitySwitching(false);
+
+    if (!video || !snapshot) {
+      return;
+    }
+
+    const videoDuration = getVideoDuration(video);
+    const canRestoreTime = snapshot.time > 0 && (!videoDuration || snapshot.time < videoDuration - 1);
+
+    if (canRestoreTime && (video.currentTime + 0.75 < snapshot.time || Math.abs(video.currentTime - snapshot.time) > 8)) {
+      video.currentTime = snapshot.time;
+      setCurrentTime(snapshot.time);
+    }
+
+    if (video.readyState >= 3) {
+      setLoading(false);
+    }
+
+    if (snapshot.wasPlaying && video.paused && streamReadyRef.current) {
+      void video.play().catch(() => {
+        setPlaying(false);
+      });
+    }
+  }
+
   function changeQuality(value: string) {
     const nextLevel = Number(value);
     const hls = hlsRef.current;
+    const video = videoRef.current;
 
     if (!Number.isFinite(nextLevel)) {
       return;
     }
 
+    revealControls();
     manualLevelRef.current = nextLevel;
     setManualLevel(nextLevel);
     setActiveMenu(null);
     setSettingsPanel("root");
 
-    if (hls) {
-      hls.currentLevel = nextLevel;
+    if (hls && streamReadyRef.current) {
+      qualitySwitchSnapshotRef.current = {
+        time: video?.currentTime ?? currentTime,
+        wasPlaying: video ? !video.paused : playing
+      };
+      qualitySwitchTargetRef.current = nextLevel;
+      setQualitySwitching(true);
+      window.clearTimeout(qualitySwitchTimerRef.current ?? undefined);
+      qualitySwitchTimerRef.current = window.setTimeout(finishQualitySwitch, 1800);
+      hls.nextLevel = nextLevel;
+      hls.nextLoadLevel = nextLevel;
     }
 
     const nextLabel = nextLevel === -1 ? "Auto quality" : qualityLevels.find((level) => level.index === nextLevel)?.label;
@@ -930,7 +997,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     setControlsVisible(true);
     window.clearTimeout(controlsHideTimerRef.current ?? undefined);
 
-    if (playing && !loading && !error && !activeMenu && !scrubbing) {
+    if (playing && !loading && !qualitySwitching && !error && !activeMenu && !scrubbing) {
       controlsHideTimerRef.current = window.setTimeout(() => {
         setControlsVisible(false);
       }, 2600);
@@ -1044,6 +1111,9 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
               } else if (streamReadyRef.current) {
                 setLoading(false);
               }
+              if (qualitySwitchTargetRef.current !== null) {
+                finishQualitySwitch();
+              }
               restorePlaybackProgress(videoRef.current as HTMLVideoElement);
               syncVideoState();
             }}
@@ -1069,6 +1139,13 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
             onPlay={() => {
               setPlaying(true);
               setLoading(false);
+            }}
+            onPlaying={() => {
+              setPlaying(true);
+              setLoading(false);
+              if (qualitySwitchTargetRef.current !== null) {
+                finishQualitySwitch();
+              }
             }}
             onPause={() => {
               setPlaying(false);
@@ -1125,8 +1202,20 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
 
           {loading && !error ? (
             <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-black/18">
-              <div className="cinema-loader" aria-label={streamReadyRef.current ? "Буферизация" : "Жүктелуде"}>
-                <Loader2 className="h-6 w-6 animate-spin" />
+              <div className="cinema-loader-stack">
+                <div className="cinema-loader" aria-label={qualitySwitching ? "Сапа ауыстырылуда" : streamReadyRef.current ? "Буферизация" : "Жүктелуде"}>
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+                {qualitySwitching ? <span>Сапа ауыстырылуда</span> : null}
+              </div>
+            </div>
+          ) : null}
+
+          {qualitySwitching && !loading && !error ? (
+            <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-black/10">
+              <div className="cinema-quality-switch" aria-live="polite">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Сапа ауыстырылуда</span>
               </div>
             </div>
           ) : null}

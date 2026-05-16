@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
-import { EmailPasswordAuthForm } from "@/components/auth/email-password-auth-form";
-import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { AuthLegalGate } from "@/components/auth/auth-legal-gate";
 import { LogoMark } from "@/components/layout/site-logo";
 import { getCanonicalUrl } from "@/lib/site-url";
 import { getSupabaseConfig } from "@/lib/supabase/config";
@@ -106,19 +105,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </div>
           )}
 
-          <div className="mt-6">
-            <EmailPasswordAuthForm disabled={!config.configured} />
-          </div>
-
-          <div className="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            <span className="h-px flex-1 bg-white/10" />
-            немесе
-            <span className="h-px flex-1 bg-white/10" />
-          </div>
-
-          <div>
-            <GoogleSignInButton disabled={!config.configured} />
-          </div>
+          <AuthLegalGate disabled={!config.configured} />
         </div>
       </section>
     </main>

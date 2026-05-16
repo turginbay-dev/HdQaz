@@ -23,7 +23,7 @@ export function TopTenRow({ movies }: TopTenRowProps) {
           </h2>
         </div>
 
-        <div className="cinema-mask hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-9 pt-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="cinema-mask performance-rail hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-9 pt-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           {movies.map((movie, index) => (
             <div
               key={`${movie.id}-${index}`}

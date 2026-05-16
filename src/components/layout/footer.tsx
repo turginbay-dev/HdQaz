@@ -23,10 +23,15 @@ const footerNavigation: FooterLinkItem[] = [
 ];
 
 const supportLinks: FooterLinkItem[] = [
-  { label: "Авторлық құқық", href: "mailto:dmca@hdqaz.online" },
   { label: "Байланыс", href: "mailto:info@hdqaz.online" },
   { label: "Қолдау", href: "mailto:support@hdqaz.online" },
   { label: "Әкімшілік", href: "mailto:admin@hdqaz.online" }
+];
+
+const legalLinks: FooterLinkItem[] = [
+  { label: "Пайдалану шарттары", href: "/terms" },
+  { label: "Құпиялылық саясаты", href: "/privacy" },
+  { label: "DMCA / Авторлық құқық", href: "/dmca" }
 ];
 
 const socialLinks = [
@@ -151,11 +156,24 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="relative mx-auto mt-8 flex w-full max-w-7xl flex-col gap-2 border-t border-white/[0.08] pt-5 text-xs leading-5 text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 HdQaz. Барлық құқықтар қорғалған.</p>
-          <p className="max-w-2xl sm:text-right">
-            Кейбір аудармалар мен дыбыстаулар серіктес командалардың еңбегімен ұсынылады.
-          </p>
+        <div className="relative mx-auto mt-8 grid w-full max-w-7xl gap-4 border-t border-white/[0.08] pt-5 text-xs leading-5 text-zinc-500 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div>
+            <p>© 2026 HdQaz. Барлық құқықтар қорғалған.</p>
+            <p className="mt-1 max-w-2xl">
+              Кейбір аудармалар мен дыбыстаулар серіктес командалардың еңбегімен ұсынылады.
+            </p>
+          </div>
+          <nav className="flex flex-wrap gap-x-4 gap-y-1 lg:justify-end" aria-label="Заңдық сілтемелер">
+            {legalLinks.map((item) => (
+              <FooterAnchor
+                key={`${item.label}-${item.href}`}
+                href={item.href}
+                className="transition hover:text-white"
+              >
+                {item.label}
+              </FooterAnchor>
+            ))}
+          </nav>
         </div>
     </footer>
   );

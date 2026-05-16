@@ -1,13 +1,18 @@
 "use client";
 
 import { useCallback, useState, type MouseEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LockKeyhole, LogIn, Mail, UserPlus } from "lucide-react";
+import { AlertCircle, LockKeyhole, LogIn, Mail, UserPlus } from "lucide-react";
 import { signInWithPassword } from "@/app/auth/actions";
 import { TurnstileWidget } from "@/components/auth/turnstile-widget";
 
 type EmailPasswordAuthFormProps = {
   disabled?: boolean;
+  legalAccepted: boolean;
+  legalError: string | null;
+  onLegalAcceptedChange: (accepted: boolean) => void;
+  onRequireLegalConsent: () => boolean;
 };
 
 type SignupResponse = {
@@ -23,7 +28,13 @@ type SignupResponse = {
 const SIGNUP_PASSWORD_MIN_LENGTH = 8;
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
-export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFormProps) {
+export function EmailPasswordAuthForm({
+  disabled = false,
+  legalAccepted,
+  legalError,
+  onLegalAcceptedChange,
+  onRequireLegalConsent
+}: EmailPasswordAuthFormProps) {
   const router = useRouter();
   const [signupError, setSignupError] = useState<string | null>(null);
   const [signupStatus, setSignupStatus] = useState<string | null>(null);
@@ -31,6 +42,8 @@ export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFor
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const turnstileRequired = Boolean(TURNSTILE_SITE_KEY);
+  const signupDisabled = disabled || isSigningUp || !legalAccepted || (turnstileRequired && !turnstileToken);
+  const showSignupConsentOverlay = !disabled && !isSigningUp && !legalAccepted;
 
   const resetTurnstile = useCallback(() => {
     if (!turnstileRequired) {
@@ -46,7 +59,15 @@ export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFor
 
     const form = event.currentTarget.form;
 
-    if (!form || disabled || isSigningUp || !form.reportValidity()) {
+    if (!form || disabled || isSigningUp) {
+      return;
+    }
+
+    if (!onRequireLegalConsent()) {
+      return;
+    }
+
+    if (!form.reportValidity()) {
       return;
     }
 
@@ -160,6 +181,45 @@ export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFor
         siteKey={TURNSTILE_SITE_KEY}
       />
 
+      <div className="rounded-[24px] border border-white/[0.1] bg-white/[0.055] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+        <div className="flex items-start gap-3">
+          <input
+            id="legal-consent"
+            checked={legalAccepted}
+            className="mt-1 h-5 w-5 shrink-0 rounded border border-white/20 bg-black/30 accent-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={disabled}
+            onChange={(event) => onLegalAcceptedChange(event.target.checked)}
+            type="checkbox"
+            aria-describedby={legalError ? "legal-consent-error" : undefined}
+            aria-labelledby="legal-consent-label"
+          />
+          <p
+            id="legal-consent-label"
+            className="text-sm font-medium leading-6 text-zinc-300"
+          >
+            Мен{" "}
+            <Link className="font-semibold text-[var(--accent)] transition hover:text-[#f3d78e]" href="/terms">
+              Пайдалану шарттарымен
+            </Link>{" "}
+            және{" "}
+            <Link className="font-semibold text-[var(--accent)] transition hover:text-[#f3d78e]" href="/privacy">
+              Құпиялылық саясатымен
+            </Link>{" "}
+            таныстым және келісемін.
+          </p>
+        </div>
+        {legalError ? (
+          <div
+            id="legal-consent-error"
+            className="mt-3 flex gap-2 rounded-2xl border border-[rgba(217,183,111,0.22)] bg-[rgba(217,183,111,0.1)] px-3 py-2 text-sm leading-6 text-zinc-100"
+            role="alert"
+          >
+            <AlertCircle className="mt-1 h-4 w-4 shrink-0 text-[var(--accent)]" />
+            <span>{legalError}</span>
+          </div>
+        ) : null}
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <button
           disabled={disabled || isSigningUp || (turnstileRequired && !turnstileToken)}
@@ -169,15 +229,25 @@ export function EmailPasswordAuthForm({ disabled = false }: EmailPasswordAuthFor
           <LogIn className="h-4 w-4" />
           Кіру
         </button>
-        <button
-          disabled={disabled || isSigningUp || (turnstileRequired && !turnstileToken)}
-          onClick={handleSignup}
-          className="glass-button inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
-          type="button"
-        >
-          <UserPlus className="h-4 w-4" />
-          {isSigningUp ? "Жіберілуде" : "Тіркелу"}
-        </button>
+        <div className="relative">
+          <button
+            disabled={signupDisabled}
+            onClick={handleSignup}
+            className="glass-button inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+            type="button"
+          >
+            <UserPlus className="h-4 w-4" />
+            {isSigningUp ? "Жіберілуде" : "Тіркелу"}
+          </button>
+          {showSignupConsentOverlay ? (
+            <button
+              aria-label="Тіркелу үшін құқықтық шарттарға келісу керек"
+              className="absolute inset-0 rounded-full cursor-not-allowed bg-transparent"
+              onClick={onRequireLegalConsent}
+              type="button"
+            />
+          ) : null}
+        </div>
       </div>
     </form>
   );

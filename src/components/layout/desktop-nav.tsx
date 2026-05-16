@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Crown, Search, X } from "lucide-react";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteLogo } from "@/components/layout/site-logo";
@@ -21,8 +21,8 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { scrollY } = useScroll();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [desktopActive, setDesktopActive] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -30,21 +30,69 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
   const [searchValue, setSearchValue] = useState("");
   const currentSearchQuery = searchParams.get("q") ?? "";
 
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    setScrolled(latest > 32);
-  });
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+
+    function syncDesktopState() {
+      setDesktopActive(media.matches);
+      setScrolled(media.matches && window.scrollY > 32);
+    }
+
+    syncDesktopState();
+    media.addEventListener("change", syncDesktopState);
+
+    return () => {
+      media.removeEventListener("change", syncDesktopState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!desktopActive) {
+      return;
+    }
+
+    let frame = 0;
+
+    function updateScrolled() {
+      frame = 0;
+      setScrolled(window.scrollY > 32);
+    }
+
+    function handleScroll() {
+      if (frame) {
+        return;
+      }
+
+      frame = window.requestAnimationFrame(updateScrolled);
+    }
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [desktopActive]);
 
   useEffect(() => {
     setSearchValue(currentSearchQuery);
   }, [currentSearchQuery]);
 
   useEffect(() => {
+    if (!desktopActive) {
+      return;
+    }
+
     const id = window.setInterval(() => {
       setHintIndex((current) => (current + 1) % searchSuggestions.length);
     }, 2200);
 
     return () => window.clearInterval(id);
-  }, []);
+  }, [desktopActive]);
 
   function focusSearchInput() {
     setSearchOpen(true);

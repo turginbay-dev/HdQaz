@@ -32,7 +32,7 @@ export function MovieRow({ href = "/catalog", title, movies, priorityCount = 0 }
             Барлығы
           </Link>
         </div>
-        <div className="cinema-mask hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-8 pt-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="cinema-mask performance-rail hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-8 pt-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           {movies.map((movie, index) => (
             <div
               key={movie.id}

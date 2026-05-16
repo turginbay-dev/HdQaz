@@ -109,9 +109,9 @@ export function HeroBanner({ movies }: HeroBannerProps) {
           <motion.div
             key={`content-${movie.id}`}
             className="max-w-4xl"
-            initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -10, filter: "blur(8px)" }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-3.5 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-zinc-200 backdrop-blur-xl">
@@ -157,9 +157,9 @@ export function HeroBanner({ movies }: HeroBannerProps) {
           <motion.div
             key={`poster-${movie.id}`}
             className="relative mx-auto hidden w-full max-w-[250px] pb-4 lg:block xl:max-w-[280px]"
-            initial={{ opacity: 0, x: 28, filter: "blur(12px)" }}
-            animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, x: 18, filter: "blur(10px)" }}
+            initial={{ opacity: 0, x: 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 18 }}
             transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="absolute -inset-8 rounded-full bg-[rgba(217,183,111,0.16)] blur-3xl" />

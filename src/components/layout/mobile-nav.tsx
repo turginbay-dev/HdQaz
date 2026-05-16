@@ -16,6 +16,14 @@ type MobileNavProps = {
   isPremium?: boolean;
 };
 
+const mobileNavigation = [
+  {
+    label: "Басты бет",
+    href: "/"
+  },
+  ...mainNavigation.map((item) => (item.href === "/catalog" ? { ...item, label: "Каталог" } : item))
+];
+
 export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -25,13 +33,6 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
   const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const currentSearchQuery = searchParams.get("q") ?? "";
-  const mobileNavigation = [
-    {
-      label: "Басты бет",
-      href: "/"
-    },
-    ...mainNavigation.map((item) => (item.href === "/catalog" ? { ...item, label: "Каталог" } : item))
-  ];
 
   useEffect(() => {
     setSearchValue(currentSearchQuery);
@@ -78,8 +79,9 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
       <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-4 py-4 lg:hidden">
         <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}>
           <button
-            className="glass inline-flex h-14 w-[6rem] items-center justify-center rounded-[24px] transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            className="glass mobile-nav-trigger inline-flex h-14 w-[6rem] items-center justify-center rounded-[24px] transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             aria-label="Мәзірді ашу"
+            aria-expanded={open}
             type="button"
             onClick={() => {
               setSearchOpen(false);
@@ -113,19 +115,20 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
         {searchOpen && (
           <>
             <motion.button
-              className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-md lg:hidden"
+              className="mobile-nav-backdrop fixed inset-0 z-[70] lg:hidden"
               aria-label="Іздеуді жабу"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
               onClick={() => setSearchOpen(false)}
             />
             <motion.div
-              className="glass-strong fixed left-3 top-3 z-[80] w-[min(92vw,420px)] rounded-[30px] p-4 lg:hidden"
-              initial={{ x: -430, opacity: 0, scale: 0.98 }}
-              animate={{ x: 0, opacity: 1, scale: 1 }}
-              exit={{ x: -430, opacity: 0, scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 280, damping: 30 }}
+              className="glass-strong mobile-nav-panel fixed left-3 top-3 z-[80] w-[min(92vw,420px)] rounded-[30px] p-4 lg:hidden"
+              initial={{ x: "-105%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "-105%", opacity: 0 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -198,19 +201,20 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
         {open && (
           <>
             <motion.button
-              className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-md lg:hidden"
+              className="mobile-nav-backdrop fixed inset-0 z-[70] lg:hidden"
               aria-label="Мәзірді жабу"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.16, ease: "easeOut" }}
               onClick={() => setOpen(false)}
             />
             <motion.aside
-              className="glass-strong fixed left-3 top-3 z-[80] flex h-[calc(100vh-24px)] w-[min(86vw,380px)] flex-col rounded-[30px] p-4 lg:hidden"
-              initial={{ x: -380, opacity: 0, scale: 0.98 }}
-              animate={{ x: 0, opacity: 1, scale: 1 }}
-              exit={{ x: -380, opacity: 0, scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 280, damping: 30 }}
+              className="glass-strong mobile-nav-panel fixed left-3 top-3 z-[80] flex h-[calc(100svh-24px)] w-[min(86vw,380px)] flex-col overflow-y-auto overscroll-contain rounded-[30px] p-4 lg:hidden"
+              initial={{ x: "-105%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "-105%", opacity: 0 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="flex items-center justify-between">
                 <SiteLogo variant="drawer" onClick={() => setOpen(false)} />
@@ -224,7 +228,7 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
               </div>
 
               <div className="mt-8 flex flex-col gap-2">
-                {mobileNavigation.map((item, index) => {
+                {mobileNavigation.map((item) => {
                   const itemPath = item.href.split("?")[0];
                   const itemParams = new URLSearchParams(item.href.split("?")[1]);
                   const itemCatalog = itemParams.get("catalog");
@@ -243,12 +247,7 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
                           : true);
 
                   return (
-                    <motion.div
-                      key={item.href}
-                      initial={{ opacity: 0, x: -18 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.04 * index }}
-                    >
+                    <div key={item.href}>
                       <Link
                         href={item.href}
                         className={
@@ -261,14 +260,10 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
                         {item.label}
                         {active && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
                       </Link>
-                    </motion.div>
+                    </div>
                   );
                 })}
-                <motion.div
-                  initial={{ opacity: 0, x: -18 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.04 * mobileNavigation.length }}
-                >
+                <div>
                   <Link
                     href="/profile"
                     className={
@@ -289,14 +284,10 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
                     </span>
                     {pathname === "/profile" && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
                   </Link>
-                </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, x: -18 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.04 * (mobileNavigation.length + 1) }}
-                >
+                </div>
+                <div>
                   <LanguageSwitcher variant="mobile" />
-                </motion.div>
+                </div>
               </div>
 
               <Link

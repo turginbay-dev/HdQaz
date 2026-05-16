@@ -44,7 +44,7 @@ export function EpisodesSection({ contentSlug, episodes, selectedEpisodeId }: Ep
       ) : null}
 
       {episodes.length > 0 ? (
-        <div className="hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 lg:pb-0">
+        <div className="performance-rail hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 lg:pb-0">
           {episodes.map((episode) => {
             const active = episode.id === selectedEpisodeId;
             const className = active

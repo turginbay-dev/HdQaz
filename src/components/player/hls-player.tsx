@@ -59,7 +59,7 @@ type Toast = {
   message: string;
 };
 
-type ActiveMenu = "settings" | "speed" | null;
+type ActiveMenu = "settings" | null;
 
 type SavedProgressSnapshot = {
   completed: boolean;
@@ -1258,9 +1258,6 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                   <div className="cinema-time">
                     {formatTime(currentTime)} <span>/</span> {durationLabel}
                   </div>
-                </div>
-
-                <div className="cinema-secondary-controls">
                   <div className="cinema-volume" style={volumeStyle}>
                     <button
                       className="cinema-control-button"
@@ -1285,38 +1282,9 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div className="relative">
-                    <button
-                      className="cinema-menu-trigger px-3"
-                      aria-label="Ойнату жылдамдығы"
-                      aria-expanded={activeMenu === "speed"}
-                      aria-haspopup="menu"
-                      onClick={() => toggleMenu("speed")}
-                      type="button"
-                    >
-                      {formatSpeed(playbackRate)}
-                    </button>
-
-                    {activeMenu === "speed" ? (
-                      <div className="cinema-menu right-0 w-40" role="menu" aria-label="Ойнату жылдамдығы">
-                        {playbackSpeeds.map((speed) => (
-                          <button
-                            key={speed}
-                            className={cn("cinema-menu-item", playbackRate === speed && "is-active")}
-                            role="menuitemradio"
-                            aria-checked={playbackRate === speed}
-                            onClick={() => changeSpeed(speed)}
-                            type="button"
-                          >
-                            <span>{formatSpeed(speed)}</span>
-                            {playbackRate === speed ? <Check className="h-4 w-4" /> : null}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-
+                <div className="cinema-secondary-controls">
                   <div className="relative">
                     <button
                       className="cinema-control-button"
@@ -1358,6 +1326,23 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                             <span>{level.label}</span>
                             <span className="cinema-menu-meta">{level.height >= 1080 ? "Full HD" : "HD"}</span>
                             {manualLevel === level.index ? <Check className="h-4 w-4" /> : null}
+                          </button>
+                        ))}
+                        <div className="cinema-menu-status">
+                          <span>Жылдамдық</span>
+                          <span>{formatSpeed(playbackRate)}</span>
+                        </div>
+                        {playbackSpeeds.map((speed) => (
+                          <button
+                            key={speed}
+                            className={cn("cinema-menu-item", playbackRate === speed && "is-active")}
+                            role="menuitemradio"
+                            aria-checked={playbackRate === speed}
+                            onClick={() => changeSpeed(speed)}
+                            type="button"
+                          >
+                            <span>{formatSpeed(speed)}</span>
+                            {playbackRate === speed ? <Check className="h-4 w-4" /> : null}
                           </button>
                         ))}
                         <button

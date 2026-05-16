@@ -591,11 +591,13 @@ select {
 }
 
 .cinema-main-controls {
+  flex: 1 1 auto;
   min-width: 0;
   gap: 0.48rem;
 }
 
 .cinema-secondary-controls {
+  flex: 0 0 auto;
   justify-content: flex-end;
   gap: 0.48rem;
 }
@@ -913,22 +915,20 @@ select {
 
   .cinema-controls-row {
     min-height: auto;
-    flex-direction: column;
-    align-items: stretch;
+    align-items: center;
     gap: 0.62rem;
   }
 
-  .cinema-main-controls,
-  .cinema-secondary-controls {
-    justify-content: space-between;
+  .cinema-main-controls {
+    justify-content: flex-start;
   }
 
   .cinema-secondary-controls {
-    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .cinema-time {
-    margin-left: auto;
+    margin-left: 0;
     font-size: 0.72rem;
   }
 

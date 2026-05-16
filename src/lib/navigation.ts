@@ -1,6 +1,6 @@
 export const mainNavigation = [
   {
-    label: "Каталог",
+    label: "Кино әлемі",
     href: "/catalog"
   },
   {

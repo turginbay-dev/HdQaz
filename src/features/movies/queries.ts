@@ -4,12 +4,16 @@ import { movieMatchesSearch } from "./search";
 import { contentToMovieRecord, getContentBySlug as getContentRecordBySlug, listContents } from "@/features/content/repository";
 import type { Movie } from "@/types/movie";
 import type { MovieRecord } from "@/types/backend";
+import type { ContentType } from "@/types/content";
 
 export type MovieFilters = {
   genre?: string;
   catalog?: string;
   filter?: string;
   language?: string;
+  type?: ContentType | string;
+  year?: string;
+  country?: string;
   q?: string;
 };
 
@@ -49,14 +53,29 @@ export function selectMoviesByFilters(records: Movie[], filters: MovieFilters = 
   const catalog = filters.catalog?.trim();
   const filter = filters.filter?.trim();
   const language = filters.language?.trim();
+  const type = filters.type?.trim();
+  const year = filters.year?.trim();
+  const country = filters.country?.trim();
   const query = filters.q?.trim();
 
   return records.filter((movie) => {
     const matchesGenre = !genre || movie.genres.includes(genre);
     const matchesCatalog = !catalog || movie.catalogs.some((item) => item === catalog);
     const matchesLanguage = !language || movie.languages.some((item) => item === language);
+    const matchesType = !type || movie.type === type;
+    const matchesYear = !year || String(movie.year) === year;
+    const matchesCountry = !country || movie.country === country;
 
-    return matchesGenre && matchesCatalog && matchesLanguage && matchesLegacyFilter(movie, filter) && movieMatchesSearch(movie, query);
+    return (
+      matchesGenre &&
+      matchesCatalog &&
+      matchesLanguage &&
+      matchesType &&
+      matchesYear &&
+      matchesCountry &&
+      matchesLegacyFilter(movie, filter) &&
+      movieMatchesSearch(movie, query)
+    );
   });
 }
 

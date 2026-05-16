@@ -167,6 +167,13 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
           ) : (
             <PremiumLockScreen backdropUrl={content.backdropUrl} title={content.title} />
           )}
+          {contentIsEpisodic ? (
+            <EpisodesSection
+              contentSlug={content.slug}
+              episodes={episodes}
+              selectedEpisodeId={selectedEpisode?.id ?? null}
+            />
+          ) : null}
           <MovieEngagementActions
             initialLiked={engagementState.isLiked}
             initialWatchlisted={engagementState.isWatchlisted}
@@ -196,14 +203,6 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
             movies={relatedMovies}
           />
         </div>
-
-        {contentIsEpisodic ? (
-          <EpisodesSection
-            contentSlug={content.slug}
-            episodes={episodes}
-            selectedEpisodeId={selectedEpisode?.id ?? null}
-          />
-        ) : null}
       </div>
     </main>
   );

@@ -95,6 +95,14 @@ export function getFeaturedMovie(records: Movie[]) {
   return records[0] ?? movies[0];
 }
 
+export function getHeroMovies(records: Movie[]) {
+  const heroMovies = records
+    .filter((movie) => movie.isHero)
+    .sort((left, right) => (left.heroOrder ?? 9999) - (right.heroOrder ?? 9999));
+
+  return heroMovies.length > 0 ? heroMovies : [getFeaturedMovie(records)];
+}
+
 export function getTrendingMovies(records: Movie[]) {
   return records;
 }
@@ -133,6 +141,26 @@ export function getDubbedMovies(records: Movie[]) {
 
 export function getSubtitleMovies(records: Movie[]) {
   return getMoviesByCatalog(records, "kazakh-subtitles");
+}
+
+export function getDoramaMovies(records: Movie[]) {
+  return records.filter((movie) => movie.type === "dorama");
+}
+
+export function getAnimeMovies(records: Movie[]) {
+  return records.filter((movie) => movie.type === "anime");
+}
+
+function isCartoonMovie(movie: Movie) {
+  return movie.type !== "anime" && movie.genres.some((genre) => genre === "Анимация" || genre === "Отбасы");
+}
+
+export function getFeatureMovies(records: Movie[]) {
+  return records.filter((movie) => movie.type === "movie" && !isCartoonMovie(movie));
+}
+
+export function getCartoonMovies(records: Movie[]) {
+  return records.filter(isCartoonMovie);
 }
 
 export function getNewReleases(records: Movie[]) {

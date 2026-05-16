@@ -31,6 +31,9 @@ export type Movie = {
   contentGenres?: Genre[];
   episodes?: Episode[];
   episodeCount?: number;
+  heroComment?: string | null;
+  heroOrder?: number | null;
+  isHero?: boolean;
   isPublished?: boolean;
   badges: string[];
   languages: MovieLanguageId[];

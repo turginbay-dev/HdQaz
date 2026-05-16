@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Crown, Menu, Search, X } from "lucide-react";
-import { SiteLogo } from "@/components/layout/site-logo";
+import { Crown, Search, X } from "lucide-react";
+import { LogoMark, SiteLogo } from "@/components/layout/site-logo";
 import { UserAvatar } from "@/components/user/user-avatar";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
 
@@ -24,6 +24,13 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
   const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const currentSearchQuery = searchParams.get("q") ?? "";
+  const mobileNavigation = [
+    {
+      label: "Home",
+      href: "/"
+    },
+    ...mainNavigation.map((item) => (item.href === "/catalog" ? { ...item, label: "Categories" } : item))
+  ];
 
   useEffect(() => {
     setSearchValue(currentSearchQuery);
@@ -69,10 +76,20 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
     <>
       <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-4 py-4 lg:hidden">
         <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}>
-          <SiteLogo variant="mobile" priority />
+          <button
+            className="glass inline-flex h-14 w-[6rem] items-center justify-center rounded-[24px] transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            aria-label="Мәзірді ашу"
+            type="button"
+            onClick={() => {
+              setSearchOpen(false);
+              setOpen(true);
+            }}
+          >
+            <LogoMark className="h-12 w-[72px] p-1" priority sizes="72px" />
+          </button>
         </motion.div>
         <motion.div
-          className="flex items-center gap-2"
+          className="flex items-center"
           initial={{ opacity: 0, y: -14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08 }}
@@ -87,13 +104,6 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
             }}
           >
             <Search className="h-5 w-5" />
-          </button>
-          <button
-            className="glass-button flex h-12 w-12 items-center justify-center rounded-full text-white"
-            aria-label="Мәзір"
-            onClick={() => setOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
           </button>
         </motion.div>
       </header>
@@ -110,10 +120,10 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
               onClick={() => setSearchOpen(false)}
             />
             <motion.div
-              className="glass-strong fixed left-3 right-3 top-3 z-[80] rounded-[30px] p-4 lg:hidden"
-              initial={{ y: -18, opacity: 0, scale: 0.98 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: -18, opacity: 0, scale: 0.98 }}
+              className="glass-strong fixed left-3 top-3 z-[80] w-[min(92vw,420px)] rounded-[30px] p-4 lg:hidden"
+              initial={{ x: -430, opacity: 0, scale: 0.98 }}
+              animate={{ x: 0, opacity: 1, scale: 1 }}
+              exit={{ x: -430, opacity: 0, scale: 0.98 }}
               transition={{ type: "spring", stiffness: 280, damping: 30 }}
             >
               <div className="flex items-center justify-between gap-3">
@@ -195,10 +205,10 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
               onClick={() => setOpen(false)}
             />
             <motion.aside
-              className="glass-strong fixed right-3 top-3 z-[80] flex h-[calc(100vh-24px)] w-[min(86vw,380px)] flex-col rounded-[30px] p-4 lg:hidden"
-              initial={{ x: 380, opacity: 0, scale: 0.98 }}
+              className="glass-strong fixed left-3 top-3 z-[80] flex h-[calc(100vh-24px)] w-[min(86vw,380px)] flex-col rounded-[30px] p-4 lg:hidden"
+              initial={{ x: -380, opacity: 0, scale: 0.98 }}
               animate={{ x: 0, opacity: 1, scale: 1 }}
-              exit={{ x: 380, opacity: 0, scale: 0.98 }}
+              exit={{ x: -380, opacity: 0, scale: 0.98 }}
               transition={{ type: "spring", stiffness: 280, damping: 30 }}
             >
               <div className="flex items-center justify-between">
@@ -213,7 +223,7 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
               </div>
 
               <div className="mt-8 flex flex-col gap-2">
-                {mainNavigation.map((item, index) => {
+                {mobileNavigation.map((item, index) => {
                   const itemPath = item.href.split("?")[0];
                   const itemParams = new URLSearchParams(item.href.split("?")[1]);
                   const itemCatalog = itemParams.get("catalog");
@@ -234,7 +244,7 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
                   return (
                     <motion.div
                       key={item.href}
-                      initial={{ opacity: 0, x: 18 }}
+                      initial={{ opacity: 0, x: -18 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.04 * index }}
                     >
@@ -254,9 +264,9 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
                   );
                 })}
                 <motion.div
-                  initial={{ opacity: 0, x: 18 }}
+                  initial={{ opacity: 0, x: -18 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.04 * mainNavigation.length }}
+                  transition={{ delay: 0.04 * mobileNavigation.length }}
                 >
                   <Link
                     href="/profile"

@@ -8,60 +8,91 @@ import { getViewerContext } from "@/features/users/session";
 import { getMyWatchHistory, getRecommendationsForUser } from "@/features/watch-history/repository";
 import {
   getAllMovies,
+  getAnimeMovies,
+  getCartoonMovies,
+  getDoramaMovies,
   getDubbedMovies,
-  getFeaturedMovie,
-  getMoviesByGenre,
-  getNewReleases,
+  getFeatureMovies,
+  getHeroMovies,
   getSubtitleMovies,
-  getTopTenMovies,
-  getTrendingMovies
+  getTopTenMovies
 } from "@/features/movies/queries";
+import type { Movie } from "@/types/movie";
 
 export const dynamic = "force-dynamic";
+
+function prioritizeUnseen(movies: Movie[], seenIds: Set<string>) {
+  const unseen = movies.filter((movie) => !seenIds.has(movie.id));
+  const repeated = movies.filter((movie) => seenIds.has(movie.id));
+
+  unseen.forEach((movie) => seenIds.add(movie.id));
+
+  return [...unseen, ...repeated];
+}
 
 export default async function HomePage() {
   const [movies, viewer] = await Promise.all([getAllMovies(), getViewerContext()]);
   const [continueWatchingItems, recommendations] = await Promise.all([
     viewer.user ? getMyWatchHistory(viewer.user.id, 10) : Promise.resolve([]),
-    getRecommendationsForUser(viewer.user?.id, 8)
+    getRecommendationsForUser(viewer.user?.id, 10)
   ]);
-  const featured = getFeaturedMovie(movies);
+  const heroMovies = getHeroMovies(movies);
+  const rowSeenIds = new Set<string>();
+  const homepageRows: Array<{
+    href: { pathname: string; query: Record<string, string> };
+    movies: Movie[];
+    title: string;
+  }> = [
+    {
+      title: "Қазақша дыбыстама",
+      href: { pathname: "/catalog", query: { catalog: "kazakh-dubbed" } },
+      movies: prioritizeUnseen(getDubbedMovies(movies), rowSeenIds)
+    },
+    {
+      title: "Қазақша субтитрмен",
+      href: { pathname: "/catalog", query: { catalog: "kazakh-subtitles" } },
+      movies: prioritizeUnseen(getSubtitleMovies(movies), rowSeenIds)
+    },
+    {
+      title: "Дорамалар",
+      href: { pathname: "/catalog", query: { type: "dorama" } },
+      movies: prioritizeUnseen(getDoramaMovies(movies), rowSeenIds)
+    },
+    {
+      title: "Фильмдер",
+      href: { pathname: "/catalog", query: { type: "movie" } },
+      movies: prioritizeUnseen(getFeatureMovies(movies), rowSeenIds)
+    },
+    {
+      title: "Аниме",
+      href: { pathname: "/catalog", query: { type: "anime" } },
+      movies: prioritizeUnseen(getAnimeMovies(movies), rowSeenIds)
+    },
+    {
+      title: "Мультфильмдер",
+      href: { pathname: "/catalog", query: { genre: "Анимация" } },
+      movies: prioritizeUnseen(getCartoonMovies(movies), rowSeenIds)
+    }
+  ];
 
   return (
     <main className="ambient-page">
-      <HeroBanner movie={featured} />
+      <HeroBanner movies={heroMovies} />
       <div className="home-content-flow">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-14 px-4 pb-24 pt-0 sm:px-6 lg:gap-18 lg:px-8">
           {viewer.user ? <ContinueWatching isAuthenticated={Boolean(viewer.user)} items={continueWatchingItems} /> : null}
           {viewer.isAdmin ? <AdminShortcut /> : null}
           <AiRecommendations recommendations={recommendations} />
-          <MovieRow title="Трендте" movies={getTrendingMovies(movies)} />
+          {homepageRows.map((row, index) => (
+            <MovieRow
+              key={row.title}
+              title={row.title}
+              href={row.href}
+              movies={row.movies}
+              priorityCount={index === 0 ? 3 : 0}
+            />
+          ))}
           <TopTenRow movies={getTopTenMovies(movies)} />
-          <MovieRow
-            title="Қазақша дыбыстама"
-            href={{ pathname: "/catalog", query: { catalog: "kazakh-dubbed" } }}
-            movies={getDubbedMovies(movies)}
-          />
-          <MovieRow
-            title="Қазақша субтитрмен"
-            href={{ pathname: "/catalog", query: { catalog: "kazakh-subtitles" } }}
-            movies={getSubtitleMovies(movies)}
-          />
-          <MovieRow
-            title="Фантастика"
-            href={{ pathname: "/catalog", query: { genre: "Фантастика" } }}
-            movies={getMoviesByGenre(movies, "Фантастика")}
-          />
-          <MovieRow
-            title="Драма"
-            href={{ pathname: "/catalog", query: { genre: "Драма" } }}
-            movies={getMoviesByGenre(movies, "Драма")}
-          />
-          <MovieRow
-            title="Жаңа релиздер"
-            href={{ pathname: "/catalog", query: { catalog: "new-releases" } }}
-            movies={getNewReleases(movies)}
-          />
         </div>
       </div>
     </main>

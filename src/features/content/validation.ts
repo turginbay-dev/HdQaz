@@ -132,6 +132,7 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
   const status = asString(payload.status) as ContentStatus | undefined;
   const year = asNumber(payload.year);
   const durationMinutes = asNumber(payload.durationMinutes);
+  const heroOrder = asNumber(payload.heroOrder);
   const introStartSeconds = asNumber(payload.introStartSeconds);
   const introEndSeconds = asNumber(payload.introEndSeconds);
   const genreIds = asStringArray(payload.genreIds);
@@ -171,6 +172,10 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
 
   if (durationMinutes !== undefined && (!Number.isInteger(durationMinutes) || durationMinutes <= 0)) {
     errors.durationMinutes = "Must be a positive whole number.";
+  }
+
+  if (heroOrder !== undefined && (!Number.isInteger(heroOrder) || heroOrder < 0)) {
+    errors.heroOrder = "Hero order must be a non-negative whole number.";
   }
 
   if (!genreIds || genreIds.length === 0) {
@@ -229,6 +234,9 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
       introEndSeconds: introEndSeconds ?? null,
       dubberId: asNullableString(payload.dubberId) ?? null,
       genreIds: genreIds ?? [],
+      heroComment: asNullableString(payload.heroComment) ?? null,
+      heroOrder: heroOrder ?? null,
+      isHero: asBoolean(payload.isHero) ?? false,
       isPremium: asBoolean(payload.isPremium) ?? false,
       isPublished: asBoolean(payload.isPublished) ?? false
     },

@@ -7,12 +7,17 @@ type MovieRowProps = {
   href?: string | { pathname: string; query?: Record<string, string> };
   title: string;
   movies: Movie[];
+  priorityCount?: number;
 };
 
-export function MovieRow({ href = "/catalog", title, movies }: MovieRowProps) {
+export function MovieRow({ href = "/catalog", title, movies, priorityCount = 0 }: MovieRowProps) {
+  if (movies.length === 0) {
+    return null;
+  }
+
   return (
     <Reveal>
-      <section className="relative">
+      <section className="content-rail-section relative">
         <div className="mb-5 flex items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-[-0.024em] text-white sm:text-3xl">
@@ -27,10 +32,13 @@ export function MovieRow({ href = "/catalog", title, movies }: MovieRowProps) {
             Барлығы
           </Link>
         </div>
-        <div className="cinema-mask hide-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-8 pt-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="cinema-mask hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-8 pt-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           {movies.map((movie, index) => (
-            <div key={movie.id} className="w-40 shrink-0 sm:w-48 lg:w-56">
-              <MovieCard movie={movie} priority={index < 2} />
+            <div
+              key={movie.id}
+              className="w-[42vw] min-w-[9.75rem] shrink-0 snap-start sm:w-48 lg:w-[calc((100%-2rem)/3)]"
+            >
+              <MovieCard movie={movie} priority={index < priorityCount} />
             </div>
           ))}
         </div>

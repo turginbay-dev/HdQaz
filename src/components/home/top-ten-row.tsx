@@ -7,9 +7,13 @@ type TopTenRowProps = {
 };
 
 export function TopTenRow({ movies }: TopTenRowProps) {
+  if (movies.length === 0) {
+    return null;
+  }
+
   return (
     <Reveal>
-      <section>
+      <section className="content-rail-section">
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
             Weekly Chart
@@ -19,9 +23,12 @@ export function TopTenRow({ movies }: TopTenRowProps) {
           </h2>
         </div>
 
-        <div className="cinema-mask hide-scrollbar -mx-4 flex gap-5 overflow-x-auto px-4 pb-9 pt-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="cinema-mask hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-9 pt-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           {movies.map((movie, index) => (
-            <div key={`${movie.id}-${index}`} className="relative flex w-64 shrink-0 items-end">
+            <div
+              key={`${movie.id}-${index}`}
+              className="relative flex w-[74vw] max-w-[19rem] shrink-0 snap-start items-end sm:w-72 lg:w-[calc((100%-2.5rem)/3)] lg:max-w-none"
+            >
               <span className="pointer-events-none absolute -left-2 bottom-8 z-0 text-[8rem] font-black leading-none tracking-[-0.08em] text-white/[0.07]">
                 {index + 1}
               </span>

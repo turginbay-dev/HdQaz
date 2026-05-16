@@ -74,6 +74,9 @@ export type Content = {
   genres: Genre[];
   episodes: Episode[];
   episodeCount: number;
+  heroComment?: string | null;
+  heroOrder?: number | null;
+  isHero?: boolean;
   isPremium: boolean;
   isPublished: boolean;
   createdAt?: string;
@@ -99,6 +102,9 @@ export type ContentInput = {
   introEndSeconds?: number | null;
   dubberId?: string | null;
   genreIds: string[];
+  heroComment?: string | null;
+  heroOrder?: number | null;
+  isHero?: boolean;
   isPremium?: boolean;
   isPublished?: boolean;
 };

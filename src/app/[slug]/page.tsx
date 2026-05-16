@@ -9,6 +9,7 @@ import { GlassPanel } from "@/components/glass/glass-panel";
 import { MovieImage } from "@/components/movie/movie-image";
 import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieRow } from "@/components/movie/movie-row";
+import { ReadMoreDescription } from "@/components/movie/read-more-description";
 import { EpisodesSection } from "@/components/player/episodes-section";
 import { HlsPlayer } from "@/components/player/hls-player";
 import { PremiumLockScreen } from "@/components/premium/premium-lock-screen";
@@ -73,7 +74,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
 
   return (
     <main className="min-h-screen pb-20">
-      <section className="relative min-h-[72svh] overflow-hidden sm:min-h-[78vh]">
+      <section className="relative min-h-[62svh] overflow-hidden sm:min-h-[68vh]">
         <MovieImage
           src={content.backdropUrl}
           alt=""
@@ -86,7 +87,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/72 to-black/20" />
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-transparent to-black/40" />
 
-        <div className="relative mx-auto flex min-h-[72svh] w-full max-w-7xl items-end px-4 pb-10 pt-28 sm:min-h-[78vh] sm:px-6 sm:pb-14 sm:pt-32 lg:px-8">
+        <div className="relative mx-auto flex min-h-[62svh] w-full max-w-7xl items-end px-4 pb-10 pt-28 sm:min-h-[68vh] sm:px-6 sm:pb-14 sm:pt-32 lg:px-8">
           <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
             <div className="max-w-3xl">
               <div className="mb-4 flex flex-wrap gap-2">
@@ -97,9 +98,6 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
               <h1 className="break-words text-[clamp(2.55rem,11vw,3.4rem)] font-bold tracking-[-0.028em] text-white sm:text-7xl">
                 {content.title}
               </h1>
-              <p className="mt-4 max-w-2xl text-base font-medium leading-7 tracking-[0.004em] text-zinc-200 sm:text-lg sm:leading-8">
-                {content.description}
-              </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {content.genres.map((genre) => (
                   <span
@@ -187,6 +185,10 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
       </section>
 
       <div className="mx-auto mt-14 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-14">
+          <ReadMoreDescription description={content.description} />
+        </div>
+
         <div className="mb-14">
           <CommentsSection
             comments={comments}

@@ -44,12 +44,12 @@ export function EpisodesSection({ contentSlug, episodes, selectedEpisodeId }: Ep
       ) : null}
 
       {episodes.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 lg:pb-0">
           {episodes.map((episode) => {
             const active = episode.id === selectedEpisodeId;
             const className = active
-              ? "glass group w-full rounded-[24px] border-[rgba(217,183,111,0.45)] bg-[rgba(217,183,111,0.1)] p-4 text-left transition"
-              : "glass group rounded-[24px] p-4 transition hover:border-[rgba(217,183,111,0.35)]";
+              ? "glass group w-[76vw] max-w-[19rem] shrink-0 snap-start rounded-[24px] border-[rgba(217,183,111,0.45)] bg-[rgba(217,183,111,0.1)] p-4 text-left transition lg:w-auto lg:max-w-none"
+              : "glass group w-[76vw] max-w-[19rem] shrink-0 snap-start rounded-[24px] p-4 transition hover:border-[rgba(217,183,111,0.35)] lg:w-auto lg:max-w-none";
             const content = (
               <>
                 <div className="flex items-center justify-between gap-3">
@@ -62,7 +62,7 @@ export function EpisodesSection({ contentSlug, episodes, selectedEpisodeId }: Ep
                     </span>
                   ) : null}
                 </div>
-                <h3 className="mt-2 line-clamp-2 min-h-10 text-base font-bold tracking-[-0.012em] text-white">
+                <h3 className="mt-2 line-clamp-2 min-h-11 break-words text-base font-bold leading-6 tracking-[-0.012em] text-white">
                   {episode.title || `${episode.episodeNumber}-серия`}
                 </h3>
                 <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold tracking-[0.01em] text-zinc-300 transition group-hover:text-white">

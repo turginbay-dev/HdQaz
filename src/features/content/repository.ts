@@ -35,6 +35,9 @@ type ContentRow = {
   intro_start_seconds: number | null;
   intro_end_seconds: number | null;
   dubber_id: string | null;
+  hero_comment?: string | null;
+  hero_order?: number | null;
+  is_hero?: boolean | null;
   is_premium: boolean;
   is_published: boolean;
   created_at: string;
@@ -221,6 +224,9 @@ function rowToContent(
     genres: relations.genres ?? [],
     episodes,
     episodeCount: episodes.length,
+    heroComment: row.hero_comment ?? null,
+    heroOrder: row.hero_order ?? null,
+    isHero: Boolean(row.is_hero),
     isPremium: row.is_premium ?? false,
     isPublished: row.is_published,
     createdAt: row.created_at,
@@ -247,6 +253,9 @@ function contentToRow(input: ContentInput): ContentRowPatch {
     intro_start_seconds: input.introStartSeconds ?? null,
     intro_end_seconds: input.introEndSeconds ?? null,
     dubber_id: input.dubberId ?? null,
+    hero_comment: input.heroComment ?? null,
+    hero_order: input.heroOrder ?? null,
+    is_hero: input.isHero ?? false,
     is_premium: input.isPremium ?? false,
     is_published: input.isPublished ?? false
   };
@@ -311,6 +320,9 @@ function seedContents(): Content[] {
     })),
     episodes: [],
     episodeCount: 0,
+    heroComment: null,
+    heroOrder: null,
+    isHero: false,
     isPremium: movie.isPremium,
     isPublished: true
   }));
@@ -722,9 +734,25 @@ export async function deleteEpisode(contentSlug: string, episodeId: string) {
 
 export function contentToMovieRecord(content: Content): MovieRecord {
   const genreNames = content.genres.map((genre) => genre.name);
+  const legacyMovie = movies.find((movie) => movie.slug === content.slug);
   const runtime = isEpisodicContent(content)
     ? formatEpisodeCount(content.episodeCount) || "Сериялар жақында"
     : formatDurationMinutes(content.durationMinutes) || "Кино";
+  const legacyLocalizationCatalogs = (legacyMovie?.catalogs ?? []).filter(
+    (catalog) => catalog === "kazakh-dubbed" || catalog === "kazakh-subtitles"
+  );
+  const localizationCatalogs = legacyLocalizationCatalogs.length > 0
+    ? legacyLocalizationCatalogs
+    : content.dubber
+      ? ["kazakh-dubbed" as const]
+      : ["kazakh-subtitles" as const];
+  const fallbackCatalogs: MovieRecord["catalogs"] = [
+    "full-hd",
+    ...(content.isPremium ? ["premium" as const] : []),
+    ...localizationCatalogs,
+    ...(content.status === "ongoing" ? ["new-releases" as const] : [])
+  ];
+  const catalogs = Array.from(new Set([...(legacyMovie?.catalogs ?? []), ...fallbackCatalogs]));
 
   return {
     id: content.id,
@@ -752,17 +780,16 @@ export function contentToMovieRecord(content: Content): MovieRecord {
     contentGenres: content.genres,
     episodes: content.episodes,
     episodeCount: content.episodeCount,
+    heroComment: content.heroComment,
+    heroOrder: content.heroOrder,
+    isHero: content.isHero,
     isPublished: content.isPublished,
-    badges: [],
-    languages: ["kk"],
+    badges: legacyMovie?.badges ?? [content.dubber ? "Қазақша дыбыстама" : "Қазақша субтитрмен"],
+    languages: legacyMovie?.languages ?? ["kk"],
     genres: genreNames,
-    catalogs: [
-      "full-hd",
-      ...(content.dubber ? ["kazakh-dubbed" as const] : []),
-      ...(content.status === "ongoing" ? ["new-releases" as const] : [])
-    ],
+    catalogs,
     isPremium: content.isPremium,
-    isNewRelease: content.status === "ongoing",
+    isNewRelease: legacyMovie?.isNewRelease ?? content.status === "ongoing",
     streams: {
       master: content.hlsUrl ?? content.episodes[0]?.hlsUrl ?? ""
     },

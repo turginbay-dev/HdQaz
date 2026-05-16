@@ -35,6 +35,9 @@ type AdminContent = {
   introEndSeconds: string;
   dubberId: string;
   genreIds: string[];
+  heroComment: string;
+  heroOrder: string;
+  isHero: boolean;
   isPremium: boolean;
   isPublished: boolean;
   episodes: Episode[];
@@ -136,6 +139,9 @@ function createEmptyContent(): AdminContent {
     introEndSeconds: "",
     dubberId: "",
     genreIds: [],
+    heroComment: "",
+    heroOrder: "",
+    isHero: false,
     isPremium: false,
     isPublished: false,
     episodes: []
@@ -208,6 +214,9 @@ function toAdminContent(content: Content): AdminContent {
     introEndSeconds: content.introEndSeconds !== null && content.introEndSeconds !== undefined ? String(content.introEndSeconds) : "",
     dubberId: content.dubberId ?? "",
     genreIds: content.genres.map((genre) => genre.id),
+    heroComment: content.heroComment ?? "",
+    heroOrder: content.heroOrder !== null && content.heroOrder !== undefined ? String(content.heroOrder) : "",
+    isHero: Boolean(content.isHero),
     isPremium: content.isPremium,
     isPublished: content.isPublished,
     episodes: sortEpisodes(content.episodes)
@@ -510,6 +519,9 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         introEndSeconds: !draftIsEpisodic && contentDraft.introEndSeconds ? Number(contentDraft.introEndSeconds) : null,
         dubberId: contentDraft.dubberId || null,
         genreIds: contentDraft.genreIds,
+        heroComment: contentDraft.heroComment || null,
+        heroOrder: contentDraft.heroOrder ? Number(contentDraft.heroOrder) : null,
+        isHero: contentDraft.isHero,
         isPremium: contentDraft.isPremium,
         isPublished: contentDraft.isPublished
       };
@@ -827,6 +839,39 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
           />
         </div>
 
+        <div className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
+                Hero
+              </p>
+              <h3 className="mt-1 text-lg font-semibold tracking-[-0.014em] text-white">Басты слайд</h3>
+            </div>
+            <AdminToggle
+              label={contentDraft.isHero ? "Hero қосылған" : "Hero-ға қосу"}
+              active={contentDraft.isHero}
+              onClick={() => updateContentField("isHero", !contentDraft.isHero)}
+            />
+          </div>
+          <div className="mt-4 grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
+            <AdminInput
+              label="Hero order"
+              value={contentDraft.heroOrder}
+              onChange={(value) => updateContentField("heroOrder", value)}
+              placeholder="0"
+            />
+            <label className="block">
+              <span className="text-sm font-medium text-zinc-300">Hero comment</span>
+              <textarea
+                value={contentDraft.heroComment}
+                onChange={(event) => updateContentField("heroComment", event.target.value)}
+                className="mt-2 min-h-20 w-full resize-none rounded-[24px] border border-white/10 bg-white/[0.06] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-zinc-600 focus:border-[rgba(217,183,111,0.45)] focus:bg-white/[0.08]"
+                placeholder="Hero слайдқа қысқа комментарий..."
+              />
+            </label>
+          </div>
+        </div>
+
         <button
           className="cinema-sweep mt-6 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-black shadow-[0_18px_70px_rgba(255,255,255,0.16)] transition hover:bg-[#f3ead5] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           disabled={!canSaveContent || isSavingContent}
@@ -1008,6 +1053,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
           <div className="mt-4 flex flex-wrap gap-2">
             <StatusPill active label={contentTypeLabels[contentDraft.type]} />
             <StatusPill active={contentDraft.status !== "announced"} label={contentStatusLabels[contentDraft.status]} />
+            {contentDraft.isHero ? <StatusPill active label={`Hero ${contentDraft.heroOrder || "0"}`} /> : null}
           </div>
           <h3 className="mt-3 truncate text-lg font-semibold text-white">{contentDraft.title || "Контент атауы"}</h3>
           <p className="mt-1 text-sm text-zinc-500">
@@ -1219,6 +1265,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                     <StatusPill active label={itemIsEpisodic ? contentReleaseFormatLabels.episodic : contentReleaseFormatLabels.feature} />
                     <StatusPill active={item.status !== "announced"} label={contentStatusLabels[item.status]} />
                     {item.isPremium ? <StatusPill active label="Premium" /> : null}
+                    {item.isHero ? <StatusPill active label={`Hero ${item.heroOrder ?? 0}`} /> : null}
                     <StatusPill active={item.isPublished} label={item.isPublished ? "Published" : "Draft"} />
                   </div>
                   <h3 className="truncate font-semibold text-white">{item.title}</h3>

@@ -72,7 +72,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
 
   return (
     <main className="min-h-screen pb-20">
-      <section className="relative min-h-[78vh] overflow-hidden">
+      <section className="relative min-h-[72svh] overflow-hidden sm:min-h-[78vh]">
         <MovieImage
           src={content.backdropUrl}
           alt=""
@@ -85,7 +85,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/72 to-black/20" />
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-transparent to-black/40" />
 
-        <div className="relative mx-auto flex min-h-[78vh] w-full max-w-7xl items-end px-4 pb-14 pt-32 sm:px-6 lg:px-8">
+        <div className="relative mx-auto flex min-h-[72svh] w-full max-w-7xl items-end px-4 pb-10 pt-28 sm:min-h-[78vh] sm:px-6 sm:pb-14 sm:pt-32 lg:px-8">
           <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
             <div className="max-w-3xl">
               <div className="mb-4 flex flex-wrap gap-2">
@@ -93,7 +93,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
                 <MovieBadge label={statusLabel} />
                 {content.isPremium ? <MovieBadge label="Premium" /> : null}
               </div>
-              <h1 className="text-5xl font-bold tracking-[-0.028em] text-white sm:text-7xl">
+              <h1 className="break-words text-[clamp(2.55rem,11vw,3.4rem)] font-bold tracking-[-0.028em] text-white sm:text-7xl">
                 {content.title}
               </h1>
               <p className="mt-4 max-w-2xl text-base font-medium leading-7 tracking-[0.004em] text-zinc-200 sm:text-lg sm:leading-8">
@@ -139,7 +139,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
         </div>
       </section>
 
-      <section id="player" className="relative z-10 -mt-3 scroll-mt-24 px-4 sm:px-6 lg:px-8">
+      <section id="player" className="relative z-10 -mt-5 scroll-mt-24 px-3 sm:-mt-3 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-7xl">
           {canWatch && playerStreamUrl ? (
             <>
@@ -253,12 +253,12 @@ function HeroDubberInfo({ dubber }: { dubber: NonNullable<Movie["dubber"]> }) {
 function UnavailablePlayer({ title }: { title: string }) {
   return (
     <GlassPanel className="relative overflow-hidden p-0">
-      <div className="flex aspect-video min-h-[280px] items-center justify-center rounded-[28px] bg-black px-5 text-center">
+      <div className="flex aspect-video min-h-[210px] items-center justify-center rounded-[18px] bg-black px-5 text-center sm:min-h-[280px] sm:rounded-[28px]">
         <div>
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-[var(--accent)]">
             <Play className="h-5 w-5 fill-current" />
           </span>
-          <h2 className="mt-4 text-2xl font-bold tracking-[-0.018em] text-white">{title}</h2>
+          <h2 className="mt-4 text-xl font-bold tracking-[-0.018em] text-white sm:text-2xl">{title}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-zinc-400">
             Видео жақында қосылады.
           </p>

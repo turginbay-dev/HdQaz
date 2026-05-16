@@ -36,7 +36,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
   const opacity = useTransform(scrollYProgress, [0, 0.74], [1, 0]);
 
   return (
-    <section ref={ref} className="hero-vignette relative min-h-[100svh] overflow-hidden">
+    <section ref={ref} className="hero-vignette relative min-h-[92svh] overflow-hidden sm:min-h-[100svh]">
       <motion.div
         className="absolute inset-0 scale-[1.08]"
         style={{ y: imageY }}
@@ -67,7 +67,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
       ))}
 
       <motion.div
-        className="relative mx-auto grid min-h-[100svh] w-full max-w-7xl items-end gap-10 px-4 pb-24 pt-36 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8 lg:pb-28 lg:pt-40 xl:grid-cols-[minmax(0,1fr)_440px]"
+        className="relative mx-auto grid min-h-[92svh] w-full max-w-7xl items-end gap-10 px-4 pb-20 pt-32 sm:min-h-[100svh] sm:px-6 sm:pb-24 sm:pt-36 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8 lg:pb-28 lg:pt-40 xl:grid-cols-[minmax(0,1fr)_440px]"
         style={{ y: contentY, opacity }}
       >
         <div className="max-w-4xl">
@@ -94,7 +94,7 @@ export function HeroBanner({ movie }: HeroBannerProps) {
           </motion.div>
 
           <motion.h1
-            className="max-w-4xl font-cinematic leading-[0.92] tracking-[var(--tracking-cinematic)] text-white [font-size:clamp(3.4rem,9.4vw,8.4rem)]"
+            className="max-w-4xl break-words font-cinematic leading-[0.92] tracking-[var(--tracking-cinematic)] text-white [font-size:clamp(2.7rem,13vw,4.9rem)] sm:[font-size:clamp(3.4rem,9.4vw,8.4rem)]"
             initial={{ opacity: 0, y: 24, filter: "blur(12px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             transition={{ duration: 0.9, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
@@ -117,8 +117,8 @@ export function HeroBanner({ movie }: HeroBannerProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.34 }}
           >
-            <WatchButton href={`/${movie.slug}#player`} className="min-w-40" />
-            <PremiumButton href={`/${movie.slug}`} variant="glass" className="min-w-40">
+            <WatchButton href={`/${movie.slug}#player`} className="w-full min-w-0 sm:w-auto sm:min-w-40" />
+            <PremiumButton href={`/${movie.slug}`} variant="glass" className="w-full min-w-0 sm:w-auto sm:min-w-40">
               <Info className="h-4 w-4" />
               Толығырақ
             </PremiumButton>

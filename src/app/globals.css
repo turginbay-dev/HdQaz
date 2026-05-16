@@ -36,6 +36,10 @@
 }
 
 html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
   background: var(--background);
   color-scheme: dark;
   scroll-behavior: smooth;
@@ -46,6 +50,8 @@ html {
 }
 
 body {
+  width: 100%;
+  max-width: 100%;
   min-height: 100vh;
   margin: 0;
   background:
@@ -60,6 +66,7 @@ body {
   letter-spacing: var(--tracking-body);
   font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 :where(h1, h2, h3, h4, h5, h6) {
@@ -203,6 +210,7 @@ select {
 .cinema-player-shell:fullscreen {
   width: 100vw;
   height: 100vh;
+  aspect-ratio: auto;
   border-radius: 0;
   border-color: transparent;
 }
@@ -235,6 +243,9 @@ select {
 }
 
 .cinema-player-shell {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 18%),
     #000000;
@@ -256,6 +267,9 @@ select {
 
 .cinema-player-video {
   display: block;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
 }
 
 .cinema-badge {
@@ -943,6 +957,51 @@ select {
     filter: blur(24px);
   }
 
+  .cinema-badge {
+    min-height: 1.65rem;
+    padding: 0.34rem 0.55rem;
+    font-size: 0.64rem;
+  }
+
+  .cinema-loader {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .cinema-center-play {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .cinema-player-controls {
+    right: 0.45rem;
+    bottom: 0.45rem;
+    left: 0.45rem;
+  }
+
+  .cinema-control-bar {
+    border-radius: 0.95rem;
+    padding: 0.5rem;
+  }
+
+  .cinema-progress-shell {
+    height: 0.95rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .cinema-progress-track {
+    height: 0.3rem;
+  }
+
+  .cinema-controls-row {
+    gap: 0.42rem;
+  }
+
+  .cinema-main-controls,
+  .cinema-secondary-controls {
+    gap: 0.34rem;
+  }
+
   .cinema-control-button,
   .cinema-menu-trigger {
     min-width: 2.25rem;
@@ -964,6 +1023,11 @@ select {
     max-width: 7rem;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .cinema-time {
+    padding: 0;
+    font-size: 0.68rem;
   }
 
   .cinema-volume {

@@ -63,9 +63,9 @@ export default async function ProfilePage() {
             <ProfileNameEditor initialName={displayName} />
           </div>
 
-          <p className="mt-4 flex items-center gap-2 text-sm font-medium tracking-[0.004em] text-zinc-400">
-            <Mail className="h-4 w-4" />
-            {viewer.user.email}
+          <p className="mt-4 flex min-w-0 items-start gap-2 text-sm font-medium tracking-[0.004em] text-zinc-400">
+            <Mail className="mt-0.5 h-4 w-4 shrink-0" />
+            <span className="min-w-0 break-all">{viewer.user.email}</span>
           </p>
           <p className="mt-2 text-sm font-medium tracking-[0.004em] text-zinc-500">
             Қосылған күні: {joinedAt ? formatKazakhDateTime(joinedAt) : "Белгісіз"}

@@ -67,7 +67,7 @@ export function ProfileMovieSection({ emptyCta = false, movies, title, variant }
       </div>
 
       {items.length > 0 ? (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-x-4 gap-y-8 min-[380px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
           {items.map((movie) => (
             <div key={movie.id} className="relative">
               <MovieCard movie={movie} />

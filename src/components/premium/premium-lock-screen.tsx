@@ -11,7 +11,7 @@ type PremiumLockScreenProps = {
 export function PremiumLockScreen({ backdropUrl, title }: PremiumLockScreenProps) {
   return (
     <GlassPanel className="relative isolate overflow-hidden p-0">
-      <div className="relative aspect-video min-h-[320px] overflow-hidden rounded-[28px]">
+      <div className="relative aspect-video min-h-[220px] overflow-hidden rounded-[18px] sm:min-h-[320px] sm:rounded-[28px]">
         <MovieImage
           src={backdropUrl}
           alt=""
@@ -23,13 +23,13 @@ export function PremiumLockScreen({ backdropUrl, title }: PremiumLockScreenProps
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/35" />
         <div className="absolute inset-0 flex items-center justify-center px-4">
           <div className="max-w-xl text-center">
-            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[rgba(217,183,111,0.32)] bg-[rgba(217,183,111,0.14)] text-[var(--accent)] backdrop-blur-2xl">
-              <LockKeyhole className="h-7 w-7" />
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[rgba(217,183,111,0.32)] bg-[rgba(217,183,111,0.14)] text-[var(--accent)] backdrop-blur-2xl sm:h-16 sm:w-16">
+              <LockKeyhole className="h-6 w-6 sm:h-7 sm:w-7" />
             </span>
             <p className="mt-5 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
               Premium
             </p>
-            <h2 className="mt-2 text-3xl font-bold tracking-[-0.024em] text-white sm:text-4xl">
+            <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white sm:text-4xl">
               {title}
             </h2>
             <p className="mx-auto mt-3 max-w-md text-sm font-medium leading-6 text-zinc-300">

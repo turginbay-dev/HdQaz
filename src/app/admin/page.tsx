@@ -40,7 +40,7 @@ export default async function AdminPage() {
               <LogoMark className="h-8 w-12 p-0.5" sizes="48px" />
               HdQaz Admin
             </p>
-            <h1 className="mt-3 font-bold leading-[0.96] tracking-[-0.032em] text-white [font-size:clamp(3rem,6.6vw,6rem)]">
+            <h1 className="mt-3 break-words font-bold leading-[0.96] tracking-[-0.032em] text-white [font-size:clamp(2.4rem,12vw,3.4rem)] sm:[font-size:clamp(3rem,6.6vw,6rem)]">
               Контент басқару панелі
             </h1>
             <p className="mt-5 max-w-2xl text-base font-medium leading-7 tracking-[0.004em] text-zinc-400">

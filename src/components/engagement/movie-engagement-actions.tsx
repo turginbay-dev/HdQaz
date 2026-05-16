@@ -151,13 +151,13 @@ export function MovieEngagementActions({
   if (variant === "player-row") {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 px-1">
-        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+        <div className="flex w-full min-w-0 items-center justify-between gap-3 sm:w-auto sm:justify-start sm:gap-5">
           <InlineStat icon={<Eye className="h-4 w-4" />} label="Қаралым" value={counts.views} />
           <InlineStat icon={<Heart className="h-4 w-4" />} label="Ұнату" value={counts.likes} />
           <InlineStat icon={<Bookmark className="h-4 w-4" />} label="Тізімге қосқан" value={counts.watchlist} />
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-0 flex w-full shrink-0 items-center justify-end gap-2 sm:ml-auto sm:w-auto">
           <button
             className={cn(
               "inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.055] text-zinc-200 shadow-[0_12px_34px_rgba(0,0,0,0.28)] outline-none transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.1] hover:text-white focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-wait disabled:opacity-70",

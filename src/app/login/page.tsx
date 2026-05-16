@@ -62,7 +62,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <LogoMark className="h-7 w-11 p-0.5" sizes="44px" />
             HdQaz Account
           </div>
-          <h1 className="max-w-3xl font-bold leading-[0.94] tracking-[-0.032em] text-white [font-size:clamp(3.2rem,7.4vw,7rem)]">
+          <h1 className="max-w-3xl break-words font-bold leading-[0.94] tracking-[-0.032em] text-white [font-size:clamp(2.55rem,13vw,3.8rem)] sm:[font-size:clamp(3.2rem,7.4vw,7rem)]">
             Бір аккаунт. Барлық қазақша кино.
           </h1>
           <p className="mt-6 max-w-2xl text-base font-medium leading-7 tracking-[0.004em] text-zinc-300 sm:text-lg sm:leading-8">

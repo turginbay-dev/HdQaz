@@ -1018,7 +1018,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
         <section
           ref={playerRef}
           className={cn(
-            "cinema-player-shell group relative isolate overflow-hidden rounded-[24px] border border-white/[0.14] bg-black outline-none transition-[border-radius,box-shadow,transform] duration-500 sm:rounded-[30px]",
+            "cinema-player-shell group relative isolate aspect-video w-full max-w-full overflow-hidden rounded-[18px] border border-white/[0.14] bg-black outline-none transition-[border-radius,box-shadow,transform] duration-500 sm:rounded-[30px]",
             playing && !visibleChrome && "cursor-none"
           )}
           tabIndex={0}
@@ -1029,7 +1029,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
           <video
             ref={videoRef}
             poster={poster}
-            className="cinema-player-video relative z-0 aspect-video w-full bg-black object-contain"
+            className="cinema-player-video absolute inset-0 z-0 h-full w-full max-w-full bg-black object-contain"
             crossOrigin="anonymous"
             playsInline
             preload="metadata"
@@ -1181,8 +1181,8 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
           {showSkipIntro || showNextEpisode ? (
             <div
               className={cn(
-                "absolute right-4 z-40 flex flex-col items-end gap-2 transition duration-300 sm:right-6",
-                visibleChrome ? "bottom-32 sm:bottom-36" : "bottom-6",
+                "absolute right-3 z-40 flex flex-col items-end gap-2 transition duration-300 sm:right-6",
+                visibleChrome ? "bottom-[6rem] sm:bottom-36" : "bottom-4 sm:bottom-6",
                 visibleChrome ? "opacity-100" : "opacity-95"
               )}
             >

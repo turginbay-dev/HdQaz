@@ -49,7 +49,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
           <div className="glass rounded-[28px] p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Қазір ашық</p>
-            <p className="mt-2 text-2xl font-bold tracking-[-0.018em] text-white">{selectedLabel}</p>
+            <p className="mt-2 break-words text-2xl font-bold tracking-[-0.018em] text-white">{selectedLabel}</p>
             <p className="mt-2 text-sm font-medium tracking-[0.004em] text-zinc-400">{movies.length} контент табылды</p>
           </div>
         </div>

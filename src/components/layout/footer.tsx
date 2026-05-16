@@ -106,7 +106,7 @@ export function Footer() {
               <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.06] text-[var(--accent)]">
                 <UsersRound className="h-4 w-4" />
               </span>
-              <h2 id="footer-dubbers" className="text-sm font-semibold uppercase tracking-[0.22em] text-zinc-300">
+              <h2 id="footer-dubbers" className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-300 sm:tracking-[0.22em]">
                 Дыбыстау серіктестері
               </h2>
             </div>
@@ -127,7 +127,7 @@ export function Footer() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
             <FooterLinkGroup id="footer-support" title="Құқық және көмек" links={supportLinks} />
             <section aria-labelledby="footer-social">
-              <h2 id="footer-social" className="text-sm font-semibold uppercase tracking-[0.22em] text-zinc-300">
+              <h2 id="footer-social" className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-300 sm:tracking-[0.22em]">
                 Әлеуметтік
               </h2>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -163,7 +163,7 @@ export function Footer() {
 function FooterLinkGroup({ id, links, title }: { id: string; links: FooterLinkItem[]; title: string }) {
   return (
     <section aria-labelledby={id}>
-      <h2 id={id} className="text-sm font-semibold uppercase tracking-[0.22em] text-zinc-300">
+      <h2 id={id} className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-300 sm:tracking-[0.22em]">
         {title}
       </h2>
       <nav className="mt-3 grid gap-2" aria-label={title}>

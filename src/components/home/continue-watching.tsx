@@ -98,7 +98,7 @@ export function ContinueWatching({ isAuthenticated, items }: ContinueWatchingPro
                 <Link
                   key={item.id}
                   href={`/${item.movie.slug}#player`}
-                  className="group relative w-[20rem] shrink-0 overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_24px_90px_rgba(0,0,0,0.3)] transition duration-500 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.075] sm:w-[23rem]"
+                  className="group relative w-[min(20rem,82vw)] shrink-0 overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_24px_90px_rgba(0,0,0,0.3)] transition duration-500 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.075] sm:w-[23rem] sm:rounded-[28px]"
                 >
                   <div className="relative aspect-video overflow-hidden rounded-[22px]">
                     <MovieImage
@@ -119,7 +119,7 @@ export function ContinueWatching({ isAuthenticated, items }: ContinueWatchingPro
                   </div>
 
                   <div className="px-1 pt-3">
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-3 min-[390px]:flex-row min-[390px]:items-start min-[390px]:justify-between">
                       <div className="min-w-0">
                         <h3 className="truncate text-base font-bold tracking-[-0.014em] text-white">{item.movie.title}</h3>
                         <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold tracking-[0.006em] text-zinc-500">

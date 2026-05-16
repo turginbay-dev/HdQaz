@@ -36,7 +36,7 @@ export function MovieRow({ href = "/catalog", title, movies, priorityCount = 0 }
           {movies.map((movie, index) => (
             <div
               key={movie.id}
-              className="w-[42vw] min-w-[9.75rem] shrink-0 snap-start sm:w-48 lg:w-[calc((100%-2rem)/3)]"
+              className="w-[42vw] min-w-[9.75rem] shrink-0 snap-start sm:w-44 lg:w-52 xl:w-56"
             >
               <MovieCard movie={movie} priority={index < priorityCount} />
             </div>

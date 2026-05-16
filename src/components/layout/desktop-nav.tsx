@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { Crown, Search, X } from "lucide-react";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { UserAvatar } from "@/components/user/user-avatar";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
@@ -143,7 +144,7 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
         <div className="ml-1 flex items-center gap-2 border-l border-white/10 pl-3">
           <motion.form
             className="relative"
-            animate={{ width: searchOpen || focused ? 238 : 44 }}
+            animate={{ width: searchOpen || focused ? 220 : 44 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
             onSubmit={handleSearchSubmit}
             onHoverStart={() => setSearchOpen(true)}
@@ -213,12 +214,14 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
             </div>
           </motion.form>
 
+          <LanguageSwitcher />
+
           <Link
             href="/premium"
-            className="glass-button flex h-11 items-center gap-2 rounded-full border-[rgba(217,183,111,0.32)] px-4 text-sm font-semibold tracking-[0.012em] text-white shadow-[0_0_34px_rgba(217,183,111,0.1)] hover:shadow-[0_0_46px_rgba(217,183,111,0.2)]"
+            className="glass-button flex h-11 items-center gap-2 rounded-full border-[rgba(217,183,111,0.32)] px-3.5 text-sm font-semibold tracking-[0.012em] text-white shadow-[0_0_28px_rgba(217,183,111,0.1)] hover:shadow-[0_0_38px_rgba(217,183,111,0.18)]"
           >
             <Crown className="h-4 w-4 text-[var(--accent)]" />
-            {isPremium ? "Premium" : "Premium қосу"}
+            {isPremium ? "Premium" : "Premium алу"}
           </Link>
 
           <Link

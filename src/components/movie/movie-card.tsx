@@ -13,7 +13,7 @@ type MovieCardProps = {
 };
 
 export function MovieCard({ movie, priority = false }: MovieCardProps) {
-  const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Movie";
+  const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Фильм";
   const statusLabel = movie.status ? contentStatusLabels[movie.status] : movie.isNewRelease ? "Жаңа" : "Аяқталған";
   const detailLine = isEpisodicContent(movie)
     ? formatEpisodeCount(movie.episodeCount) || "Сериялар жақында"

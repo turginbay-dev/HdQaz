@@ -23,7 +23,7 @@ export function RelatedMoviesPanel({
     return null;
   }
 
-  const typeLabel = current.type ? contentTypeLabels[current.type] : "Movie";
+  const typeLabel = current.type ? contentTypeLabels[current.type] : "Фильм";
   const subtitle = [typeLabel, current.genres[0]].filter(Boolean).join(" · ");
 
   return (
@@ -51,7 +51,7 @@ export function RelatedMoviesPanel({
 }
 
 function RelatedMovieLink({ movie, priority }: { movie: Movie; priority: boolean }) {
-  const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Movie";
+  const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Фильм";
   const statusLabel = movie.status ? contentStatusLabels[movie.status] : movie.isNewRelease ? "Жаңа" : "Аяқталған";
   const detailLine = isEpisodicContent(movie)
     ? formatEpisodeCount(movie.episodeCount) || "Сериялар"

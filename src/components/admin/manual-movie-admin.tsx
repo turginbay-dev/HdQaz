@@ -99,11 +99,11 @@ type DubberApiResponse = {
 };
 
 const typeFilterOptions: Array<{ label: string; value: ContentType | "all" }> = [
-  { label: "All", value: "all" },
-  { label: "Movie", value: "movie" },
-  { label: "Dorama", value: "dorama" },
-  { label: "Anime", value: "anime" },
-  { label: "Series", value: "series" }
+  { label: "Бәрі", value: "all" },
+  { label: "Фильм", value: "movie" },
+  { label: "Дорама", value: "dorama" },
+  { label: "Аниме", value: "anime" },
+  { label: "Сериал", value: "series" }
 ];
 
 const releaseFormatOptions: Array<{ label: string; value: ContentReleaseFormat }> = [
@@ -112,10 +112,10 @@ const releaseFormatOptions: Array<{ label: string; value: ContentReleaseFormat }
 ];
 
 const statusFilterOptions: Array<{ label: string; value: ContentStatus | "all" }> = [
-  { label: "All", value: "all" },
-  { label: "Ongoing", value: "ongoing" },
-  { label: "Completed", value: "completed" },
-  { label: "Announced", value: "announced" }
+  { label: "Бәрі", value: "all" },
+  { label: "Жалғасуда", value: "ongoing" },
+  { label: "Аяқталған", value: "completed" },
+  { label: "Жақында", value: "announced" }
 ];
 
 function createEmptyContent(): AdminContent {
@@ -693,10 +693,10 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
             value={contentDraft.type}
             onChange={(value) => updateContentField("type", value as ContentType)}
             options={[
-              { label: "Movie", value: "movie" },
-              { label: "Dorama", value: "dorama" },
-              { label: "Anime", value: "anime" },
-              { label: "Series", value: "series" }
+              { label: "Фильм", value: "movie" },
+              { label: "Дорама", value: "dorama" },
+              { label: "Аниме", value: "anime" },
+              { label: "Сериал", value: "series" }
             ]}
           />
           {supportsReleaseFormatSwitch(contentDraft.type) ? (
@@ -725,9 +725,9 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
             value={contentDraft.status}
             onChange={(value) => updateContentField("status", value as ContentStatus)}
             options={[
-              { label: "Ongoing", value: "ongoing" },
-              { label: "Completed", value: "completed" },
-              { label: "Announced", value: "announced" }
+              { label: "Жалғасуда", value: "ongoing" },
+              { label: "Аяқталған", value: "completed" },
+              { label: "Жақында", value: "announced" }
             ]}
           />
           <AdminInput
@@ -843,30 +843,30 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
-                Hero
+                Басты баннер
               </p>
               <h3 className="mt-1 text-lg font-semibold tracking-[-0.014em] text-white">Басты слайд</h3>
             </div>
             <AdminToggle
-              label={contentDraft.isHero ? "Hero қосылған" : "Hero-ға қосу"}
+              label={contentDraft.isHero ? "Баннерге қосылған" : "Баннерге қосу"}
               active={contentDraft.isHero}
               onClick={() => updateContentField("isHero", !contentDraft.isHero)}
             />
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
             <AdminInput
-              label="Hero order"
+              label="Реті"
               value={contentDraft.heroOrder}
               onChange={(value) => updateContentField("heroOrder", value)}
               placeholder="0"
             />
             <label className="block">
-              <span className="text-sm font-medium text-zinc-300">Hero comment</span>
+              <span className="text-sm font-medium text-zinc-300">Баннердегі қысқа мәтін</span>
               <textarea
                 value={contentDraft.heroComment}
                 onChange={(event) => updateContentField("heroComment", event.target.value)}
                 className="mt-2 min-h-20 w-full resize-none rounded-[24px] border border-white/10 bg-white/[0.06] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-zinc-600 focus:border-[rgba(217,183,111,0.45)] focus:bg-white/[0.08]"
-                placeholder="Hero слайдқа қысқа комментарий..."
+                placeholder="Көрерменге арналған қысқа мәтін..."
               />
             </label>
           </div>
@@ -892,7 +892,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
-                  Episodes
+                  Сериялар
                 </p>
                 <h3 className="mt-2 text-xl font-bold tracking-[-0.014em] text-white">Сериялар</h3>
               </div>
@@ -902,13 +902,13 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                 type="button"
               >
                 <Plus className="h-4 w-4" />
-                Add Episode
+                Серия қосу
               </button>
             </div>
 
             {!contentDraft.id ? (
               <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-zinc-400">
-                Алдымен dorama/series/anime контентін сақтаңыз. Содан кейін серияларды осы жерде қосасыз.
+                Алдымен дорама, сериал немесе аниме контентін сақтаңыз. Содан кейін серияларды осы жерде қосасыз.
               </div>
             ) : (
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -918,7 +918,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                       <article key={episode.id} className="glass flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center">
                         <div className="min-w-0 flex-1">
                           <h4 className="font-semibold text-white">
-                            Episode {episode.episodeNumber}
+                            {episode.episodeNumber}-серия
                             {episode.title ? ` — ${episode.title}` : ""}
                           </h4>
                           <p className="mt-1 truncate text-xs text-zinc-500">
@@ -926,11 +926,11 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <StatusPill active={episode.isPublished} label={episode.isPublished ? "Published" : "Draft"} />
+                          <StatusPill active={episode.isPublished} label={episode.isPublished ? "Жарияланған" : "Жоба"} />
                           <button
                             className="glass-button flex h-10 w-10 items-center justify-center rounded-full text-white"
                             onClick={() => setEpisodeDraft(toEpisodeDraft(episode))}
-                            aria-label="Edit episode"
+                            aria-label="Серияны өңдеу"
                             type="button"
                           >
                             <Pencil className="h-4 w-4" />
@@ -938,7 +938,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                           <button
                             className="glass-button flex h-10 w-10 items-center justify-center rounded-full text-red-200"
                             onClick={() => void deleteEpisode(episode)}
-                            aria-label="Delete episode"
+                            aria-label="Серияны өшіру"
                             type="button"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -959,16 +959,16 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                   </h4>
                   <div className="grid gap-3">
                     <AdminInput
-                      label="Episode number"
+                      label="Серия нөмірі"
                       value={episodeDraft.episodeNumber}
                       onChange={(value) => setEpisodeDraft((current) => ({ ...current, episodeNumber: value }))}
                       placeholder="1"
                     />
                     <AdminInput
-                      label="Episode title"
+                      label="Серия атауы"
                       value={episodeDraft.title}
                       onChange={(value) => setEpisodeDraft((current) => ({ ...current, title: value }))}
-                      placeholder="Optional"
+                      placeholder="Қалауыңызша"
                     />
                     <AdminInput
                       label="HLS URL"
@@ -977,13 +977,13 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                       placeholder="https://cdn.example.com/dorama/1/master.m3u8"
                     />
                     <AdminInput
-                      label="Thumbnail URL"
+                      label="Кадр URL"
                       value={episodeDraft.thumbnailUrl}
                       onChange={(value) => setEpisodeDraft((current) => ({ ...current, thumbnailUrl: value }))}
-                      placeholder="Optional"
+                      placeholder="Қалауыңызша"
                     />
                     <AdminInput
-                      label="Duration, minutes"
+                      label="Ұзақтығы, минут"
                       value={episodeDraft.durationMinutes}
                       onChange={(value) => setEpisodeDraft((current) => ({ ...current, durationMinutes: value }))}
                       placeholder="64"
@@ -1005,7 +1005,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <AdminToggle
-                      label="Published"
+                      label={episodeDraft.isPublished ? "Жарияланған" : "Жоба"}
                       active={episodeDraft.isPublished}
                       onClick={() => setEpisodeDraft((current) => ({ ...current, isPublished: !current.isPublished }))}
                     />
@@ -1017,7 +1017,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                     type="button"
                   >
                     <Save className="h-4 w-4" />
-                    {isSavingEpisode ? "Saving..." : "Save episode"}
+                    {isSavingEpisode ? "Сақталып жатыр..." : "Серияны сақтау"}
                   </button>
                   {episodeError ? (
                     <p className="mt-3 text-sm leading-6 text-red-300">{episodeError}</p>
@@ -1053,7 +1053,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
           <div className="mt-4 flex flex-wrap gap-2">
             <StatusPill active label={contentTypeLabels[contentDraft.type]} />
             <StatusPill active={contentDraft.status !== "announced"} label={contentStatusLabels[contentDraft.status]} />
-            {contentDraft.isHero ? <StatusPill active label={`Hero ${contentDraft.heroOrder || "0"}`} /> : null}
+            {contentDraft.isHero ? <StatusPill active label={`Баннер ${contentDraft.heroOrder || "0"}`} /> : null}
           </div>
           <h3 className="mt-3 truncate text-lg font-semibold text-white">{contentDraft.title || "Контент атауы"}</h3>
           <p className="mt-1 text-sm text-zinc-500">
@@ -1198,14 +1198,14 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         </section>
 
         <section className="glass rounded-[30px] p-5">
-          <h3 className="mb-4 font-semibold text-white">Architecture checklist</h3>
+          <h3 className="mb-4 font-semibold text-white">Құрылым ережелері</h3>
           {[
-            "Movie әрдайым толық метражды HLS URL арқылы сақталады",
-            "Anime және dorama толық метражды немесе сериялы форматта сақтала алады",
-            "Series сериялары бөлек episodes кестесінде сақталады",
-            "Episode slug бос болса episode_number арқылы толады",
-            "Public беттер published контент пен published серияларды ғана көрсетеді",
-            "Толық метражды anime/dorama watch page-қа, сериялы формат episode list-ке өтеді"
+            "Фильм әрдайым толық метражды HLS URL арқылы сақталады",
+            "Аниме және дорама толық метражды немесе сериялы форматта сақтала алады",
+            "Сериал сериялары бөлек episodes кестесінде сақталады",
+            "Серия slug бос болса, episode number арқылы толады",
+            "Жария беттер тек жарияланған контент пен жарияланған серияларды көрсетеді",
+            "Толық метражды аниме/дорама бірден көру бетіне, сериялы формат серия тізіміне өтеді"
           ].map((item) => (
             <div key={item} className="flex items-center gap-3 border-t border-white/10 py-3 first:border-t-0 first:pt-0">
               <Check className="h-4 w-4 text-[var(--accent)]" />
@@ -1219,7 +1219,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
-              Contents
+              Контент
             </p>
             <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white">Контент тізімі</h2>
           </div>
@@ -1265,8 +1265,8 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                     <StatusPill active label={itemIsEpisodic ? contentReleaseFormatLabels.episodic : contentReleaseFormatLabels.feature} />
                     <StatusPill active={item.status !== "announced"} label={contentStatusLabels[item.status]} />
                     {item.isPremium ? <StatusPill active label="Premium" /> : null}
-                    {item.isHero ? <StatusPill active label={`Hero ${item.heroOrder ?? 0}`} /> : null}
-                    <StatusPill active={item.isPublished} label={item.isPublished ? "Published" : "Draft"} />
+                    {item.isHero ? <StatusPill active label={`Баннер ${item.heroOrder ?? 0}`} /> : null}
+                    <StatusPill active={item.isPublished} label={item.isPublished ? "Жарияланған" : "Жоба"} />
                   </div>
                   <h3 className="truncate font-semibold text-white">{item.title}</h3>
                   <p className="mt-1 truncate text-sm text-zinc-500">
@@ -1281,7 +1281,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                     {itemIsEpisodic ? <ListVideo className="h-4 w-4" /> : <Film className="h-4 w-4" />}
                     {itemIsEpisodic
                       ? formatEpisodeCount(item.episodeCount) || "0 серия"
-                      : formatDurationMinutes(item.durationMinutes) || "Movie"}
+                      : formatDurationMinutes(item.durationMinutes) || "Фильм"}
                   </div>
                   <button
                     className="glass-button inline-flex h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white"
@@ -1289,7 +1289,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                     type="button"
                   >
                     <Pencil className="h-4 w-4" />
-                    Edit
+                    Өңдеу
                   </button>
                 </div>
               </article>

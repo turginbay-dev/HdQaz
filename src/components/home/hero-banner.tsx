@@ -41,7 +41,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
     return null;
   }
 
-  const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Movie";
+  const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Фильм";
   const statusLabel = movie.status ? contentStatusLabels[movie.status] : movie.isNewRelease ? "Жаңа" : "Аяқталған";
   const comment = movie.heroComment?.trim();
   const hasComment = Boolean(comment);
@@ -52,7 +52,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
   }
 
   return (
-    <section ref={ref} className="hero-vignette relative min-h-[78svh] overflow-hidden sm:min-h-[86svh]">
+    <section ref={ref} className="hero-vignette relative min-h-[68svh] overflow-hidden sm:min-h-[74svh]">
       <motion.div className="absolute inset-0 scale-[1.05]" style={{ y: imageY }}>
         <AnimatePresence mode="wait">
           <motion.div
@@ -102,7 +102,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
       ) : null}
 
       <motion.div
-        className="relative mx-auto grid min-h-[78svh] w-full max-w-7xl items-end gap-8 px-4 pb-16 pt-28 sm:min-h-[86svh] sm:px-6 sm:pb-20 sm:pt-32 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-8 lg:pb-24 lg:pt-36 xl:grid-cols-[minmax(0,1fr)_380px]"
+        className="relative mx-auto grid min-h-[68svh] w-full max-w-7xl items-end gap-8 px-4 pb-14 pt-24 sm:min-h-[74svh] sm:px-6 sm:pb-16 sm:pt-28 lg:grid-cols-[minmax(0,1fr)_280px] lg:px-8 lg:pb-[4.5rem] lg:pt-[7.5rem] xl:grid-cols-[minmax(0,1fr)_320px]"
         style={{ y: contentY, opacity }}
       >
         <AnimatePresence mode="wait">
@@ -116,7 +116,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
           >
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-3.5 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-zinc-200 backdrop-blur-xl">
               <LogoMark className="h-6 w-10 p-0.5" sizes="40px" />
-              HdQaz Selection
+              HdQaz таңдауы
             </div>
 
             <div className="mb-4 flex flex-wrap gap-2">
@@ -130,8 +130,8 @@ export function HeroBanner({ movies }: HeroBannerProps) {
               className={cn(
                 "max-w-4xl break-words font-cinematic leading-[0.94] tracking-[var(--tracking-cinematic)] text-white",
                 hasComment
-                  ? "[font-size:clamp(2.35rem,10vw,4.6rem)] sm:[font-size:clamp(3rem,7.5vw,6.4rem)]"
-                  : "[font-size:clamp(2.8rem,12vw,5.4rem)] sm:[font-size:clamp(3.4rem,8.6vw,7.6rem)]"
+                  ? "[font-size:clamp(2.1rem,8.4vw,3.8rem)] sm:[font-size:clamp(2.6rem,5.9vw,5rem)]"
+                  : "[font-size:clamp(2.35rem,9vw,4.35rem)] sm:[font-size:clamp(2.9rem,6.5vw,5.8rem)]"
               )}
             >
               {movie.title}
@@ -144,8 +144,8 @@ export function HeroBanner({ movies }: HeroBannerProps) {
             ) : null}
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <WatchButton href={`/${movie.slug}#player`} className="min-h-11 w-full min-w-0 px-4 sm:w-auto sm:min-w-36 sm:min-h-12" />
-              <PremiumButton href={`/${movie.slug}`} variant="glass" className="min-h-11 w-full min-w-0 px-4 sm:w-auto sm:min-w-36 sm:min-h-12">
+              <WatchButton href={`/${movie.slug}#player`} className="min-h-10 w-full min-w-0 px-4 sm:w-auto sm:min-h-11 sm:min-w-32" />
+              <PremiumButton href={`/${movie.slug}`} variant="glass" className="min-h-10 w-full min-w-0 px-4 sm:w-auto sm:min-h-11 sm:min-w-32">
                 <Info className="h-4 w-4" />
                 Толығырақ
               </PremiumButton>
@@ -156,22 +156,22 @@ export function HeroBanner({ movies }: HeroBannerProps) {
         <AnimatePresence mode="wait">
           <motion.div
             key={`poster-${movie.id}`}
-            className="relative mx-auto hidden w-full max-w-[310px] pb-5 lg:block"
+            className="relative mx-auto hidden w-full max-w-[250px] pb-4 lg:block xl:max-w-[280px]"
             initial={{ opacity: 0, x: 28, filter: "blur(12px)" }}
             animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, x: 18, filter: "blur(10px)" }}
             transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="absolute -inset-8 rounded-full bg-[rgba(217,183,111,0.16)] blur-3xl" />
-            <div className="poster-reflection relative aspect-[2/3] overflow-hidden rounded-[28px] border border-white/[0.16] bg-white/[0.06] p-2 shadow-[0_34px_110px_rgba(0,0,0,0.66)] backdrop-blur-xl">
-              <div className="relative h-full overflow-hidden rounded-[21px]">
+            <div className="poster-reflection relative aspect-[2/3] overflow-hidden rounded-[24px] border border-white/[0.16] bg-white/[0.06] p-1.5 shadow-[0_28px_90px_rgba(0,0,0,0.62)] backdrop-blur-xl">
+              <div className="relative h-full overflow-hidden rounded-[19px]">
                 <MovieImage
                   src={movie.posterUrl}
                   alt={movie.title}
                   fallback="poster"
                   fill
                   priority
-                  sizes="360px"
+                  sizes="280px"
                   className="object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/[0.32] via-transparent to-white/[0.08]" />

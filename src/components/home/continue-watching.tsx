@@ -78,7 +78,7 @@ export function ContinueWatching({ isAuthenticated, items }: ContinueWatchingPro
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
-              Continue
+              Көру тарихы
             </p>
             <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white sm:text-4xl">
               Жалғастырып көру
@@ -98,7 +98,7 @@ export function ContinueWatching({ isAuthenticated, items }: ContinueWatchingPro
                 <Link
                   key={item.id}
                   href={`/${item.movie.slug}#player`}
-                  className="group relative w-[82vw] shrink-0 snap-start overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_22px_72px_rgba(0,0,0,0.28)] transition duration-500 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.075] sm:w-[23rem] sm:rounded-[28px] lg:w-[calc((100%-2rem)/3)]"
+                  className="group relative w-[82vw] shrink-0 snap-start overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_22px_72px_rgba(0,0,0,0.28)] transition duration-500 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.075] sm:w-[22rem] sm:rounded-[28px] lg:w-[21rem]"
                 >
                   <div className="relative aspect-video overflow-hidden rounded-[22px]">
                     <MovieImage

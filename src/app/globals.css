@@ -1153,8 +1153,8 @@ select {
 
 .home-content-flow {
   position: relative;
-  margin-top: -5rem;
-  padding-top: 6rem;
+  margin-top: -4rem;
+  padding-top: 5rem;
   background:
     linear-gradient(180deg, rgba(3, 3, 5, 0), rgba(3, 3, 5, 0.82) 3.8rem, var(--background) 8.5rem),
     radial-gradient(ellipse at 22% 0%, rgba(217, 183, 111, 0.08), transparent 32rem),

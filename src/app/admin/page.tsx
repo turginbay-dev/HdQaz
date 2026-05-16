@@ -50,7 +50,7 @@ export default async function AdminPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:w-[560px]">
-            <AdminMetric icon={<Film className="h-5 w-5" />} label="Contents" value={String(initialContents.length)} />
+            <AdminMetric icon={<Film className="h-5 w-5" />} label="Контент" value={String(initialContents.length)} />
             <AdminMetric icon={<Tags className="h-5 w-5" />} label="Genres" value={String(genres.length)} />
             <AdminMetric icon={<FolderKanban className="h-5 w-5" />} label="Дыбыстаушылар" value={String(dubbers.length)} />
             <AdminMetric icon={<ShieldAlert className="h-5 w-5" />} label="Guard" value="Email" />

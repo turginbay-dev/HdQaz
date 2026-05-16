@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Crown, Search, X } from "lucide-react";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { LogoMark, SiteLogo } from "@/components/layout/site-logo";
 import { UserAvatar } from "@/components/user/user-avatar";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
@@ -26,10 +27,10 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
   const currentSearchQuery = searchParams.get("q") ?? "";
   const mobileNavigation = [
     {
-      label: "Home",
+      label: "Басты бет",
       href: "/"
     },
-    ...mainNavigation.map((item) => (item.href === "/catalog" ? { ...item, label: "Categories" } : item))
+    ...mainNavigation.map((item) => (item.href === "/catalog" ? { ...item, label: "Каталог" } : item))
   ];
 
   useEffect(() => {
@@ -288,6 +289,13 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
                     </span>
                     {pathname === "/profile" && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
                   </Link>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, x: -18 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.04 * (mobileNavigation.length + 1) }}
+                >
+                  <LanguageSwitcher variant="mobile" />
                 </motion.div>
               </div>
 

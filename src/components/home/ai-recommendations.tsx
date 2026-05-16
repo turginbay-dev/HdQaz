@@ -24,7 +24,7 @@ export function AiRecommendations({ recommendations }: AiRecommendationsProps) {
           <div>
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
               <Brain className="h-3.5 w-3.5" />
-              Ұсыныс сигналы
+              Сізге арналған
             </p>
             <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white sm:text-4xl">
               Сізге ұсынылады
@@ -40,14 +40,14 @@ export function AiRecommendations({ recommendations }: AiRecommendationsProps) {
         <div className="cinema-mask hide-scrollbar relative -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-5 pb-2 sm:-mx-7 sm:px-7">
           {recommendations.items.map((item) => {
             const movie = item.movie;
-            const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Movie";
+            const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Фильм";
             const statusLabel = movie.status ? contentStatusLabels[movie.status] : "Аяқталған";
 
             return (
               <Link
                 key={movie.id}
                 href={`/${movie.slug}`}
-                className="group w-[82vw] shrink-0 snap-start rounded-[28px] border border-white/10 bg-black/[0.28] p-3 transition duration-500 hover:-translate-y-1 hover:border-[rgba(217,183,111,0.28)] hover:bg-white/[0.07] sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]"
+                className="group w-[82vw] shrink-0 snap-start rounded-[28px] border border-white/10 bg-black/[0.28] p-3 transition duration-500 hover:-translate-y-1 hover:border-[rgba(217,183,111,0.28)] hover:bg-white/[0.07] sm:w-[22rem] lg:w-[22rem]"
               >
                 <div className="relative aspect-[16/10] overflow-hidden rounded-[22px]">
                   <MovieImage

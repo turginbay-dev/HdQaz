@@ -45,7 +45,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
     notFound();
   }
 
-  const typeLabel = content.type ? contentTypeLabels[content.type] : "Movie";
+  const typeLabel = content.type ? contentTypeLabels[content.type] : "Фильм";
   const statusLabel = content.status ? contentStatusLabels[content.status] : "Аяқталған";
   const episodes = content.episodes ?? [];
   const contentIsEpisodic = isEpisodicContent(content);
@@ -74,7 +74,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
 
   return (
     <main className="min-h-screen pb-20">
-      <section className="relative min-h-[62svh] overflow-hidden sm:min-h-[68vh]">
+      <section className="relative min-h-[58svh] overflow-hidden sm:min-h-[64vh]">
         <MovieImage
           src={content.backdropUrl}
           alt=""
@@ -87,15 +87,15 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/72 to-black/20" />
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-transparent to-black/40" />
 
-        <div className="relative mx-auto flex min-h-[62svh] w-full max-w-7xl items-end px-4 pb-10 pt-28 sm:min-h-[68vh] sm:px-6 sm:pb-14 sm:pt-32 lg:px-8">
-          <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
+        <div className="relative mx-auto flex min-h-[58svh] w-full max-w-7xl items-end px-4 pb-10 pt-28 sm:min-h-[64vh] sm:px-6 sm:pb-12 sm:pt-[7.5rem] lg:px-8">
+          <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_300px] lg:items-end">
             <div className="max-w-3xl">
               <div className="mb-4 flex flex-wrap gap-2">
                 <MovieBadge label={typeLabel} />
                 <MovieBadge label={statusLabel} />
                 {content.isPremium ? <MovieBadge label="Premium" /> : null}
               </div>
-              <h1 className="break-words text-[clamp(2.55rem,11vw,3.4rem)] font-bold tracking-[-0.028em] text-white sm:text-7xl">
+              <h1 className="break-words text-[clamp(2.25rem,9vw,3.2rem)] font-bold tracking-[-0.028em] text-white sm:text-[4.4rem]">
                 {content.title}
               </h1>
               <div className="mt-5 flex flex-wrap gap-2">

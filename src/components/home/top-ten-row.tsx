@@ -16,7 +16,7 @@ export function TopTenRow({ movies }: TopTenRowProps) {
       <section className="content-rail-section">
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
-            Weekly Chart
+            Апталық таңдау
           </p>
           <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white sm:text-4xl">
             Топ 10
@@ -27,12 +27,12 @@ export function TopTenRow({ movies }: TopTenRowProps) {
           {movies.map((movie, index) => (
             <div
               key={`${movie.id}-${index}`}
-              className="relative flex w-[74vw] max-w-[19rem] shrink-0 snap-start items-end sm:w-72 lg:w-[calc((100%-2.5rem)/3)] lg:max-w-none"
+              className="relative flex w-[72vw] max-w-[17rem] shrink-0 snap-start items-end sm:w-64 lg:w-64"
             >
-              <span className="pointer-events-none absolute -left-2 bottom-8 z-0 text-[8rem] font-black leading-none tracking-[-0.08em] text-white/[0.07]">
+              <span className="pointer-events-none absolute -left-2 bottom-8 z-0 text-[7rem] font-black leading-none tracking-[-0.08em] text-white/[0.07]">
                 {index + 1}
               </span>
-              <div className="relative z-10 ml-14 w-44">
+              <div className="relative z-10 ml-12 w-40">
                 <MovieCard movie={movie} />
               </div>
             </div>

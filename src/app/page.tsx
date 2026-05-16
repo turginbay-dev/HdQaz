@@ -79,7 +79,7 @@ export default async function HomePage() {
     <main className="ambient-page">
       <HeroBanner movies={heroMovies} />
       <div className="home-content-flow">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-14 px-4 pb-24 pt-0 sm:px-6 lg:gap-18 lg:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 pb-24 pt-0 sm:px-6 lg:gap-12 lg:px-8">
           {viewer.user ? <ContinueWatching isAuthenticated={Boolean(viewer.user)} items={continueWatchingItems} /> : null}
           {viewer.isAdmin ? <AdminShortcut /> : null}
           <AiRecommendations recommendations={recommendations} />

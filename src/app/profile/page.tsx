@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Crown, LogOut, Mail, MessageCircle, ShieldCheck } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { ProfileMovieSection } from "@/components/profile/profile-movie-section";
 import { ProfileNameEditor } from "@/components/profile/profile-name-editor";
 import { UserAvatar } from "@/components/user/user-avatar";
@@ -109,6 +110,10 @@ export default async function ProfilePage() {
               Admin
             </div>
           ) : null}
+
+          <div className="mt-4">
+            <LanguageSwitcher variant="profile" />
+          </div>
 
           <form action={signOut} className="mt-6">
             <button

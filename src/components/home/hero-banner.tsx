@@ -117,7 +117,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
 
             <h1
               className={cn(
-                "max-w-4xl break-words font-cinematic leading-[0.94] tracking-[var(--tracking-cinematic)] text-white",
+                "type-cinematic max-w-4xl break-words leading-[0.94] tracking-[var(--tracking-cinematic)] text-white",
                 hasComment
                   ? "[font-size:clamp(2.1rem,8.4vw,3.8rem)] sm:[font-size:clamp(2.6rem,5.9vw,5rem)]"
                   : "[font-size:clamp(2.35rem,9vw,4.35rem)] sm:[font-size:clamp(2.9rem,6.5vw,5.8rem)]"

@@ -1081,6 +1081,99 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     toggleControlsVisibility();
   }
 
+  function renderSettingsMenu(className?: string) {
+    return (
+      <div className={cn("cinema-menu cinema-settings-menu", className)} role="menu" aria-label="Плеер баптаулары">
+        {settingsPanel === "root" ? (
+          <>
+            <button className="cinema-menu-item" onClick={() => setSettingsPanel("quality")} type="button">
+              <span>HQ</span>
+              <span className="cinema-menu-meta">{qualityLabel}</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <button className="cinema-menu-item" onClick={() => setSettingsPanel("speed")} type="button">
+              <span>Speed</span>
+              <span className="cinema-menu-meta">{formatSpeed(playbackRate)}</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <button
+              className={cn("cinema-menu-item", cinemaMode && "is-active")}
+              role="menuitemcheckbox"
+              aria-checked={cinemaMode}
+              onClick={toggleCinemaMode}
+              type="button"
+            >
+              <span>Cinema mode</span>
+              <span className="cinema-toggle-dot" aria-hidden="true" />
+            </button>
+            <div className="cinema-menu-status">
+              <span>Auto fallback</span>
+              <span>On</span>
+            </div>
+          </>
+        ) : null}
+
+        {settingsPanel === "quality" ? (
+          <>
+            <button className="cinema-menu-item" onClick={() => setSettingsPanel("root")} type="button">
+              <ChevronRight className="!ml-0 h-4 w-4 rotate-180" />
+              <span>HQ</span>
+              <span className="cinema-menu-meta">{qualityLabel}</span>
+            </button>
+            {qualityLevels.map((level) => (
+              <button
+                key={level.index}
+                className={cn("cinema-menu-item", manualLevel === level.index && "is-active")}
+                role="menuitemradio"
+                aria-checked={manualLevel === level.index}
+                onClick={() => changeQuality(String(level.index))}
+                type="button"
+              >
+                <span>{level.label}</span>
+                <span className="cinema-menu-meta">{level.height >= 1080 ? "Full HD" : "HD"}</span>
+                {manualLevel === level.index ? <Check className="h-4 w-4" /> : null}
+              </button>
+            ))}
+            <button
+              className={cn("cinema-menu-item", manualLevel === -1 && "is-active")}
+              role="menuitemradio"
+              aria-checked={manualLevel === -1}
+              onClick={() => changeQuality("-1")}
+              type="button"
+            >
+              <span>Auto</span>
+              <span className="cinema-menu-meta">{activeAutoQuality ?? "Best"}</span>
+              {manualLevel === -1 ? <Check className="h-4 w-4" /> : null}
+            </button>
+          </>
+        ) : null}
+
+        {settingsPanel === "speed" ? (
+          <>
+            <button className="cinema-menu-item" onClick={() => setSettingsPanel("root")} type="button">
+              <ChevronRight className="!ml-0 h-4 w-4 rotate-180" />
+              <span>Speed</span>
+              <span className="cinema-menu-meta">{formatSpeed(playbackRate)}</span>
+            </button>
+            {playbackSpeeds.map((speed) => (
+              <button
+                key={speed}
+                className={cn("cinema-menu-item", playbackRate === speed && "is-active")}
+                role="menuitemradio"
+                aria-checked={playbackRate === speed}
+                onClick={() => changeSpeed(speed)}
+                type="button"
+              >
+                <span>{formatSpeed(speed)}</span>
+                {playbackRate === speed ? <Check className="h-4 w-4" /> : null}
+              </button>
+            ))}
+          </>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <>
       {cinemaMode ? <div className="fixed inset-0 z-20 bg-black/72 backdrop-blur-md transition-opacity" aria-hidden="true" /> : null}
@@ -1378,7 +1471,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                 </div>
 
                 <div className="cinema-secondary-controls">
-                  <div className="relative">
+                  <div className="cinema-settings-anchor relative">
                     <button
                       className="cinema-control-button"
                       aria-label="Плеер баптаулары"
@@ -1390,96 +1483,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                       <Settings className="h-4 w-4" />
                     </button>
 
-                    {activeMenu === "settings" ? (
-                      <div className="cinema-menu right-0 w-56" role="menu" aria-label="Плеер баптаулары">
-                        {settingsPanel === "root" ? (
-                          <>
-                            <button className="cinema-menu-item" onClick={() => setSettingsPanel("quality")} type="button">
-                              <span>HQ</span>
-                              <span className="cinema-menu-meta">{qualityLabel}</span>
-                              <ChevronRight className="h-4 w-4" />
-                            </button>
-                            <button className="cinema-menu-item" onClick={() => setSettingsPanel("speed")} type="button">
-                              <span>Speed</span>
-                              <span className="cinema-menu-meta">{formatSpeed(playbackRate)}</span>
-                              <ChevronRight className="h-4 w-4" />
-                            </button>
-                            <button
-                              className={cn("cinema-menu-item", cinemaMode && "is-active")}
-                              role="menuitemcheckbox"
-                              aria-checked={cinemaMode}
-                              onClick={toggleCinemaMode}
-                              type="button"
-                            >
-                              <span>Cinema mode</span>
-                              <span className="cinema-toggle-dot" aria-hidden="true" />
-                            </button>
-                            <div className="cinema-menu-status">
-                              <span>Auto fallback</span>
-                              <span>On</span>
-                            </div>
-                          </>
-                        ) : null}
-
-                        {settingsPanel === "quality" ? (
-                          <>
-                            <button className="cinema-menu-item" onClick={() => setSettingsPanel("root")} type="button">
-                              <ChevronRight className="!ml-0 h-4 w-4 rotate-180" />
-                              <span>HQ</span>
-                              <span className="cinema-menu-meta">{qualityLabel}</span>
-                            </button>
-                            {qualityLevels.map((level) => (
-                              <button
-                                key={level.index}
-                                className={cn("cinema-menu-item", manualLevel === level.index && "is-active")}
-                                role="menuitemradio"
-                                aria-checked={manualLevel === level.index}
-                                onClick={() => changeQuality(String(level.index))}
-                                type="button"
-                              >
-                                <span>{level.label}</span>
-                                <span className="cinema-menu-meta">{level.height >= 1080 ? "Full HD" : "HD"}</span>
-                                {manualLevel === level.index ? <Check className="h-4 w-4" /> : null}
-                              </button>
-                            ))}
-                            <button
-                              className={cn("cinema-menu-item", manualLevel === -1 && "is-active")}
-                              role="menuitemradio"
-                              aria-checked={manualLevel === -1}
-                              onClick={() => changeQuality("-1")}
-                              type="button"
-                            >
-                              <span>Auto</span>
-                              <span className="cinema-menu-meta">{activeAutoQuality ?? "Best"}</span>
-                              {manualLevel === -1 ? <Check className="h-4 w-4" /> : null}
-                            </button>
-                          </>
-                        ) : null}
-
-                        {settingsPanel === "speed" ? (
-                          <>
-                            <button className="cinema-menu-item" onClick={() => setSettingsPanel("root")} type="button">
-                              <ChevronRight className="!ml-0 h-4 w-4 rotate-180" />
-                              <span>Speed</span>
-                              <span className="cinema-menu-meta">{formatSpeed(playbackRate)}</span>
-                            </button>
-                            {playbackSpeeds.map((speed) => (
-                              <button
-                                key={speed}
-                                className={cn("cinema-menu-item", playbackRate === speed && "is-active")}
-                                role="menuitemradio"
-                                aria-checked={playbackRate === speed}
-                                onClick={() => changeSpeed(speed)}
-                                type="button"
-                              >
-                                <span>{formatSpeed(speed)}</span>
-                                {playbackRate === speed ? <Check className="h-4 w-4" /> : null}
-                              </button>
-                            ))}
-                          </>
-                        ) : null}
-                      </div>
-                    ) : null}
+                    {activeMenu === "settings" && fullscreen ? renderSettingsMenu("right-0 w-56") : null}
                   </div>
 
                   <button
@@ -1495,6 +1499,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
             </div>
           </div>
         </section>
+        {activeMenu === "settings" && !fullscreen ? renderSettingsMenu("cinema-settings-floating") : null}
       </div>
     </>
   );

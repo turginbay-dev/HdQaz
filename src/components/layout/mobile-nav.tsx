@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Crown, Languages, Search, X } from "lucide-react";
+import { Crown, Search, X } from "lucide-react";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
 
 type MobileNavProps = {
@@ -11,28 +11,6 @@ type MobileNavProps = {
   displayName?: string | null;
   isPremium?: boolean;
 };
-
-const LANGUAGE_STORAGE_KEY = "hdqaz-language";
-
-const languageOptions = [
-  {
-    code: "kk",
-    shortLabel: "KK",
-    htmlLang: "kk-KZ"
-  },
-  {
-    code: "ru",
-    shortLabel: "RU",
-    htmlLang: "ru-RU"
-  },
-  {
-    code: "en",
-    shortLabel: "EN",
-    htmlLang: "en-US"
-  }
-] as const;
-
-type LanguageCode = (typeof languageOptions)[number]["code"];
 
 const mobileNavigation = [
   {
@@ -52,23 +30,10 @@ function getInitials(value?: string | null) {
   return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
 }
 
-function isLanguageCode(value: string | null): value is LanguageCode {
-  return languageOptions.some((option) => option.code === value);
-}
-
-function applyLanguage(code: LanguageCode) {
-  const option = languageOptions.find((item) => item.code === code) ?? languageOptions[0];
-
-  document.documentElement.lang = option.htmlLang;
-  window.localStorage.setItem(LANGUAGE_STORAGE_KEY, code);
-  document.cookie = `${LANGUAGE_STORAGE_KEY}=${code}; path=/; max-age=31536000; samesite=lax`;
-}
-
 export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>("kk");
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -79,14 +44,6 @@ export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
   useEffect(() => {
     setSearchValue(currentSearchQuery);
   }, [currentSearchQuery]);
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    const nextLanguage = isLanguageCode(stored) ? stored : "kk";
-
-    setSelectedLanguage(nextLanguage);
-    applyLanguage(nextLanguage);
-  }, []);
 
   useEffect(() => {
     if (searchOpen) {
@@ -122,11 +79,6 @@ export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
     }
 
     setSearchOpen(true);
-  }
-
-  function selectLanguage(code: LanguageCode) {
-    setSelectedLanguage(code);
-    applyLanguage(code);
   }
 
   return (
@@ -259,7 +211,6 @@ export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
             className="mobile-nav-drawer-brand"
             onClick={() => setOpen(false)}
           >
-            <span className="mobile-nav-brand-mark">H</span>
             <span>HdQaz</span>
           </Link>
           <button
@@ -326,34 +277,6 @@ export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
               </span>
               {pathname === "/profile" && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
             </Link>
-          </div>
-          <div>
-            <div className="rounded-[24px] border border-white/10 bg-white/[0.045] p-3">
-              <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white">
-                <Languages className="h-4 w-4 text-[var(--accent)]" />
-                Тіл
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {languageOptions.map((option) => {
-                  const active = option.code === selectedLanguage;
-
-                  return (
-                    <button
-                      key={option.code}
-                      className={
-                        active
-                          ? "rounded-2xl border border-[rgba(217,183,111,0.42)] bg-[rgba(217,183,111,0.16)] px-3 py-2 text-sm font-bold text-[var(--accent)]"
-                          : "rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm font-bold text-zinc-300"
-                      }
-                      type="button"
-                      onClick={() => selectLanguage(option.code)}
-                    >
-                      {option.shortLabel}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         </div>
 

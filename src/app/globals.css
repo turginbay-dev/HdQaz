@@ -25,12 +25,6 @@
   --tracking-label: 0.18em;
 }
 
-@theme inline {
-  --font-sans: var(--type-body);
-  --font-heading: var(--type-heading);
-  --font-cinematic: var(--type-cinematic);
-}
-
 * {
   box-sizing: border-box;
 }
@@ -214,23 +208,6 @@ body:has(.app-loading-screen) {
   transform: scale(0.97);
 }
 
-.mobile-nav-brand-mark {
-  display: inline-flex;
-  width: 2rem;
-  height: 2rem;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(217, 183, 111, 0.34);
-  border-radius: 0.85rem;
-  background: rgba(217, 183, 111, 0.14);
-  color: #fff2c6;
-  font-family: var(--type-cinematic);
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
 .mobile-nav-menu-lines {
   display: inline-flex;
   width: 1.35rem;
@@ -338,12 +315,13 @@ body:has(.app-loading-screen) {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
-  gap: 0.55rem;
   border-radius: 1rem;
   color: #ffffff;
-  font-size: 1rem;
+  font-family: var(--type-cinematic);
+  font-size: 1.32rem;
   font-weight: 900;
   letter-spacing: 0;
+  text-shadow: 0 0 24px rgba(217, 183, 111, 0.24);
 }
 
 .mobile-nav-chip {
@@ -621,14 +599,12 @@ body:has(.app-loading-screen) {
   -webkit-backdrop-filter: blur(22px) saturate(150%);
   transition:
     opacity 260ms ease,
-    scale 260ms ease,
     border-color 180ms ease,
     background 180ms ease,
     box-shadow 180ms ease;
 }
 
 .cinema-center-play:hover {
-  scale: 1.04;
   border-color: rgba(217, 183, 111, 0.38);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08)),
@@ -636,7 +612,7 @@ body:has(.app-loading-screen) {
 }
 
 .cinema-center-play:active {
-  scale: 0.97;
+  border-color: rgba(217, 183, 111, 0.46);
 }
 
 .cinema-center-play:focus-visible,
@@ -838,7 +814,7 @@ body:has(.app-loading-screen) {
     0 8px 22px rgba(0, 0, 0, 0.46);
   transition:
     opacity 150ms ease,
-    scale 150ms ease;
+    transform 150ms ease;
 }
 
 .cinema-progress-shell:hover .cinema-progress-range::-webkit-slider-thumb,
@@ -847,7 +823,7 @@ body:has(.app-loading-screen) {
 }
 
 .cinema-progress-shell.is-scrubbing .cinema-progress-range::-webkit-slider-thumb {
-  scale: 1.12;
+  transform: scale(1.12);
 }
 
 .cinema-progress-range::-moz-range-track {
@@ -1110,6 +1086,14 @@ body:has(.app-loading-screen) {
   -webkit-overflow-scrolling: touch;
 }
 
+.cinema-settings-floating {
+  right: 1.1rem;
+  bottom: 5.6rem;
+  width: 14rem;
+  max-height: min(22rem, calc(100% - 6.2rem));
+  transform-origin: bottom right;
+}
+
 .cinema-menu-item {
   display: flex;
   width: 100%;
@@ -1240,6 +1224,13 @@ body:has(.app-loading-screen) {
   .cinema-menu {
     max-width: calc(100vw - 2rem);
   }
+
+  .cinema-settings-floating {
+    right: 0.85rem;
+    bottom: 5.35rem;
+    width: min(18rem, calc(100% - 1.7rem));
+    max-height: min(14rem, calc(100% - 6rem));
+  }
 }
 
 @media (max-width: 520px) {
@@ -1318,6 +1309,23 @@ body:has(.app-loading-screen) {
 
   .cinema-menu {
     max-height: min(11.5rem, calc(100svh - 5.5rem));
+  }
+
+  .cinema-settings-floating {
+    right: 0.58rem;
+    bottom: 4.85rem;
+    width: min(17.5rem, calc(100% - 1.16rem));
+    max-height: min(10rem, calc(100% - 5.25rem));
+    animation: cinema-mobile-settings-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .cinema-settings-menu .cinema-menu-item {
+    min-height: 2.55rem;
+    padding: 0.58rem 0.68rem;
+  }
+
+  .cinema-settings-menu .cinema-menu-status {
+    min-height: 2.35rem;
   }
 
   .cinema-time {
@@ -1573,6 +1581,15 @@ body:has(.app-loading-screen) {
       inset 0 0 70px rgba(0, 0, 0, 0.58);
   }
 
+  .home-content-flow {
+    margin-top: -5.15rem;
+    padding-top: 6.15rem;
+    background:
+      linear-gradient(180deg, rgba(3, 3, 5, 0), rgba(3, 3, 5, 0.94) 2.65rem, var(--background) 7.25rem),
+      radial-gradient(ellipse at 20% 0%, rgba(217, 183, 111, 0.075), transparent 21rem),
+      radial-gradient(ellipse at 80% 4%, rgba(143, 183, 255, 0.065), transparent 20rem);
+  }
+
   .cinema-player-shell {
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.06),
@@ -1627,6 +1644,24 @@ body:has(.app-loading-screen) {
   .continue-card-image {
     transform: none !important;
     transition-duration: 180ms;
+  }
+
+  .movie-card-article::before {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    content: "";
+    background:
+      linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.06) 44%, transparent 58%),
+      radial-gradient(ellipse at 50% 0%, rgba(217, 183, 111, 0.1), transparent 46%);
+    opacity: 0.22;
+    transform: translate3d(-18%, -8%, 0);
+    animation: mobile-poster-glow 7.5s ease-in-out infinite alternate;
+  }
+
+  .movie-card-article {
+    animation: mobile-poster-breathe 8.5s ease-in-out infinite;
   }
 
   .movie-card-hover-layer,
@@ -1723,6 +1758,40 @@ body:has(.app-loading-screen) {
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cinema-mobile-settings-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0.65rem, 0.55rem, 0) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes mobile-poster-glow {
+  0% {
+    opacity: 0.16;
+    transform: translate3d(-20%, -10%, 0);
+  }
+  100% {
+    opacity: 0.3;
+    transform: translate3d(16%, 8%, 0);
+  }
+}
+
+@keyframes mobile-poster-breathe {
+  0%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  }
+  50% {
+    border-color: rgba(217, 183, 111, 0.2);
+    box-shadow: 0 26px 90px rgba(217, 183, 111, 0.08), 0 22px 70px rgba(0, 0, 0, 0.3);
   }
 }
 

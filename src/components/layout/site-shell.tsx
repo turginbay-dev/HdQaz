@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { DesktopNav } from "@/components/layout/desktop-nav";
 import { Footer } from "@/components/layout/footer";
+import { LanguagePreferenceSync } from "@/components/layout/language-switcher";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavigationLoadingOverlay } from "@/components/layout/navigation-loading-overlay";
 import { getViewerContext } from "@/features/users/session";
@@ -15,6 +16,7 @@ export async function SiteShell({ children }: SiteShellProps) {
   return (
     <>
       <Suspense fallback={null}>
+        <LanguagePreferenceSync />
         <NavigationLoadingOverlay />
         <DesktopNav
           avatarUrl={viewer.profile?.avatarUrl}

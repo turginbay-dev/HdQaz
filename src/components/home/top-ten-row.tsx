@@ -27,12 +27,12 @@ export function TopTenRow({ movies }: TopTenRowProps) {
           {movies.map((movie, index) => (
             <div
               key={`${movie.id}-${index}`}
-              className="relative flex w-[72vw] max-w-[17rem] shrink-0 snap-start items-end sm:w-64 lg:w-64"
+              className="relative flex w-[72vw] max-w-[17rem] shrink-0 snap-start items-end sm:w-64 lg:w-[21rem] lg:max-w-none xl:w-[22.5rem]"
             >
-              <span className="pointer-events-none absolute -left-2 bottom-8 z-0 text-[7rem] font-black leading-none tracking-[-0.08em] text-white/[0.07]">
+              <span className="pointer-events-none absolute -left-2 bottom-8 z-0 text-[7rem] font-black leading-none tracking-[-0.08em] text-white/[0.07] lg:-left-3 lg:bottom-10 lg:text-[8.2rem] xl:text-[8.8rem]">
                 {index + 1}
               </span>
-              <div className="relative z-10 ml-12 w-40">
+              <div className="relative z-10 ml-12 w-40 lg:ml-16 lg:w-52 xl:w-56">
                 <MovieCard movie={movie} eager={index < 8} />
               </div>
             </div>

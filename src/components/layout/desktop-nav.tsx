@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Crown, Search, X } from "lucide-react";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { UserAvatar } from "@/components/user/user-avatar";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
@@ -261,8 +260,6 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
               )}
             </div>
           </motion.form>
-
-          <LanguageSwitcher />
 
           <Link
             href="/premium"

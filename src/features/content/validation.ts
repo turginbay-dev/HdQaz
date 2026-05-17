@@ -11,7 +11,7 @@ type ValidationResult<T> =
       errors: Record<string, string>;
     };
 
-const contentTypes: ContentType[] = ["movie", "series", "anime", "dorama"];
+const contentTypes: ContentType[] = ["movie", "series", "anime", "dorama", "cartoon"];
 const contentStatuses: ContentStatus[] = ["completed", "ongoing", "announced"];
 
 function asString(value: unknown) {
@@ -188,8 +188,8 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
     } else if (!isHlsManifestUrl(hlsUrl)) {
       errors.hlsUrl = "HLS URL must end with .m3u8.";
     }
-  } else if (type === "movie") {
-    errors.hlsUrl = "Movie HLS URL is required.";
+  } else if (type === "movie" || type === "cartoon") {
+    errors.hlsUrl = "Feature content HLS URL is required.";
   }
 
   if (type && isEpisodicType(type) && hlsUrl) {
@@ -236,6 +236,7 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
       genreIds: genreIds ?? [],
       heroComment: asNullableString(payload.heroComment) ?? null,
       heroOrder: heroOrder ?? null,
+      hasKazakhSubtitles: asBoolean(payload.hasKazakhSubtitles) ?? false,
       isHero: asBoolean(payload.isHero) ?? false,
       isPremium: asBoolean(payload.isPremium) ?? false,
       isPublished: asBoolean(payload.isPublished) ?? false

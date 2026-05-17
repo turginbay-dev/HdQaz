@@ -50,10 +50,11 @@ type FilterOption = {
   value: string;
 };
 
-const contentTypeOrder: ContentType[] = ["movie", "series", "anime", "dorama"];
+const contentTypeOrder: ContentType[] = ["movie", "cartoon", "dorama", "anime", "series"];
 
 const catalogContentTypeLabels: Record<ContentType, string> = {
   anime: "Аниме",
+  cartoon: "Мультфильм",
   dorama: "Дорама",
   movie: "Фильм",
   series: "Сериал"

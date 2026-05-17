@@ -6,7 +6,7 @@ import { parseContentInput } from "@/features/content/validation";
 import type { ContentStatus, ContentType } from "@/types/content";
 
 function getContentTypeParam(value?: string) {
-  return value && ["movie", "series", "anime", "dorama"].includes(value) ? value as ContentType : undefined;
+  return value && ["movie", "series", "anime", "dorama", "cartoon"].includes(value) ? value as ContentType : undefined;
 }
 
 function getContentStatusParam(value?: string) {

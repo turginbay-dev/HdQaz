@@ -81,7 +81,7 @@ export default async function HomePage() {
     },
     {
       title: "Мультфильмдер",
-      href: { pathname: "/catalog", query: { genre: "Анимация" } },
+      href: { pathname: "/catalog", query: { type: "cartoon" } },
       movies: prioritizeUnseen(getCartoonMovies(movies), rowSeenIds)
     }
   ];
@@ -100,7 +100,7 @@ export default async function HomePage() {
               title={row.title}
               href={row.href}
               movies={row.movies}
-              priorityCount={index === 0 ? 3 : 0}
+              priorityCount={index === 0 ? 4 : 0}
             />
           ))}
           <TopTenRow movies={getTopTenMovies(movies)} />

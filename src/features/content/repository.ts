@@ -38,6 +38,7 @@ type ContentRow = {
   hero_comment?: string | null;
   hero_order?: number | null;
   is_hero?: boolean | null;
+  has_kazakh_subtitles?: boolean | null;
   is_premium: boolean;
   is_published: boolean;
   created_at: string;
@@ -227,6 +228,7 @@ function rowToContent(
     heroComment: row.hero_comment ?? null,
     heroOrder: row.hero_order ?? null,
     isHero: Boolean(row.is_hero),
+    hasKazakhSubtitles: Boolean(row.has_kazakh_subtitles),
     isPremium: row.is_premium ?? false,
     isPublished: row.is_published,
     createdAt: row.created_at,
@@ -256,9 +258,24 @@ function contentToRow(input: ContentInput): ContentRowPatch {
     hero_comment: input.heroComment ?? null,
     hero_order: input.heroOrder ?? null,
     is_hero: input.isHero ?? false,
+    has_kazakh_subtitles: input.hasKazakhSubtitles ?? false,
     is_premium: input.isPremium ?? false,
     is_published: input.isPublished ?? false
   };
+}
+
+function getSeedContentType(movie: (typeof movies)[number]): ContentType {
+  if (movie.type) {
+    return movie.type;
+  }
+
+  return movie.genres.some((genre) => genre === "Анимация" || genre === "Отбасы" || genre === "Мультфильм")
+    ? "cartoon"
+    : "movie";
+}
+
+function hasSeedKazakhSubtitles(movie: (typeof movies)[number]) {
+  return movie.badges.includes("Қазақша субтитрмен") || movie.catalogs.includes("kazakh-subtitles");
 }
 
 function episodeToRow(input: EpisodeInput, contentId: string): EpisodeRowPatch {
@@ -298,7 +315,7 @@ function seedContents(): Content[] {
     id: movie.id,
     title: movie.title,
     slug: movie.slug,
-    type: "movie",
+    type: getSeedContentType(movie),
     description: movie.description,
     posterUrl: normalizeStoredImageUrl(movie.posterUrl),
     bannerUrl: normalizeStoredImageUrl(movie.backdropUrl),
@@ -323,6 +340,7 @@ function seedContents(): Content[] {
     heroComment: null,
     heroOrder: null,
     isHero: false,
+    hasKazakhSubtitles: hasSeedKazakhSubtitles(movie),
     isPremium: movie.isPremium,
     isPublished: true
   }));
@@ -738,14 +756,18 @@ export function contentToMovieRecord(content: Content): MovieRecord {
   const runtime = isEpisodicContent(content)
     ? formatEpisodeCount(content.episodeCount) || "Сериялар жақында"
     : formatDurationMinutes(content.durationMinutes) || "Кино";
-  const legacyLocalizationCatalogs = (legacyMovie?.catalogs ?? []).filter(
-    (catalog) => catalog === "kazakh-dubbed" || catalog === "kazakh-subtitles"
+  const legacyHasKazakhSubtitles = Boolean(
+    legacyMovie?.badges.includes("Қазақша субтитрмен") || legacyMovie?.catalogs.includes("kazakh-subtitles")
   );
-  const localizationCatalogs = legacyLocalizationCatalogs.length > 0
-    ? legacyLocalizationCatalogs
-    : content.dubber
-      ? ["kazakh-dubbed" as const]
-      : ["kazakh-subtitles" as const];
+  const hasKazakhSubtitles = content.hasKazakhSubtitles || legacyHasKazakhSubtitles || (!legacyMovie && !content.dubber);
+  const localizationCatalogs: MovieRecord["catalogs"] = [
+    ...(content.dubber ? ["kazakh-dubbed" as const] : []),
+    ...(hasKazakhSubtitles ? ["kazakh-subtitles" as const] : [])
+  ];
+  const localizationBadges: MovieRecord["badges"] = [
+    ...(content.dubber ? ["Қазақша дыбыстама" as const] : []),
+    ...(hasKazakhSubtitles ? ["Қазақша субтитрмен" as const] : [])
+  ];
   const fallbackCatalogs: MovieRecord["catalogs"] = [
     "full-hd",
     ...(content.isPremium ? ["premium" as const] : []),
@@ -784,7 +806,7 @@ export function contentToMovieRecord(content: Content): MovieRecord {
     heroOrder: content.heroOrder,
     isHero: content.isHero,
     isPublished: content.isPublished,
-    badges: legacyMovie?.badges ?? [content.dubber ? "Қазақша дыбыстама" : "Қазақша субтитрмен"],
+    badges: Array.from(new Set([...(legacyMovie?.badges ?? []), ...localizationBadges])),
     languages: legacyMovie?.languages ?? ["kk"],
     genres: genreNames,
     catalogs,

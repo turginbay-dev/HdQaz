@@ -17,8 +17,9 @@ type FooterDubber = Pick<Dubber, "id" | "logoUrl" | "name" | "telegramUrl" | "vk
 const footerNavigation: FooterLinkItem[] = [
   { label: "Басты бет", href: "/" },
   { label: "Каталог", href: "/catalog" },
-  { label: "Дорамалар", href: "/catalog?q=Dorama" },
-  { label: "Аниме", href: "/catalog?q=Anime" },
+  { label: "Дорамалар", href: "/catalog?type=dorama" },
+  { label: "Аниме", href: "/catalog?type=anime" },
+  { label: "Мультфильмдер", href: "/catalog?type=cartoon" },
   { label: "Байланыс", href: "mailto:info@hdqaz.online" }
 ];
 
@@ -103,7 +104,7 @@ export function Footer() {
               <LogoMark className="h-14 w-[84px] p-1.5" sizes="84px" />
             </Link>
             <p className="mt-4 text-sm font-medium leading-6 tracking-[0.004em] text-zinc-400">
-              Қазақша фильмдер, дорамалар, аниме және сериалдарды ыңғайлы көруге арналған платформа.
+              Қазақша фильмдер, мультфильмдер, дорамалар, аниме және сериалдарды ыңғайлы көруге арналған платформа.
             </p>
           </div>
 

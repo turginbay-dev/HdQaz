@@ -109,6 +109,9 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
               <div className="mb-4 flex flex-wrap gap-2">
                 <MovieBadge label={typeLabel} />
                 <MovieBadge label={statusLabel} />
+                {content.badges.map((badge) => (
+                  <MovieBadge key={badge} label={badge === "Қазақша субтитрмен" ? "Қазақша субтитр" : badge} />
+                ))}
                 {content.isPremium ? <MovieBadge label="Premium" /> : null}
               </div>
               <h1 className="break-words text-[clamp(2.25rem,9vw,3.2rem)] font-bold tracking-[-0.028em] text-white sm:text-[4.4rem]">

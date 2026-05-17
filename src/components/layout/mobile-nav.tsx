@@ -142,8 +142,11 @@ export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
             setOpen(true);
           }}
         >
-          <span className="mobile-nav-brand-mark">H</span>
-          <span className="mobile-nav-brand-text">HdQaz</span>
+          <span className="mobile-nav-menu-lines" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
         </button>
         <button
           className="mobile-nav-icon-button"

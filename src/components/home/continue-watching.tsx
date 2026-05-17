@@ -91,7 +91,7 @@ export function ContinueWatching({ isAuthenticated, items }: ContinueWatchingPro
 
         {items.length > 0 ? (
           <div className="cinema-mask performance-rail hide-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-6 pt-1 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-            {items.map((item) => {
+            {items.map((item, index) => {
               const remaining = formatRemaining(item.remainingSeconds);
 
               return (
@@ -100,12 +100,14 @@ export function ContinueWatching({ isAuthenticated, items }: ContinueWatchingPro
                   href={`/${item.movie.slug}#player`}
                   className="continue-card group relative w-[82vw] shrink-0 snap-start overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_22px_72px_rgba(0,0,0,0.28)] transition duration-500 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.075] sm:w-[22rem] sm:rounded-[28px] lg:w-[21rem]"
                 >
-                  <div className="relative aspect-video overflow-hidden rounded-[22px]">
+                  <div className="movie-image-frame relative aspect-video overflow-hidden rounded-[22px]">
                     <MovieImage
                       src={item.movie.backdropUrl}
                       alt={item.movie.title}
                       fallback="backdrop"
                       fill
+                      loading={index < 8 ? "eager" : undefined}
+                      fetchPriority={index < 4 ? "low" : undefined}
                       sizes="(max-width: 640px) 80vw, 368px"
                       className="continue-card-image object-cover transition duration-700 group-hover:scale-105"
                     />

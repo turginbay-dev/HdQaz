@@ -1,4 +1,4 @@
-export type ContentType = "movie" | "series" | "anime" | "dorama";
+export type ContentType = "movie" | "series" | "anime" | "dorama" | "cartoon";
 
 export type ContentStatus = "completed" | "ongoing" | "announced";
 
@@ -77,6 +77,7 @@ export type Content = {
   heroComment?: string | null;
   heroOrder?: number | null;
   isHero?: boolean;
+  hasKazakhSubtitles: boolean;
   isPremium: boolean;
   isPublished: boolean;
   createdAt?: string;
@@ -104,6 +105,7 @@ export type ContentInput = {
   genreIds: string[];
   heroComment?: string | null;
   heroOrder?: number | null;
+  hasKazakhSubtitles?: boolean;
   isHero?: boolean;
   isPremium?: boolean;
   isPublished?: boolean;

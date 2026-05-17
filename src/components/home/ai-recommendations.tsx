@@ -38,7 +38,7 @@ export function AiRecommendations({ recommendations }: AiRecommendationsProps) {
         </div>
 
         <div className="cinema-mask performance-rail recommendation-rail hide-scrollbar relative -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-5 pb-3 pt-1 sm:-mx-7 sm:px-7">
-          {recommendations.items.map((item) => {
+          {recommendations.items.map((item, index) => {
             const movie = item.movie;
             const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Фильм";
             const statusLabel = movie.status ? contentStatusLabels[movie.status] : "Аяқталған";
@@ -49,12 +49,14 @@ export function AiRecommendations({ recommendations }: AiRecommendationsProps) {
                 href={`/${movie.slug}`}
                 className="recommendation-card group w-[82vw] shrink-0 snap-start rounded-[28px] border border-white/10 bg-black/[0.28] p-3 transition duration-500 hover:-translate-y-1 hover:border-[rgba(217,183,111,0.28)] hover:bg-white/[0.07] sm:w-[22rem] lg:w-[22rem]"
               >
-                <div className="relative aspect-[16/10] overflow-hidden rounded-[22px]">
+                <div className="movie-image-frame relative aspect-[16/10] overflow-hidden rounded-[22px]">
                   <MovieImage
                     src={movie.backdropUrl}
                     alt={movie.title}
                     fallback="backdrop"
                     fill
+                    loading={index < 8 ? "eager" : undefined}
+                    fetchPriority={index < 4 ? "low" : undefined}
                     sizes="(max-width: 640px) 92vw, (max-width: 1280px) 46vw, 280px"
                     className="recommendation-card-image object-cover transition duration-700 group-hover:scale-105"
                   />

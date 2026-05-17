@@ -180,10 +180,9 @@ select {
 .mobile-nav-trigger {
   display: inline-flex;
   height: 3.35rem;
-  min-width: 6.2rem;
+  width: 3.55rem;
   align-items: center;
   justify-content: center;
-  gap: 0.46rem;
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 1.35rem;
   background:
@@ -224,11 +223,27 @@ select {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.mobile-nav-brand-text {
-  color: #ffffff;
-  font-size: 0.96rem;
-  font-weight: 900;
-  letter-spacing: 0;
+.mobile-nav-menu-lines {
+  display: inline-flex;
+  width: 1.35rem;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.mobile-nav-menu-lines span {
+  display: block;
+  height: 2px;
+  border-radius: 999px;
+  background: #fff2c6;
+  box-shadow: 0 0 12px rgba(217, 183, 111, 0.18);
+}
+
+.mobile-nav-menu-lines span:nth-child(2) {
+  width: 82%;
+}
+
+.mobile-nav-menu-lines span:nth-child(3) {
+  width: 62%;
 }
 
 .mobile-nav-icon-button,
@@ -1348,6 +1363,13 @@ select {
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+.movie-image-frame {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025)),
+    radial-gradient(ellipse at 35% 20%, rgba(217, 183, 111, 0.12), transparent 44%),
+    #08090d;
 }
 
 .performance-rail {

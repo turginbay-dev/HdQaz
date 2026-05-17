@@ -33,7 +33,7 @@ export function TopTenRow({ movies }: TopTenRowProps) {
                 {index + 1}
               </span>
               <div className="relative z-10 ml-12 w-40">
-                <MovieCard movie={movie} />
+                <MovieCard movie={movie} eager={index < 8} />
               </div>
             </div>
           ))}

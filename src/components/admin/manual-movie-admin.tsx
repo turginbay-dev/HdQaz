@@ -38,6 +38,7 @@ type AdminContent = {
   heroComment: string;
   heroOrder: string;
   isHero: boolean;
+  hasKazakhSubtitles: boolean;
   isPremium: boolean;
   isPublished: boolean;
   episodes: Episode[];
@@ -101,6 +102,7 @@ type DubberApiResponse = {
 const typeFilterOptions: Array<{ label: string; value: ContentType | "all" }> = [
   { label: "Бәрі", value: "all" },
   { label: "Фильм", value: "movie" },
+  { label: "Мультфильм", value: "cartoon" },
   { label: "Дорама", value: "dorama" },
   { label: "Аниме", value: "anime" },
   { label: "Сериал", value: "series" }
@@ -142,6 +144,7 @@ function createEmptyContent(): AdminContent {
     heroComment: "",
     heroOrder: "",
     isHero: false,
+    hasKazakhSubtitles: true,
     isPremium: false,
     isPublished: false,
     episodes: []
@@ -217,6 +220,7 @@ function toAdminContent(content: Content): AdminContent {
     heroComment: content.heroComment ?? "",
     heroOrder: content.heroOrder !== null && content.heroOrder !== undefined ? String(content.heroOrder) : "",
     isHero: Boolean(content.isHero),
+    hasKazakhSubtitles: content.hasKazakhSubtitles || !content.dubberId,
     isPremium: content.isPremium,
     isPublished: content.isPublished,
     episodes: sortEpisodes(content.episodes)
@@ -521,6 +525,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         genreIds: contentDraft.genreIds,
         heroComment: contentDraft.heroComment || null,
         heroOrder: contentDraft.heroOrder ? Number(contentDraft.heroOrder) : null,
+        hasKazakhSubtitles: contentDraft.hasKazakhSubtitles,
         isHero: contentDraft.isHero,
         isPremium: contentDraft.isPremium,
         isPublished: contentDraft.isPublished
@@ -694,6 +699,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
             onChange={(value) => updateContentField("type", value as ContentType)}
             options={[
               { label: "Фильм", value: "movie" },
+              { label: "Мультфильм", value: "cartoon" },
               { label: "Дорама", value: "dorama" },
               { label: "Аниме", value: "anime" },
               { label: "Сериал", value: "series" }
@@ -827,6 +833,11 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         />
 
         <div className="mt-5 flex flex-wrap gap-3">
+          <AdminToggle
+            label="Қазақша субтитр"
+            active={contentDraft.hasKazakhSubtitles}
+            onClick={() => updateContentField("hasKazakhSubtitles", !contentDraft.hasKazakhSubtitles)}
+          />
           <AdminToggle
             label="Premium"
             active={contentDraft.isPremium}
@@ -1053,6 +1064,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
           <div className="mt-4 flex flex-wrap gap-2">
             <StatusPill active label={contentTypeLabels[contentDraft.type]} />
             <StatusPill active={contentDraft.status !== "announced"} label={contentStatusLabels[contentDraft.status]} />
+            {contentDraft.hasKazakhSubtitles ? <StatusPill active label="Қазақша субтитр" /> : null}
             {contentDraft.isHero ? <StatusPill active label={`Баннер ${contentDraft.heroOrder || "0"}`} /> : null}
           </div>
           <h3 className="mt-3 truncate text-lg font-semibold text-white">{contentDraft.title || "Контент атауы"}</h3>
@@ -1201,6 +1213,8 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
           <h3 className="mb-4 font-semibold text-white">Құрылым ережелері</h3>
           {[
             "Фильм әрдайым толық метражды HLS URL арқылы сақталады",
+            "Мультфильм де толық метражды контент ретінде сақталады",
+            "Қазақша субтитр белгісі каталогтағы бөлек бөлімге шығарады",
             "Аниме және дорама толық метражды немесе сериялы форматта сақтала алады",
             "Сериал сериялары бөлек episodes кестесінде сақталады",
             "Серия slug бос болса, episode number арқылы толады",
@@ -1264,6 +1278,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                     <StatusPill active label={contentTypeLabels[item.type]} />
                     <StatusPill active label={itemIsEpisodic ? contentReleaseFormatLabels.episodic : contentReleaseFormatLabels.feature} />
                     <StatusPill active={item.status !== "announced"} label={contentStatusLabels[item.status]} />
+                    {item.hasKazakhSubtitles ? <StatusPill active label="Қазақша субтитр" /> : null}
                     {item.isPremium ? <StatusPill active label="Premium" /> : null}
                     {item.isHero ? <StatusPill active label={`Баннер ${item.heroOrder ?? 0}`} /> : null}
                     <StatusPill active={item.isPublished} label={item.isPublished ? "Жарияланған" : "Жоба"} />

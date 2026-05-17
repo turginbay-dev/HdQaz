@@ -2,6 +2,7 @@ import type { ContentStatus, ContentType } from "@/types/content";
 
 export const contentTypeLabels: Record<ContentType, string> = {
   anime: "Аниме",
+  cartoon: "Мультфильм",
   dorama: "Дорама",
   movie: "Фильм",
   series: "Сериал"

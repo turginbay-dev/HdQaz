@@ -152,7 +152,10 @@ export function getAnimeMovies(records: Movie[]) {
 }
 
 function isCartoonMovie(movie: Movie) {
-  return movie.type !== "anime" && movie.genres.some((genre) => genre === "Анимация" || genre === "Отбасы");
+  return (
+    movie.type === "cartoon" ||
+    (movie.type !== "anime" && movie.genres.some((genre) => genre === "Анимация" || genre === "Отбасы" || genre === "Мультфильм"))
+  );
 }
 
 export function getFeatureMovies(records: Movie[]) {

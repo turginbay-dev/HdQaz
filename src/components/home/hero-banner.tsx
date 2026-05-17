@@ -111,6 +111,9 @@ export function HeroBanner({ movies }: HeroBannerProps) {
             <div className="mb-4 flex flex-wrap gap-2">
               <MovieBadge label={typeLabel} />
               <MovieBadge label={statusLabel} />
+              {movie.badges.map((badge) => (
+                <MovieBadge key={badge} label={badge === "Қазақша субтитрмен" ? "Қазақша субтитр" : badge} />
+              ))}
               {movie.dubber?.name ? <MovieBadge label={movie.dubber.name} /> : null}
               <MovieBadge label="1080p" />
             </div>

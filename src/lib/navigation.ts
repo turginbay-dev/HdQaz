@@ -17,4 +17,4 @@ export const mainNavigation = [
   }
 ];
 
-export const searchSuggestions = ["Interstellar", "Қазақша дыбыстама", "Dune: Part Two", "Жаңа релиздер"];
+export const searchSuggestions = ["Interstellar", "Қазақша дыбыстама", "Қазақша субтитр", "Мультфильм"];

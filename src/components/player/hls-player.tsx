@@ -119,7 +119,7 @@ function getSelectableQualityLevels(levels: Level[]): QualityLevel[] {
   });
 
   return Array.from(bestByHeight.values())
-    .sort((left, right) => left.height - right.height)
+    .sort((left, right) => right.height - left.height)
     .map(({ bitrate: _bitrate, ...level }) => level);
 }
 
@@ -1174,8 +1174,8 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
             onPointerUp={handleMediaPointerUp}
           />
 
-          <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.62)_0%,rgba(0,0,0,0.1)_25%,rgba(0,0,0,0.04)_48%,rgba(0,0,0,0.9)_100%)]" />
-          <div className="pointer-events-none absolute inset-0 z-10 shadow-[inset_0_0_160px_rgba(0,0,0,0.74)]" />
+          <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.56)_0%,rgba(0,0,0,0.12)_28%,transparent_58%)]" />
+          <div className="pointer-events-none absolute inset-0 z-10 shadow-[inset_0_92px_120px_-96px_rgba(0,0,0,0.72)]" />
 
           <div
             className={cn(
@@ -1428,17 +1428,6 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                               <span>HQ</span>
                               <span className="cinema-menu-meta">{qualityLabel}</span>
                             </button>
-                            <button
-                              className={cn("cinema-menu-item", manualLevel === -1 && "is-active")}
-                              role="menuitemradio"
-                              aria-checked={manualLevel === -1}
-                              onClick={() => changeQuality("-1")}
-                              type="button"
-                            >
-                              <span>Auto</span>
-                              <span className="cinema-menu-meta">{activeAutoQuality ?? "Best"}</span>
-                              {manualLevel === -1 ? <Check className="h-4 w-4" /> : null}
-                            </button>
                             {qualityLevels.map((level) => (
                               <button
                                 key={level.index}
@@ -1453,6 +1442,17 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                                 {manualLevel === level.index ? <Check className="h-4 w-4" /> : null}
                               </button>
                             ))}
+                            <button
+                              className={cn("cinema-menu-item", manualLevel === -1 && "is-active")}
+                              role="menuitemradio"
+                              aria-checked={manualLevel === -1}
+                              onClick={() => changeQuality("-1")}
+                              type="button"
+                            >
+                              <span>Auto</span>
+                              <span className="cinema-menu-meta">{activeAutoQuality ?? "Best"}</span>
+                              {manualLevel === -1 ? <Check className="h-4 w-4" /> : null}
+                            </button>
                           </>
                         ) : null}
 

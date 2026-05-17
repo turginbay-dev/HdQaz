@@ -127,15 +127,23 @@ select {
 }
 
 .app-loading-screen {
-  position: relative;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
   display: grid;
   min-height: 100svh;
+  min-height: 100dvh;
   place-items: center;
   overflow: hidden;
   background:
     radial-gradient(ellipse at 50% 34%, rgba(217, 183, 111, 0.14), transparent 18rem),
     linear-gradient(180deg, #030305 0%, #070914 52%, #030305 100%);
   isolation: isolate;
+  touch-action: none;
+}
+
+body:has(.app-loading-screen) {
+  overflow: hidden;
 }
 
 .app-loading-screen::before {
@@ -1309,7 +1317,7 @@ select {
   }
 
   .cinema-menu {
-    max-height: 7.6rem;
+    max-height: min(11.5rem, calc(100svh - 5.5rem));
   }
 
   .cinema-time {
@@ -1463,7 +1471,7 @@ select {
 }
 
 .content-rail-section {
-  contain: layout paint style;
+  contain: layout style;
 }
 
 @media (min-width: 768px) {
@@ -1513,7 +1521,7 @@ select {
   }
 
   .performance-rail {
-    contain: layout paint;
+    contain: layout;
     overflow-y: hidden;
   }
 

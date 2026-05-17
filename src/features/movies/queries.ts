@@ -109,7 +109,9 @@ export function getTrendingMovies(records: Movie[]) {
 
 export function getRelatedMovies(records: Movie[], current: Movie, limit = 10) {
   const currentGenres = new Set(current.genres);
-  const currentCatalogs = new Set(current.catalogs);
+  const currentCatalogs = new Set<string>(
+    current.catalogs.filter((catalog) => catalog === "kazakh-dubbed" || catalog === "kazakh-subtitles")
+  );
   const currentLanguages = new Set(current.languages);
 
   const scoredMovies = records
@@ -120,17 +122,35 @@ export function getRelatedMovies(records: Movie[], current: Movie, limit = 10) {
       const languageMatches = movie.languages.filter((language) => currentLanguages.has(language)).length;
       const sameType = movie.type && current.type && movie.type === current.type ? 1 : 0;
       const sameDubber = current.dubberId && movie.dubberId === current.dubberId ? 1 : 0;
-      const score = sameType * 5 + genreMatches * 4 + catalogMatches * 2 + languageMatches + sameDubber * 2;
+      const sameCountry = current.country && movie.country && movie.country === current.country ? 1 : 0;
+      const closeYear = Math.abs(movie.year - current.year) <= 3 ? 1 : 0;
+      const typeScore = sameType && current.type !== "movie" ? 6 : 0;
+      const score =
+        typeScore +
+        genreMatches * 7 +
+        sameDubber * 5 +
+        catalogMatches * 2 +
+        sameCountry * 2 +
+        closeYear +
+        (genreMatches > 0 ? languageMatches : 0);
 
       return { index, movie, score };
     })
-    .filter((item) => item.score > 0)
+    .filter((item) => item.score >= 6)
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .map((item) => item.movie);
 
-  const fallbackMovies = records.filter(
-    (movie) => movie.id !== current.id && !scoredMovies.some((relatedMovie) => relatedMovie.id === movie.id)
-  );
+  const fallbackMovies = records.filter((movie) => {
+    if (movie.id === current.id || scoredMovies.some((relatedMovie) => relatedMovie.id === movie.id)) {
+      return false;
+    }
+
+    if (current.type && current.type !== "movie" && movie.type === current.type) {
+      return true;
+    }
+
+    return movie.genres.some((genre) => currentGenres.has(genre));
+  });
 
   return [...scoredMovies, ...fallbackMovies].slice(0, limit);
 }

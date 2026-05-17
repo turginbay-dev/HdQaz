@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Info } from "lucide-react";
@@ -16,6 +16,11 @@ import type { Movie } from "@/types/movie";
 type HeroBannerProps = {
   movies: Movie[];
 };
+
+const HERO_BACKDROP_SIZES = "(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 100vw";
+const HERO_POSTER_SIZES = "(max-width: 1023px) 1px, (max-width: 1279px) 250px, 280px";
+const HERO_BLUR_DATA_URL =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 9'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%23030305'/%3E%3Cstop offset='.52' stop-color='%23110d0b'/%3E%3Cstop offset='1' stop-color='%23070812'/%3E%3C/linearGradient%3E%3CradialGradient id='b' cx='.72' cy='.22' r='.62'%3E%3Cstop stop-color='%23332416' stop-opacity='.82'/%3E%3Cstop offset='1' stop-color='%23030305' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='16' height='9' fill='url(%23a)'/%3E%3Crect width='16' height='9' fill='url(%23b)'/%3E%3C/svg%3E";
 
 const dust = Array.from({ length: 5 }, (_, index) => ({
   id: index,
@@ -44,26 +49,18 @@ export function HeroBanner({ movies }: HeroBannerProps) {
   }
 
   return (
-    <section className="hero-vignette relative min-h-[68svh] overflow-hidden sm:min-h-[74svh]">
-      <div className="absolute inset-0 scale-[1.05]">
-        <AnimatePresence mode="wait">
+    <section className="hero-vignette relative overflow-hidden">
+      <div className="absolute inset-0 scale-[1.05] bg-[#030305]">
+        <AnimatePresence initial={false}>
           <motion.div
             key={movie.id}
             className="absolute inset-0"
-            initial={{ opacity: 0, scale: 1.035 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
           >
-            <MovieImage
-              src={movie.backdropUrl}
-              alt=""
-              fallback="backdrop"
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover"
-            />
+            <HeroBackdrop movie={movie} />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -93,8 +90,8 @@ export function HeroBanner({ movies }: HeroBannerProps) {
         </div>
       ) : null}
 
-      <div className="relative mx-auto grid min-h-[68svh] w-full max-w-7xl items-end gap-8 px-4 pb-14 pt-24 sm:min-h-[74svh] sm:px-6 sm:pb-16 sm:pt-28 lg:grid-cols-[minmax(0,1fr)_280px] lg:px-8 lg:pb-[4.5rem] lg:pt-[7.5rem] xl:grid-cols-[minmax(0,1fr)_320px]">
-        <AnimatePresence mode="wait">
+      <div className="hero-layout relative mx-auto grid w-full max-w-7xl items-end gap-8 px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-28 lg:grid-cols-[minmax(0,1fr)_280px] lg:px-8 lg:pb-[4.5rem] lg:pt-[7.5rem] xl:grid-cols-[minmax(0,1fr)_320px]">
+        <AnimatePresence initial={false} mode="wait">
           <motion.div
             key={`content-${movie.id}`}
             className="max-w-4xl"
@@ -145,7 +142,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
           </motion.div>
         </AnimatePresence>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false} mode="wait">
           <motion.div
             key={`poster-${movie.id}`}
             className="relative mx-auto hidden w-full max-w-[250px] pb-4 lg:block xl:max-w-[280px]"
@@ -162,8 +159,9 @@ export function HeroBanner({ movies }: HeroBannerProps) {
                   alt={movie.title}
                   fallback="poster"
                   fill
-                  priority
-                  sizes="280px"
+                  sizes={HERO_POSTER_SIZES}
+                  placeholder="blur"
+                  blurDataURL={HERO_BLUR_DATA_URL}
                   className="object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/[0.32] via-transparent to-white/[0.08]" />
@@ -175,6 +173,28 @@ export function HeroBanner({ movies }: HeroBannerProps) {
     </section>
   );
 }
+
+const HeroBackdrop = memo(function HeroBackdrop({ movie }: { movie: Movie }) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  return (
+    <div className="hero-backdrop-fallback absolute inset-0">
+      <MovieImage
+        src={movie.backdropUrl}
+        alt=""
+        fallback="backdrop"
+        fill
+        priority={true}
+        fetchPriority="high"
+        sizes={HERO_BACKDROP_SIZES}
+        placeholder="blur"
+        blurDataURL={HERO_BLUR_DATA_URL}
+        onLoadingComplete={() => setImageLoaded(true)}
+        className={cn("hero-backdrop-image object-cover", imageLoaded && "is-loaded")}
+      />
+    </div>
+  );
+});
 
 function HeroArrow({
   children,

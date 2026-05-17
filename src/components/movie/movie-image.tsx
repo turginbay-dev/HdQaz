@@ -1,7 +1,7 @@
 "use client";
 
 import Image, { type ImageProps } from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getMovieImageFallback, getMovieImageSrc } from "@/lib/movie-images";
 
 type MovieImageProps = Omit<ImageProps, "src"> & {
@@ -13,9 +13,13 @@ export function MovieImage({ fallback, onError, src, ...props }: MovieImageProps
   const fallbackSrc = getMovieImageFallback(fallback);
   const safeSrc = getMovieImageSrc(src, fallback);
   const [currentSrc, setCurrentSrc] = useState(safeSrc);
+  const lastSafeSrc = useRef(safeSrc);
 
   useEffect(() => {
-    setCurrentSrc(safeSrc);
+    if (lastSafeSrc.current !== safeSrc) {
+      lastSafeSrc.current = safeSrc;
+      setCurrentSrc(safeSrc);
+    }
   }, [safeSrc]);
 
   return (

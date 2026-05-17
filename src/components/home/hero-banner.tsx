@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { LogoMark } from "@/components/layout/site-logo";
 import { MovieBadge } from "@/components/movie/movie-badge";
@@ -27,14 +27,6 @@ const dust = Array.from({ length: 5 }, (_, index) => ({
 export function HeroBanner({ movies }: HeroBannerProps) {
   const slides = useMemo(() => movies.filter(Boolean), [movies]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const ref = useRef<HTMLElement | null>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start start", "end start"]
-  });
-  const imageY = useTransform(scrollYProgress, [0, 1], ["0%", "8%"]);
-  const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "8%"]);
-  const opacity = useTransform(scrollYProgress, [0, 0.82], [1, 0]);
   const movie = slides[activeIndex] ?? slides[0];
 
   if (!movie) {
@@ -52,8 +44,8 @@ export function HeroBanner({ movies }: HeroBannerProps) {
   }
 
   return (
-    <section ref={ref} className="hero-vignette relative min-h-[68svh] overflow-hidden sm:min-h-[74svh]">
-      <motion.div className="absolute inset-0 scale-[1.05]" style={{ y: imageY }}>
+    <section className="hero-vignette relative min-h-[68svh] overflow-hidden sm:min-h-[74svh]">
+      <div className="absolute inset-0 scale-[1.05]">
         <AnimatePresence mode="wait">
           <motion.div
             key={movie.id}
@@ -74,7 +66,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
             />
           </motion.div>
         </AnimatePresence>
-      </motion.div>
+      </div>
 
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_68%_30%,rgba(255,180,92,0.16),transparent_32%),radial-gradient(ellipse_at_24%_18%,rgba(143,183,255,0.14),transparent_34%)]" />
       <div className="absolute inset-0 bg-gradient-to-r from-black via-black/[0.68] to-black/[0.18]" />
@@ -101,10 +93,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
         </div>
       ) : null}
 
-      <motion.div
-        className="relative mx-auto grid min-h-[68svh] w-full max-w-7xl items-end gap-8 px-4 pb-14 pt-24 sm:min-h-[74svh] sm:px-6 sm:pb-16 sm:pt-28 lg:grid-cols-[minmax(0,1fr)_280px] lg:px-8 lg:pb-[4.5rem] lg:pt-[7.5rem] xl:grid-cols-[minmax(0,1fr)_320px]"
-        style={{ y: contentY, opacity }}
-      >
+      <div className="relative mx-auto grid min-h-[68svh] w-full max-w-7xl items-end gap-8 px-4 pb-14 pt-24 sm:min-h-[74svh] sm:px-6 sm:pb-16 sm:pt-28 lg:grid-cols-[minmax(0,1fr)_280px] lg:px-8 lg:pb-[4.5rem] lg:pt-[7.5rem] xl:grid-cols-[minmax(0,1fr)_320px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={`content-${movie.id}`}
@@ -179,7 +168,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
             </div>
           </motion.div>
         </AnimatePresence>
-      </motion.div>
+      </div>
     </section>
   );
 }

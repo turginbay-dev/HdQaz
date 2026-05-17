@@ -1,7 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { movieCatalogs, movieGenres } from "@/lib/movie-taxonomy";
 
 const highlightedCatalogs = ["premium", "full-hd", "kazakh-dubbed", "kazakh-subtitles", "new-releases"];
@@ -36,11 +33,9 @@ export function CategoryRail() {
   return (
     <div className="cinema-mask performance-rail hide-scrollbar -mx-4 flex snap-x gap-2 overflow-x-auto px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
       {categoryChips.map((category) => (
-        <motion.div
+        <div
           key={category.key}
           className="snap-start"
-          whileHover={{ y: -2, scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
         >
           <Link
             href={category.href}
@@ -51,15 +46,11 @@ export function CategoryRail() {
             }
           >
             {category.solid && (
-              <motion.span
-                layoutId="category-active"
-                className="absolute inset-0 rounded-full bg-white"
-                transition={{ type: "spring", stiffness: 360, damping: 30 }}
-              />
+              <span className="absolute inset-0 rounded-full bg-white" />
             )}
             <span className="relative z-10 whitespace-nowrap">{category.label}</span>
           </Link>
-        </motion.div>
+        </div>
       ))}
     </div>
   );

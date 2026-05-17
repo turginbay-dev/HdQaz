@@ -3,11 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
-import { Crown, Search, X } from "lucide-react";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
-import { LogoMark, SiteLogo } from "@/components/layout/site-logo";
-import { UserAvatar } from "@/components/user/user-avatar";
+import { Crown, Languages, Search, X } from "lucide-react";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
 
 type MobileNavProps = {
@@ -15,6 +11,28 @@ type MobileNavProps = {
   displayName?: string | null;
   isPremium?: boolean;
 };
+
+const LANGUAGE_STORAGE_KEY = "hdqaz-language";
+
+const languageOptions = [
+  {
+    code: "kk",
+    shortLabel: "KK",
+    htmlLang: "kk-KZ"
+  },
+  {
+    code: "ru",
+    shortLabel: "RU",
+    htmlLang: "ru-RU"
+  },
+  {
+    code: "en",
+    shortLabel: "EN",
+    htmlLang: "en-US"
+  }
+] as const;
+
+type LanguageCode = (typeof languageOptions)[number]["code"];
 
 const mobileNavigation = [
   {
@@ -24,19 +42,51 @@ const mobileNavigation = [
   ...mainNavigation.map((item) => (item.href === "/catalog" ? { ...item, label: "Каталог" } : item))
 ];
 
-export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileNavProps) {
+function getInitials(value?: string | null) {
+  const parts = value?.trim().split(/\s+/).filter(Boolean) ?? [];
+
+  if (parts.length === 0) {
+    return "H";
+  }
+
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
+}
+
+function isLanguageCode(value: string | null): value is LanguageCode {
+  return languageOptions.some((option) => option.code === value);
+}
+
+function applyLanguage(code: LanguageCode) {
+  const option = languageOptions.find((item) => item.code === code) ?? languageOptions[0];
+
+  document.documentElement.lang = option.htmlLang;
+  window.localStorage.setItem(LANGUAGE_STORAGE_KEY, code);
+  document.cookie = `${LANGUAGE_STORAGE_KEY}=${code}; path=/; max-age=31536000; samesite=lax`;
+}
+
+export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>("kk");
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const currentSearchQuery = searchParams.get("q") ?? "";
+  const profileInitials = getInitials(displayName);
 
   useEffect(() => {
     setSearchValue(currentSearchQuery);
   }, [currentSearchQuery]);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    const nextLanguage = isLanguageCode(stored) ? stored : "kk";
+
+    setSelectedLanguage(nextLanguage);
+    applyLanguage(nextLanguage);
+  }, []);
 
   useEffect(() => {
     if (searchOpen) {
@@ -74,243 +124,254 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
     setSearchOpen(true);
   }
 
+  function selectLanguage(code: LanguageCode) {
+    setSelectedLanguage(code);
+    applyLanguage(code);
+  }
+
   return (
     <>
       <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-4 py-4 lg:hidden">
-        <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}>
-          <button
-            className="glass mobile-nav-trigger inline-flex h-14 w-[6rem] items-center justify-center rounded-[24px] transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-            aria-label="Мәзірді ашу"
-            aria-expanded={open}
-            type="button"
-            onClick={() => {
-              setSearchOpen(false);
-              setOpen(true);
-            }}
-          >
-            <LogoMark className="h-12 w-[72px] p-1" priority sizes="72px" />
-          </button>
-        </motion.div>
-        <motion.div
-          className="flex items-center"
-          initial={{ opacity: 0, y: -14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
+        <button
+          className="mobile-nav-trigger"
+          aria-label="Мәзірді ашу"
+          aria-expanded={open}
+          type="button"
+          onClick={() => {
+            setSearchOpen(false);
+            setOpen(true);
+          }}
         >
+          <span className="mobile-nav-brand-mark">H</span>
+          <span className="mobile-nav-brand-text">HdQaz</span>
+        </button>
+        <button
+          className="mobile-nav-icon-button"
+          aria-label="Іздеу"
+          aria-expanded={searchOpen}
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            setSearchOpen(true);
+          }}
+        >
+          <Search className="h-5 w-5" />
+        </button>
+      </header>
+
+      <button
+        className={`mobile-nav-backdrop fixed inset-0 z-[70] lg:hidden ${searchOpen ? "is-open" : ""}`}
+        aria-label="Іздеуді жабу"
+        aria-hidden={!searchOpen}
+        tabIndex={searchOpen ? 0 : -1}
+        type="button"
+        onClick={() => setSearchOpen(false)}
+      />
+      <div
+        className={`mobile-nav-panel mobile-nav-search-panel fixed left-3 top-3 z-[80] w-[min(92vw,420px)] rounded-[30px] p-4 lg:hidden ${searchOpen ? "is-open" : ""}`}
+        aria-hidden={!searchOpen}
+        inert={!searchOpen}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="mobile-nav-icon-soft">
+              <Search className="h-5 w-5" />
+            </span>
+            <p className="text-base font-bold tracking-[-0.01em] text-white">Кино іздеу</p>
+          </div>
           <button
-            className="glass-button flex h-12 w-12 items-center justify-center rounded-full text-white"
-            aria-label="Іздеу"
+            className="mobile-nav-icon-button h-10 w-10"
+            aria-label="Жабу"
             type="button"
-            onClick={() => {
-              setOpen(false);
-              setSearchOpen(true);
-            }}
+            onClick={() => setSearchOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form className="mt-4 flex gap-2" onSubmit={handleSearchSubmit}>
+          <label className="flex min-h-12 flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 text-white">
+            <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
+            <input
+              ref={searchInputRef}
+              className="min-w-0 flex-1 bg-transparent text-base font-medium tracking-[0.004em] outline-none placeholder:text-zinc-500"
+              aria-label="Кино іздеу"
+              placeholder="Атауы, жанры, жылы"
+              type="search"
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+            />
+          </label>
+          {searchValue && (
+            <button
+              className="mobile-nav-icon-button h-12 w-12 shrink-0 rounded-2xl"
+              aria-label="Іздеуді тазалау"
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={clearSearch}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+          <button
+            className="mobile-nav-submit-button flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+            aria-label="Іздеу"
+            type="submit"
           >
             <Search className="h-5 w-5" />
           </button>
-        </motion.div>
-      </header>
+        </form>
 
-      <AnimatePresence>
-        {searchOpen && (
-          <>
-            <motion.button
-              className="mobile-nav-backdrop fixed inset-0 z-[70] lg:hidden"
-              aria-label="Іздеуді жабу"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.16, ease: "easeOut" }}
-              onClick={() => setSearchOpen(false)}
-            />
-            <motion.div
-              className="glass-strong mobile-nav-panel fixed left-3 top-3 z-[80] w-[min(92vw,420px)] rounded-[30px] p-4 lg:hidden"
-              initial={{ x: "-105%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "-105%", opacity: 0 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {searchSuggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              className="mobile-nav-chip"
+              type="button"
+              onClick={() => submitSearch(suggestion)}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-[var(--accent)]">
-                    <Search className="h-5 w-5" />
-                  </span>
-                  <p className="text-base font-bold tracking-[-0.01em] text-white">Кино іздеу</p>
-                </div>
-                <button
-                  className="glass-button flex h-10 w-10 items-center justify-center rounded-full text-white"
-                  aria-label="Жабу"
-                  type="button"
-                  onClick={() => setSearchOpen(false)}
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
 
-              <form className="mt-4 flex gap-2" onSubmit={handleSearchSubmit}>
-                <label className="flex min-h-12 flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 text-white">
-                  <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
-                  <input
-                    ref={searchInputRef}
-                    className="min-w-0 flex-1 bg-transparent text-base font-medium tracking-[0.004em] outline-none placeholder:text-zinc-500"
-                    aria-label="Кино іздеу"
-                    placeholder="Атауы, жанры, жылы"
-                    type="search"
-                    value={searchValue}
-                    onChange={(event) => setSearchValue(event.target.value)}
-                  />
-                </label>
-                {searchValue && (
-                  <button
-                    className="glass-button flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white"
-                    aria-label="Іздеуді тазалау"
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={clearSearch}
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                )}
-                <button
-                  className="hero-watch-button flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-                  aria-label="Іздеу"
-                  type="submit"
-                >
-                  <Search className="h-5 w-5" />
-                </button>
-              </form>
+      <button
+        className={`mobile-nav-backdrop fixed inset-0 z-[70] lg:hidden ${open ? "is-open" : ""}`}
+        aria-label="Мәзірді жабу"
+        aria-hidden={!open}
+        tabIndex={open ? 0 : -1}
+        type="button"
+        onClick={() => setOpen(false)}
+      />
+      <aside
+        className={`mobile-nav-panel mobile-nav-drawer fixed left-3 top-3 z-[80] flex h-[calc(100svh-24px)] w-[min(86vw,380px)] flex-col overflow-y-auto overscroll-contain rounded-[30px] p-4 lg:hidden ${open ? "is-open" : ""}`}
+        aria-hidden={!open}
+        inert={!open}
+      >
+        <div className="flex items-center justify-between">
+          <Link
+            href="/"
+            aria-label="HdQaz басты бет"
+            className="mobile-nav-drawer-brand"
+            onClick={() => setOpen(false)}
+          >
+            <span className="mobile-nav-brand-mark">H</span>
+            <span>HdQaz</span>
+          </Link>
+          <button
+            className="mobile-nav-icon-button h-10 w-10"
+            aria-label="Жабу"
+            onClick={() => setOpen(false)}
+            type="button"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                {searchSuggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    className="glass-button rounded-full px-3 py-2 text-sm font-semibold tracking-[0.01em] text-white"
-                    type="button"
-                    onClick={() => submitSearch(suggestion)}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+        <div className="mt-8 flex flex-col gap-2">
+          {mobileNavigation.map((item) => {
+            const itemPath = item.href.split("?")[0];
+            const itemParams = new URLSearchParams(item.href.split("?")[1]);
+            const itemCatalog = itemParams.get("catalog");
+            const itemFilter = itemParams.get("filter");
+            const currentCatalog = searchParams.get("catalog");
+            const currentFilter = searchParams.get("filter");
+            const currentGenre = searchParams.get("genre");
+            const active =
+              pathname === itemPath &&
+              (itemCatalog
+                ? currentCatalog === itemCatalog
+                : itemFilter
+                  ? currentFilter === itemFilter
+                  : itemPath === "/catalog"
+                    ? !currentCatalog && !currentFilter && !currentGenre
+                    : true);
 
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.button
-              className="mobile-nav-backdrop fixed inset-0 z-[70] lg:hidden"
-              aria-label="Мәзірді жабу"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.16, ease: "easeOut" }}
-              onClick={() => setOpen(false)}
-            />
-            <motion.aside
-              className="glass-strong mobile-nav-panel fixed left-3 top-3 z-[80] flex h-[calc(100svh-24px)] w-[min(86vw,380px)] flex-col overflow-y-auto overscroll-contain rounded-[30px] p-4 lg:hidden"
-              initial={{ x: "-105%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "-105%", opacity: 0 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="flex items-center justify-between">
-                <SiteLogo variant="drawer" onClick={() => setOpen(false)} />
-                <button
-                  className="glass-button flex h-10 w-10 items-center justify-center rounded-full text-white"
-                  aria-label="Жабу"
+            return (
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  className={
+                    active
+                      ? "flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.12] px-4 py-3 text-base font-bold tracking-[-0.006em] text-white"
+                      : "flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold tracking-[-0.006em] text-zinc-100 transition hover:bg-white/10"
+                  }
                   onClick={() => setOpen(false)}
                 >
-                  <X className="h-5 w-5" />
-                </button>
+                  {item.label}
+                  {active && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
+                </Link>
               </div>
-
-              <div className="mt-8 flex flex-col gap-2">
-                {mobileNavigation.map((item) => {
-                  const itemPath = item.href.split("?")[0];
-                  const itemParams = new URLSearchParams(item.href.split("?")[1]);
-                  const itemCatalog = itemParams.get("catalog");
-                  const itemFilter = itemParams.get("filter");
-                  const currentCatalog = searchParams.get("catalog");
-                  const currentFilter = searchParams.get("filter");
-                  const currentGenre = searchParams.get("genre");
-                  const active =
-                    pathname === itemPath &&
-                    (itemCatalog
-                      ? currentCatalog === itemCatalog
-                      : itemFilter
-                        ? currentFilter === itemFilter
-                        : itemPath === "/catalog"
-                          ? !currentCatalog && !currentFilter && !currentGenre
-                          : true);
+            );
+          })}
+          <div>
+            <Link
+              href="/profile"
+              className={
+                pathname === "/profile"
+                  ? "flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.12] px-4 py-3 text-base font-bold tracking-[-0.006em] text-white"
+                  : "flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold tracking-[-0.006em] text-zinc-100 transition hover:bg-white/10"
+              }
+              onClick={() => setOpen(false)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <span className="mobile-nav-avatar" aria-hidden="true">
+                  {profileInitials}
+                </span>
+                Профиль
+              </span>
+              {pathname === "/profile" && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
+            </Link>
+          </div>
+          <div>
+            <div className="rounded-[24px] border border-white/10 bg-white/[0.045] p-3">
+              <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white">
+                <Languages className="h-4 w-4 text-[var(--accent)]" />
+                Тіл
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {languageOptions.map((option) => {
+                  const active = option.code === selectedLanguage;
 
                   return (
-                    <div key={item.href}>
-                      <Link
-                        href={item.href}
-                        className={
-                          active
-                            ? "flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.12] px-4 py-3 text-base font-bold tracking-[-0.006em] text-white"
-                            : "flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold tracking-[-0.006em] text-zinc-100 transition hover:bg-white/10"
-                        }
-                        onClick={() => setOpen(false)}
-                      >
-                        {item.label}
-                        {active && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
-                      </Link>
-                    </div>
+                    <button
+                      key={option.code}
+                      className={
+                        active
+                          ? "rounded-2xl border border-[rgba(217,183,111,0.42)] bg-[rgba(217,183,111,0.16)] px-3 py-2 text-sm font-bold text-[var(--accent)]"
+                          : "rounded-2xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm font-bold text-zinc-300"
+                      }
+                      type="button"
+                      onClick={() => selectLanguage(option.code)}
+                    >
+                      {option.shortLabel}
+                    </button>
                   );
                 })}
-                <div>
-                  <Link
-                    href="/profile"
-                    className={
-                      pathname === "/profile"
-                        ? "flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.12] px-4 py-3 text-base font-bold tracking-[-0.006em] text-white"
-                        : "flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold tracking-[-0.006em] text-zinc-100 transition hover:bg-white/10"
-                    }
-                    onClick={() => setOpen(false)}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <UserAvatar
-                        avatarUrl={avatarUrl}
-                        displayName={displayName}
-                        className="h-7 w-7"
-                        sizes="28px"
-                      />
-                      Профиль
-                    </span>
-                    {pathname === "/profile" && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
-                  </Link>
-                </div>
-                <div>
-                  <LanguageSwitcher variant="mobile" />
-                </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-              <Link
-                href="/premium"
-                className="cinema-sweep mt-auto rounded-[26px] border border-[rgba(217,183,111,0.25)] bg-[rgba(217,183,111,0.12)] p-4"
-                onClick={() => setOpen(false)}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)] text-black">
-                    <Crown className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-bold tracking-[-0.008em] text-white">HdQaz Premium</p>
-                    <p className="mt-1 text-sm font-medium leading-5 tracking-[0.004em] text-zinc-400">
-                      {isPremium ? "Premium белсенді" : "1080p және Premium мүмкіндіктер"}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+        <Link
+          href="/premium"
+          className="mobile-nav-premium mt-auto"
+          onClick={() => setOpen(false)}
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)] text-black">
+              <Crown className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-sm font-bold tracking-[-0.008em] text-white">HdQaz Premium</p>
+              <p className="mt-1 text-sm font-medium leading-5 tracking-[0.004em] text-zinc-400">
+                {isPremium ? "Premium белсенді" : "1080p және Premium мүмкіндіктер"}
+              </p>
+            </div>
+          </div>
+        </Link>
+      </aside>
     </>
   );
 }

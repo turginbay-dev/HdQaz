@@ -6,7 +6,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Crown, Search, X } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { UserAvatar } from "@/components/user/user-avatar";
-import { mainNavigation, searchSuggestions } from "@/lib/navigation";
+import { MovieImage } from "@/components/movie/movie-image";
+import { contentStatusLabels, contentTypeLabels, formatDurationMinutes, formatEpisodeCount, isEpisodicContent } from "@/features/content/format";
+import { mainNavigation } from "@/lib/navigation";
+import type { Movie } from "@/types/movie";
 
 type MobileNavProps = {
   avatarUrl?: string | null;
@@ -22,15 +25,59 @@ const mobileNavigation = [
   ...mainNavigation.map((item) => (item.href === "/catalog" ? { ...item, label: "Каталог" } : item))
 ];
 
+type SearchResponse = {
+  data?: {
+    items?: Movie[];
+  };
+};
+
+function getMovieMeta(movie: Movie) {
+  const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Фильм";
+  const statusLabel = movie.status ? contentStatusLabels[movie.status] : movie.isNewRelease ? "Жаңа" : "Аяқталған";
+  const lengthLabel = isEpisodicContent(movie)
+    ? formatEpisodeCount(movie.episodeCount)
+    : formatDurationMinutes(movie.durationMinutes) || movie.runtime;
+
+  return [typeLabel, movie.year ? String(movie.year) : "", statusLabel, lengthLabel, movie.dubber?.name ?? ""]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function normalizeSearchText(value: string) {
+  return value.trim().toLocaleLowerCase("kk-KZ");
+}
+
+function sortSearchResults(results: Movie[], query: string) {
+  const normalizedQuery = normalizeSearchText(query);
+
+  function score(movie: Movie) {
+    const title = normalizeSearchText(movie.title);
+    const originalTitle = normalizeSearchText(movie.originalTitle);
+
+    if (title === normalizedQuery) return 0;
+    if (title.startsWith(normalizedQuery)) return 1;
+    if (originalTitle.startsWith(normalizedQuery)) return 2;
+    if (title.includes(normalizedQuery)) return 3;
+    if (originalTitle.includes(normalizedQuery)) return 4;
+
+    return 5;
+  }
+
+  return [...results].sort((left, right) => score(left) - score(right) || left.title.localeCompare(right.title, "kk-KZ"));
+}
+
 export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<Movie[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const currentSearchQuery = searchParams.get("q") ?? "";
+  const trimmedSearch = searchValue.trim();
 
   useEffect(() => {
     setSearchValue(currentSearchQuery);
@@ -42,39 +89,67 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
     }
   }, [searchOpen]);
 
-  function submitSearch(value: string) {
-    const query = value.trim();
-
-    if (!query) {
-      setSearchOpen(true);
+  useEffect(() => {
+    if (!searchOpen) {
+      setSearchResults([]);
+      setSearchLoading(false);
       return;
     }
 
-    const params = new URLSearchParams({ q: query });
+    const query = searchValue.trim();
 
-    router.push(`/catalog?${params.toString()}`);
+    if (!query) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setSearchLoading(true);
+
+      try {
+        const response = await fetch(`/api/movies?q=${encodeURIComponent(query)}&limit=50`, {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          setSearchResults([]);
+          return;
+        }
+
+        const payload = (await response.json()) as SearchResponse;
+        setSearchResults(sortSearchResults(payload.data?.items ?? [], query));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setSearchResults([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setSearchLoading(false);
+        }
+      }
+    }, 180);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
+  }, [searchOpen, searchValue]);
+
+  function openMovie(slug: string) {
+    router.push(`/${slug}`);
     setOpen(false);
     setSearchOpen(false);
   }
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    submitSearch(searchValue);
-  }
-
-  function clearSearch() {
-    setSearchValue("");
-
-    if (pathname === "/catalog" && currentSearchQuery) {
-      router.push("/catalog");
-    }
-
-    setSearchOpen(true);
   }
 
   return (
     <>
-      <header className="fixed left-0 right-0 top-0 z-50 grid grid-cols-[3.55rem_1fr_3rem] items-center px-4 py-4 lg:hidden">
+      <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-4 py-4 lg:hidden">
         <button
           className="mobile-nav-trigger"
           aria-label="Мәзірді ашу"
@@ -91,14 +166,8 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
             <span />
           </span>
         </button>
-        <SiteLogo
-          variant="mobile"
-          className="mobile-nav-header-logo justify-self-center"
-          markClassName="h-11 w-[66px] rounded-[18px] p-0.5"
-          priority
-        />
         <button
-          className="mobile-nav-icon-button justify-self-end"
+          className="mobile-nav-icon-button"
           aria-label="Іздеу"
           aria-expanded={searchOpen}
           type="button"
@@ -120,29 +189,12 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
         onClick={() => setSearchOpen(false)}
       />
       <div
-        className={`mobile-nav-panel mobile-nav-search-panel fixed left-3 top-3 z-[80] w-[min(92vw,420px)] rounded-[30px] p-4 lg:hidden ${searchOpen ? "is-open" : ""}`}
+        className={`mobile-nav-panel mobile-nav-search-panel fixed left-3 right-3 top-3 z-[80] rounded-[26px] p-3 lg:hidden ${searchOpen ? "is-open" : ""}`}
         aria-hidden={!searchOpen}
         inert={!searchOpen}
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="mobile-nav-icon-soft">
-              <Search className="h-5 w-5" />
-            </span>
-            <p className="text-base font-bold tracking-[-0.01em] text-white">Кино іздеу</p>
-          </div>
-          <button
-            className="mobile-nav-icon-button h-10 w-10"
-            aria-label="Жабу"
-            type="button"
-            onClick={() => setSearchOpen(false)}
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form className="mt-4 flex gap-2" onSubmit={handleSearchSubmit}>
-          <label className="flex min-h-12 flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 text-white">
+        <form onSubmit={handleSearchSubmit}>
+          <label className="flex min-h-12 flex-1 items-center gap-3 rounded-[18px] border border-white/10 bg-black/24 px-4 text-white">
             <Search className="h-4 w-4 shrink-0 text-[var(--accent)]" />
             <input
               ref={searchInputRef}
@@ -154,38 +206,50 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
               onChange={(event) => setSearchValue(event.target.value)}
             />
           </label>
-          {searchValue && (
-            <button
-              className="mobile-nav-icon-button h-12 w-12 shrink-0 rounded-2xl"
-              aria-label="Іздеуді тазалау"
-              type="button"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={clearSearch}
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
-          <button
-            className="mobile-nav-submit-button flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-            aria-label="Іздеу"
-            type="submit"
-          >
-            <Search className="h-5 w-5" />
-          </button>
         </form>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {searchSuggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              className="mobile-nav-chip"
-              type="button"
-              onClick={() => submitSearch(suggestion)}
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
+        {trimmedSearch ? (
+          <div className="mobile-search-results mt-3">
+            {searchLoading ? (
+              <div className="mobile-search-state">Ізделіп жатыр...</div>
+            ) : searchResults.length > 0 ? (
+              searchResults.map((movie) => (
+                <button
+                  key={movie.id}
+                  className="mobile-search-result"
+                  type="button"
+                  onClick={() => openMovie(movie.slug)}
+                >
+                  <span className="relative h-14 w-10 shrink-0 overflow-hidden rounded-[10px] bg-white/10">
+                    <MovieImage
+                      src={movie.posterUrl}
+                      alt={movie.title}
+                      fallback="poster"
+                      fill
+                      sizes="40px"
+                      className="object-cover"
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block truncate text-sm font-bold tracking-[-0.006em] text-white">
+                      {movie.title}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs font-medium tracking-[0.004em] text-zinc-400">
+                      {getMovieMeta(movie)}
+                    </span>
+                    {movie.genres[0] ? (
+                      <span className="mt-0.5 block truncate text-[11px] font-semibold tracking-[0.006em] text-[rgba(217,183,111,0.82)]">
+                        {movie.genres.slice(0, 2).join(" · ")}
+                      </span>
+                    ) : null}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <div className="mobile-search-state">Ештеңе табылмады</div>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <button

@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Crown, Search, X } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { UserAvatar } from "@/components/user/user-avatar";
+import { MovieSearchResults, useMovieSearch } from "@/components/layout/movie-search-results";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
 import { cn } from "@/lib/cn";
 
@@ -28,6 +29,10 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
   const [hintIndex, setHintIndex] = useState(0);
   const [searchValue, setSearchValue] = useState("");
   const currentSearchQuery = searchParams.get("q") ?? "";
+  const trimmedSearch = searchValue.trim();
+  const searchActive = desktopActive && (focused || searchOpen);
+  const searchHasQuery = searchActive && Boolean(trimmedSearch);
+  const search = useMovieSearch(searchValue, searchActive, 50);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -98,20 +103,15 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
     window.requestAnimationFrame(() => searchInputRef.current?.focus());
   }
 
-  function submitSearch(value: string) {
-    const query = value.trim();
-
-    if (!query) {
-      focusSearchInput();
-      return;
-    }
-
-    const params = new URLSearchParams({ q: query });
-
-    router.push(`/catalog?${params.toString()}`);
+  function closeSearch() {
     searchInputRef.current?.blur();
     setFocused(false);
     setSearchOpen(false);
+  }
+
+  function openMovie(slug: string) {
+    router.push(`/${slug}`);
+    closeSearch();
   }
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -119,35 +119,37 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
 
     if (!searchOpen && !focused) {
       focusSearchInput();
-      return;
     }
-
-    submitSearch(searchValue);
   }
 
   function clearSearch() {
     setSearchValue("");
-
-    if (pathname === "/catalog" && currentSearchQuery) {
-      router.push("/catalog");
-    }
-
     focusSearchInput();
   }
 
   return (
-    <header className="fixed left-0 right-0 top-5 z-50 hidden justify-center px-6 lg:flex">
-      <motion.nav
-        className={cn(
-          "flex h-16 items-center gap-2 rounded-full border px-3 transition-colors duration-300",
-          scrolled
-            ? "border-white/[0.16] bg-black/[0.58] shadow-[0_22px_80px_rgba(0,0,0,0.5)] backdrop-blur-3xl"
-            : "border-white/[0.12] bg-white/[0.055] shadow-[0_18px_70px_rgba(0,0,0,0.34)] backdrop-blur-2xl"
-        )}
-        initial={{ opacity: 0, y: -18, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      >
+    <>
+      <button
+        className={cn("desktop-search-backdrop fixed inset-0 z-40 hidden lg:block", searchHasQuery ? "is-open" : "")}
+        aria-label="Іздеуді жабу"
+        aria-hidden={!searchHasQuery}
+        tabIndex={searchHasQuery ? 0 : -1}
+        type="button"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={closeSearch}
+      />
+      <header className="fixed left-0 right-0 top-5 z-50 hidden justify-center px-6 lg:flex">
+        <motion.nav
+          className={cn(
+            "flex h-16 items-center gap-2 rounded-full border px-3 transition-colors duration-300",
+            scrolled
+              ? "border-white/[0.16] bg-black/[0.58] shadow-[0_22px_80px_rgba(0,0,0,0.5)] backdrop-blur-3xl"
+              : "border-white/[0.12] bg-white/[0.055] shadow-[0_18px_70px_rgba(0,0,0,0.34)] backdrop-blur-2xl"
+          )}
+          initial={{ opacity: 0, y: -18, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        >
         <SiteLogo className="mr-1" priority />
 
         <div className="flex items-center">
@@ -191,7 +193,7 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
         <div className="ml-1 flex items-center gap-2 border-l border-white/10 pl-3">
           <motion.form
             className="relative"
-            animate={{ width: searchOpen || focused ? 220 : 44 }}
+            animate={{ width: searchOpen || focused ? 300 : 44 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
             onSubmit={handleSearchSubmit}
             onHoverStart={() => setSearchOpen(true)}
@@ -228,7 +230,9 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
                     }}
                     onBlur={() => {
                       setFocused(false);
-                      setSearchOpen(false);
+                      if (!searchValue.trim()) {
+                        setSearchOpen(false);
+                      }
                     }}
                   />
                   {searchValue && (
@@ -259,6 +263,17 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
                 </>
               )}
             </div>
+            {searchHasQuery ? (
+              <div className="desktop-search-popover">
+                <MovieSearchResults
+                  loading={search.loading}
+                  onSelect={openMovie}
+                  query={trimmedSearch}
+                  results={search.results}
+                  variant="desktop"
+                />
+              </div>
+            ) : null}
           </motion.form>
 
           <Link
@@ -282,7 +297,8 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
             />
           </Link>
         </div>
-      </motion.nav>
-    </header>
+        </motion.nav>
+      </header>
+    </>
   );
 }

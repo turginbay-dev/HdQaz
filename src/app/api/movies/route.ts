@@ -1,7 +1,9 @@
 import { requireAdmin } from "@/lib/api/auth";
 import { getPagination, getSearchBoolean, getSearchString, readJsonObject } from "@/lib/api/request";
 import { created, handleApiError, ok, validationError } from "@/lib/api/responses";
-import { createMovie, listMovies } from "@/features/movies/repository";
+import { createMovie } from "@/features/movies/repository";
+import { contentToMovieRecord, listContents } from "@/features/content/repository";
+import { selectMoviesByFilters } from "@/features/movies/queries";
 import { parseMovieInput } from "@/features/movies/validation";
 import type { MovieInput } from "@/types/backend";
 
@@ -14,18 +16,20 @@ export async function GET(request: Request) {
       await requireAdmin(request);
     }
 
-    const movies = await listMovies({
-      ...getPagination(searchParams),
+    const pagination = getPagination(searchParams);
+    const movies = selectMoviesByFilters((await listContents({ includeDrafts })).map(contentToMovieRecord), {
       catalog: getSearchString(searchParams, "catalog"),
       filter: getSearchString(searchParams, "filter"),
       genre: getSearchString(searchParams, "genre"),
-      includeDrafts,
       language: getSearchString(searchParams, "language"),
-      q: getSearchString(searchParams, "q")
+      q: getSearchString(searchParams, "q"),
+      type: getSearchString(searchParams, "type"),
+      year: getSearchString(searchParams, "year")
     });
+    const items = movies.slice(pagination.offset, pagination.offset + pagination.limit);
 
     return ok({
-      items: movies,
+      items,
       count: movies.length
     });
   } catch (error) {

@@ -6,10 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Crown, Search, X } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { UserAvatar } from "@/components/user/user-avatar";
-import { MovieImage } from "@/components/movie/movie-image";
-import { contentStatusLabels, contentTypeLabels, formatDurationMinutes, formatEpisodeCount, isEpisodicContent } from "@/features/content/format";
+import { MovieSearchResults, useMovieSearch } from "@/components/layout/movie-search-results";
 import { mainNavigation } from "@/lib/navigation";
-import type { Movie } from "@/types/movie";
 
 type MobileNavProps = {
   avatarUrl?: string | null;
@@ -25,52 +23,9 @@ const mobileNavigation = [
   ...mainNavigation.map((item) => (item.href === "/catalog" ? { ...item, label: "Каталог" } : item))
 ];
 
-type SearchResponse = {
-  data?: {
-    items?: Movie[];
-  };
-};
-
-function getMovieMeta(movie: Movie) {
-  const typeLabel = movie.type ? contentTypeLabels[movie.type] : "Фильм";
-  const statusLabel = movie.status ? contentStatusLabels[movie.status] : movie.isNewRelease ? "Жаңа" : "Аяқталған";
-  const lengthLabel = isEpisodicContent(movie)
-    ? formatEpisodeCount(movie.episodeCount)
-    : formatDurationMinutes(movie.durationMinutes) || movie.runtime;
-
-  return [typeLabel, movie.year ? String(movie.year) : "", statusLabel, lengthLabel, movie.dubber?.name ?? ""]
-    .filter(Boolean)
-    .join(" · ");
-}
-
-function normalizeSearchText(value: string) {
-  return value.trim().toLocaleLowerCase("kk-KZ");
-}
-
-function sortSearchResults(results: Movie[], query: string) {
-  const normalizedQuery = normalizeSearchText(query);
-
-  function score(movie: Movie) {
-    const title = normalizeSearchText(movie.title);
-    const originalTitle = normalizeSearchText(movie.originalTitle);
-
-    if (title === normalizedQuery) return 0;
-    if (title.startsWith(normalizedQuery)) return 1;
-    if (originalTitle.startsWith(normalizedQuery)) return 2;
-    if (title.includes(normalizedQuery)) return 3;
-    if (originalTitle.includes(normalizedQuery)) return 4;
-
-    return 5;
-  }
-
-  return [...results].sort((left, right) => score(left) - score(right) || left.title.localeCompare(right.title, "kk-KZ"));
-}
-
 export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<Movie[]>([]);
   const [searchValue, setSearchValue] = useState("");
   const pathname = usePathname();
   const router = useRouter();
@@ -78,6 +33,7 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
   const searchInputRef = useRef<HTMLInputElement>(null);
   const currentSearchQuery = searchParams.get("q") ?? "";
   const trimmedSearch = searchValue.trim();
+  const search = useMovieSearch(searchValue, searchOpen, 50);
 
   useEffect(() => {
     setSearchValue(currentSearchQuery);
@@ -88,54 +44,6 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
       window.requestAnimationFrame(() => searchInputRef.current?.focus());
     }
   }, [searchOpen]);
-
-  useEffect(() => {
-    if (!searchOpen) {
-      setSearchResults([]);
-      setSearchLoading(false);
-      return;
-    }
-
-    const query = searchValue.trim();
-
-    if (!query) {
-      setSearchResults([]);
-      setSearchLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeout = window.setTimeout(async () => {
-      setSearchLoading(true);
-
-      try {
-        const response = await fetch(`/api/movies?q=${encodeURIComponent(query)}&limit=50`, {
-          signal: controller.signal
-        });
-
-        if (!response.ok) {
-          setSearchResults([]);
-          return;
-        }
-
-        const payload = (await response.json()) as SearchResponse;
-        setSearchResults(sortSearchResults(payload.data?.items ?? [], query));
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setSearchResults([]);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setSearchLoading(false);
-        }
-      }
-    }, 180);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timeout);
-    };
-  }, [searchOpen, searchValue]);
 
   function openMovie(slug: string) {
     router.push(`/${slug}`);
@@ -208,48 +116,13 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
           </label>
         </form>
 
-        {trimmedSearch ? (
-          <div className="mobile-search-results mt-3">
-            {searchLoading ? (
-              <div className="mobile-search-state">Ізделіп жатыр...</div>
-            ) : searchResults.length > 0 ? (
-              searchResults.map((movie) => (
-                <button
-                  key={movie.id}
-                  className="mobile-search-result"
-                  type="button"
-                  onClick={() => openMovie(movie.slug)}
-                >
-                  <span className="relative h-14 w-10 shrink-0 overflow-hidden rounded-[10px] bg-white/10">
-                    <MovieImage
-                      src={movie.posterUrl}
-                      alt={movie.title}
-                      fallback="poster"
-                      fill
-                      sizes="40px"
-                      className="object-cover"
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1 text-left">
-                    <span className="block truncate text-sm font-bold tracking-[-0.006em] text-white">
-                      {movie.title}
-                    </span>
-                    <span className="mt-0.5 block truncate text-xs font-medium tracking-[0.004em] text-zinc-400">
-                      {getMovieMeta(movie)}
-                    </span>
-                    {movie.genres[0] ? (
-                      <span className="mt-0.5 block truncate text-[11px] font-semibold tracking-[0.006em] text-[rgba(217,183,111,0.82)]">
-                        {movie.genres.slice(0, 2).join(" · ")}
-                      </span>
-                    ) : null}
-                  </span>
-                </button>
-              ))
-            ) : (
-              <div className="mobile-search-state">Ештеңе табылмады</div>
-            )}
-          </div>
-        ) : null}
+        <MovieSearchResults
+          loading={search.loading}
+          onSelect={openMovie}
+          query={trimmedSearch}
+          results={search.results}
+          variant="mobile"
+        />
       </div>
 
       <button

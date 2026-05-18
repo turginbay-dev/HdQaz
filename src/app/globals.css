@@ -340,6 +340,76 @@ body:has(.app-loading-screen) {
   font-weight: 700;
 }
 
+.desktop-search-backdrop {
+  background: rgba(0, 0, 0, 0.68);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.desktop-search-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.desktop-search-popover {
+  position: absolute;
+  top: calc(100% + 0.2rem);
+  right: 0;
+  z-index: 60;
+  width: min(31rem, calc(100vw - 2rem));
+}
+
+.desktop-search-results {
+  display: grid;
+  max-height: min(33rem, calc(100vh - 8rem));
+  gap: 0.62rem;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 1.35rem;
+  background:
+    linear-gradient(180deg, rgba(14, 15, 20, 0.96), rgba(5, 6, 10, 0.94)),
+    rgba(0, 0, 0, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 28px 90px rgba(0, 0, 0, 0.72);
+  padding: 0.72rem;
+}
+
+.desktop-search-result {
+  display: flex;
+  width: 100%;
+  min-height: 6.25rem;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.065);
+  padding: 0.66rem;
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.desktop-search-result:hover {
+  border-color: rgba(217, 183, 111, 0.34);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.desktop-search-state {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 1rem 1.1rem;
+  color: #d4d4d8;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
 .mobile-nav-drawer-brand {
   display: inline-flex;
   min-height: 2.75rem;

@@ -2,6 +2,7 @@ export const MOVIE_BACKDROP_FALLBACK = "/movie-backdrop-fallback.svg";
 export const MOVIE_POSTER_FALLBACK = "/movie-poster-fallback.svg";
 
 const tmdbWebImageHosts = new Set(["media.themoviedb.org", "www.themoviedb.org"]);
+const allowedRemoteImageHosts = new Set(["image.tmdb.org", "cdn.hdqaz.online"]);
 
 function normalizeRemoteMovieImageUrl(value: string): string | null {
   try {
@@ -17,7 +18,7 @@ function normalizeRemoteMovieImageUrl(value: string): string | null {
       url.hostname = "image.tmdb.org";
     }
 
-    if (url.hostname !== "image.tmdb.org") {
+    if (!allowedRemoteImageHosts.has(url.hostname)) {
       return null;
     }
 

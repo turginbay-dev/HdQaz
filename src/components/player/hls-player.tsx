@@ -182,6 +182,8 @@ function initialSnapshot(progress: InitialWatchProgress | null | undefined): Sav
 
 export function HlsPlayer({ contentId, initialWatchProgress, src, poster, languages, skipIntro, nextEpisode }: HlsPlayerProps) {
   const playerRef = useRef<HTMLElement | null>(null);
+  const settingsAnchorRef = useRef<HTMLDivElement | null>(null);
+  const settingsMenuRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const usingHlsJsRef = useRef(false);
@@ -495,13 +497,16 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
 
   useEffect(() => {
     const closeMenus = (event: PointerEvent) => {
-      const player = playerRef.current;
+      const target = event.target as Node | null;
+      const settingsAnchor = settingsAnchorRef.current;
+      const settingsMenu = settingsMenuRef.current;
 
-      if (!player || player.contains(event.target as Node)) {
+      if (!target || settingsAnchor?.contains(target) || settingsMenu?.contains(target)) {
         return;
       }
 
       setActiveMenu(null);
+      setSettingsPanel("root");
     };
 
     document.addEventListener("pointerdown", closeMenus);
@@ -1083,7 +1088,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
 
   function renderSettingsMenu(className?: string) {
     return (
-      <div className={cn("cinema-menu cinema-settings-menu", className)} role="menu" aria-label="Плеер баптаулары">
+      <div ref={settingsMenuRef} className={cn("cinema-menu cinema-settings-menu", className)} role="menu" aria-label="Плеер баптаулары">
         {settingsPanel === "root" ? (
           <>
             <button className="cinema-menu-item" onClick={() => setSettingsPanel("quality")} type="button">
@@ -1471,7 +1476,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                 </div>
 
                 <div className="cinema-secondary-controls">
-                  <div className="cinema-settings-anchor relative">
+                  <div ref={settingsAnchorRef} className="cinema-settings-anchor relative">
                     <button
                       className="cinema-control-button"
                       aria-label="Плеер баптаулары"

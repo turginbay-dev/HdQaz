@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Info } from "lucide-react";
@@ -32,6 +32,7 @@ const dust = Array.from({ length: 5 }, (_, index) => ({
 export function HeroBanner({ movies }: HeroBannerProps) {
   const slides = useMemo(() => movies.filter(Boolean), [movies]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const isMobileHero = useMobileHeroMode();
   const movie = slides[activeIndex] ?? slides[0];
 
   if (!movie) {
@@ -50,19 +51,25 @@ export function HeroBanner({ movies }: HeroBannerProps) {
 
   return (
     <section className="hero-vignette relative overflow-hidden">
-      <div className="absolute inset-0 scale-[1.05] bg-[#030305]">
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={movie.id}
-            className="absolute inset-0"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <HeroBackdrop movie={movie} />
-          </motion.div>
-        </AnimatePresence>
+      <div className={cn("absolute inset-0 bg-[#030305]", isMobileHero ? "scale-100" : "scale-[1.05]")}>
+        {isMobileHero ? (
+          <div className="absolute inset-0">
+            <HeroBackdrop movie={movie} mobile />
+          </div>
+        ) : (
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={movie.id}
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <HeroBackdrop movie={movie} />
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
 
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_68%_30%,rgba(255,180,92,0.16),transparent_32%),radial-gradient(ellipse_at_24%_18%,rgba(143,183,255,0.14),transparent_34%)]" />
@@ -91,105 +98,176 @@ export function HeroBanner({ movies }: HeroBannerProps) {
       ) : null}
 
       <div className="hero-layout relative mx-auto grid w-full max-w-7xl items-end gap-8 px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-28 lg:grid-cols-[minmax(0,1fr)_280px] lg:px-8 lg:pb-[4.5rem] lg:pt-[7.5rem] xl:grid-cols-[minmax(0,1fr)_320px]">
-        <AnimatePresence initial={false} mode="wait">
-          <motion.div
-            key={`content-${movie.id}`}
-            className="max-w-4xl"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-3.5 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-zinc-200 backdrop-blur-xl">
-              <LogoMark className="h-6 w-10 p-0.5" sizes="40px" />
-              HdQaz таңдауы
-            </div>
-
-            <div className="mb-4 flex flex-wrap gap-2">
-              <MovieBadge label={typeLabel} />
-              <MovieBadge label={statusLabel} />
-              {movie.badges.map((badge) => (
-                <MovieBadge key={badge} label={badge === "Қазақша субтитрмен" ? "Қазақша субтитр" : badge} />
-              ))}
-              {movie.dubber?.name ? <MovieBadge label={movie.dubber.name} /> : null}
-              <MovieBadge label="1080p" />
-            </div>
-
-            <h1
-              className={cn(
-                "type-cinematic max-w-4xl break-words leading-[0.94] tracking-[var(--tracking-cinematic)] text-white",
-                hasComment
-                  ? "[font-size:clamp(2.1rem,8.4vw,3.8rem)] sm:[font-size:clamp(2.6rem,5.9vw,5rem)]"
-                  : "[font-size:clamp(2.35rem,9vw,4.35rem)] sm:[font-size:clamp(2.9rem,6.5vw,5.8rem)]"
-              )}
+        {isMobileHero ? (
+          <div className="mobile-hero-content max-w-4xl">
+            <HeroContent
+              comment={comment}
+              hasComment={hasComment}
+              movie={movie}
+              statusLabel={statusLabel}
+              typeLabel={typeLabel}
+            />
+          </div>
+        ) : (
+          <AnimatePresence initial={false} mode="wait">
+            <motion.div
+              key={`content-${movie.id}`}
+              className="max-w-4xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
             >
-              {movie.title}
-            </h1>
+              <HeroContent
+                comment={comment}
+                hasComment={hasComment}
+                movie={movie}
+                statusLabel={statusLabel}
+                typeLabel={typeLabel}
+              />
+            </motion.div>
+          </AnimatePresence>
+        )}
 
-            {comment ? (
-              <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 tracking-[0.006em] text-zinc-200 sm:text-base sm:leading-7">
-                {comment}
-              </p>
-            ) : null}
-
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <WatchButton href={`/${movie.slug}#player`} className="min-h-10 w-full min-w-0 px-4 sm:w-auto sm:min-h-11 sm:min-w-32" />
-              <PremiumButton href={`/${movie.slug}`} variant="glass" className="min-h-10 w-full min-w-0 px-4 sm:w-auto sm:min-h-11 sm:min-w-32">
-                <Info className="h-4 w-4" />
-                Толығырақ
-              </PremiumButton>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-
-        <AnimatePresence initial={false} mode="wait">
-          <motion.div
-            key={`poster-${movie.id}`}
-            className="relative mx-auto hidden w-full max-w-[250px] pb-4 lg:block xl:max-w-[280px]"
-            initial={{ opacity: 0, x: 28 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 18 }}
-            transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="absolute -inset-8 rounded-full bg-[rgba(217,183,111,0.16)] blur-3xl" />
-            <div className="poster-reflection relative aspect-[2/3] overflow-hidden rounded-[24px] border border-white/[0.16] bg-white/[0.06] p-1.5 shadow-[0_28px_90px_rgba(0,0,0,0.62)] backdrop-blur-xl">
-              <div className="relative h-full overflow-hidden rounded-[19px]">
-                <MovieImage
-                  src={movie.posterUrl}
-                  alt={movie.title}
-                  fallback="poster"
-                  fill
-                  sizes={HERO_POSTER_SIZES}
-                  placeholder="blur"
-                  blurDataURL={HERO_BLUR_DATA_URL}
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/[0.32] via-transparent to-white/[0.08]" />
+        {!isMobileHero ? (
+          <AnimatePresence initial={false} mode="wait">
+            <motion.div
+              key={`poster-${movie.id}`}
+              className="relative mx-auto hidden w-full max-w-[250px] pb-4 lg:block xl:max-w-[280px]"
+              initial={{ opacity: 0, x: 28 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 18 }}
+              transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="absolute -inset-8 rounded-full bg-[rgba(217,183,111,0.16)] blur-3xl" />
+              <div className="poster-reflection relative aspect-[2/3] overflow-hidden rounded-[24px] border border-white/[0.16] bg-white/[0.06] p-1.5 shadow-[0_28px_90px_rgba(0,0,0,0.62)] backdrop-blur-xl">
+                <div className="relative h-full overflow-hidden rounded-[19px]">
+                  <MovieImage
+                    src={movie.posterUrl}
+                    alt={movie.title}
+                    fallback="poster"
+                    fill
+                    sizes={HERO_POSTER_SIZES}
+                    placeholder="blur"
+                    blurDataURL={HERO_BLUR_DATA_URL}
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/[0.32] via-transparent to-white/[0.08]" />
+                </div>
               </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
+            </motion.div>
+          </AnimatePresence>
+        ) : null}
       </div>
     </section>
   );
 }
 
-const HeroBackdrop = memo(function HeroBackdrop({ movie }: { movie: Movie }) {
+function useMobileHeroMode() {
+  const [isMobileHero, setIsMobileHero] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 640px)");
+    const sync = () => setIsMobileHero(media.matches);
+
+    sync();
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", sync);
+
+      return () => {
+        media.removeEventListener("change", sync);
+      };
+    }
+
+    media.addListener(sync);
+
+    return () => {
+      media.removeListener(sync);
+    };
+  }, []);
+
+  return isMobileHero;
+}
+
+function HeroContent({
+  comment,
+  hasComment,
+  movie,
+  statusLabel,
+  typeLabel
+}: {
+  comment?: string;
+  hasComment: boolean;
+  movie: Movie;
+  statusLabel: string;
+  typeLabel: string;
+}) {
+  return (
+    <>
+      <div className="mobile-hero-eyebrow mb-4 inline-flex items-center gap-2 rounded-full border border-white/[0.14] bg-white/10 px-3.5 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-zinc-200 backdrop-blur-xl">
+        <LogoMark className="h-6 w-10 p-0.5" sizes="40px" />
+        HdQaz таңдауы
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        <MovieBadge label={typeLabel} />
+        <MovieBadge label={statusLabel} />
+        {movie.badges.map((badge) => (
+          <MovieBadge key={badge} label={badge === "Қазақша субтитрмен" ? "Қазақша субтитр" : badge} />
+        ))}
+        {movie.dubber?.name ? <MovieBadge label={movie.dubber.name} /> : null}
+        <MovieBadge label="1080p" />
+      </div>
+
+      <h1
+        className={cn(
+          "type-cinematic max-w-4xl break-words leading-[0.94] tracking-[var(--tracking-cinematic)] text-white",
+          hasComment
+            ? "[font-size:clamp(2.1rem,8.4vw,3.8rem)] sm:[font-size:clamp(2.6rem,5.9vw,5rem)]"
+            : "[font-size:clamp(2.35rem,9vw,4.35rem)] sm:[font-size:clamp(2.9rem,6.5vw,5.8rem)]"
+        )}
+      >
+        {movie.title}
+      </h1>
+
+      {comment ? (
+        <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 tracking-[0.006em] text-zinc-200 sm:text-base sm:leading-7">
+          {comment}
+        </p>
+      ) : null}
+
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <WatchButton href={`/${movie.slug}#player`} className="min-h-10 w-full min-w-0 px-4 sm:w-auto sm:min-h-11 sm:min-w-32" />
+        <PremiumButton href={`/${movie.slug}`} variant="glass" className="min-h-10 w-full min-w-0 px-4 sm:w-auto sm:min-h-11 sm:min-w-32">
+          <Info className="h-4 w-4" />
+          Толығырақ
+        </PremiumButton>
+      </div>
+    </>
+  );
+}
+
+const HeroBackdrop = memo(function HeroBackdrop({ mobile = false, movie }: { mobile?: boolean; movie: Movie }) {
   const [imageLoaded, setImageLoaded] = useState(false);
 
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [movie.id]);
+
   return (
-    <div className="hero-backdrop-fallback absolute inset-0">
+    <div className={cn("hero-backdrop-fallback absolute inset-0", mobile && "hero-backdrop-mobile")}>
       <MovieImage
         src={movie.backdropUrl}
         alt=""
         fallback="backdrop"
         fill
-        priority={true}
-        fetchPriority="high"
+        priority={!mobile}
+        fetchPriority={mobile ? "auto" : "high"}
         sizes={HERO_BACKDROP_SIZES}
-        placeholder="blur"
-        blurDataURL={HERO_BLUR_DATA_URL}
-        onLoadingComplete={() => setImageLoaded(true)}
+        placeholder={mobile ? "empty" : "blur"}
+        blurDataURL={mobile ? undefined : HERO_BLUR_DATA_URL}
+        onLoad={() => setImageLoaded(true)}
         className={cn("hero-backdrop-image object-cover", imageLoaded && "is-loaded")}
       />
     </div>

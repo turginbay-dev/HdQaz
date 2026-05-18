@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Crown, Search, X } from "lucide-react";
+import { SiteLogo } from "@/components/layout/site-logo";
+import { UserAvatar } from "@/components/user/user-avatar";
 import { mainNavigation, searchSuggestions } from "@/lib/navigation";
 
 type MobileNavProps = {
@@ -20,17 +22,7 @@ const mobileNavigation = [
   ...mainNavigation.map((item) => (item.href === "/catalog" ? { ...item, label: "Каталог" } : item))
 ];
 
-function getInitials(value?: string | null) {
-  const parts = value?.trim().split(/\s+/).filter(Boolean) ?? [];
-
-  if (parts.length === 0) {
-    return "H";
-  }
-
-  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
-}
-
-export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
+export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -39,7 +31,6 @@ export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
   const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const currentSearchQuery = searchParams.get("q") ?? "";
-  const profileInitials = getInitials(displayName);
 
   useEffect(() => {
     setSearchValue(currentSearchQuery);
@@ -83,7 +74,7 @@ export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
 
   return (
     <>
-      <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-4 py-4 lg:hidden">
+      <header className="fixed left-0 right-0 top-0 z-50 grid grid-cols-[3.55rem_1fr_3rem] items-center px-4 py-4 lg:hidden">
         <button
           className="mobile-nav-trigger"
           aria-label="Мәзірді ашу"
@@ -100,8 +91,14 @@ export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
             <span />
           </span>
         </button>
+        <SiteLogo
+          variant="mobile"
+          className="mobile-nav-header-logo justify-self-center"
+          markClassName="h-11 w-[66px] rounded-[18px] p-0.5"
+          priority
+        />
         <button
-          className="mobile-nav-icon-button"
+          className="mobile-nav-icon-button justify-self-end"
           aria-label="Іздеу"
           aria-expanded={searchOpen}
           type="button"
@@ -205,14 +202,13 @@ export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
         inert={!open}
       >
         <div className="flex items-center justify-between">
-          <Link
+          <SiteLogo
             href="/"
-            aria-label="HdQaz басты бет"
             className="mobile-nav-drawer-brand"
+            variant="drawer"
+            markClassName="h-11 w-[66px] rounded-[18px] p-0.5"
             onClick={() => setOpen(false)}
-          >
-            <span>HdQaz</span>
-          </Link>
+          />
           <button
             className="mobile-nav-icon-button h-10 w-10"
             aria-label="Жабу"
@@ -270,9 +266,12 @@ export function MobileNav({ displayName, isPremium = false }: MobileNavProps) {
               onClick={() => setOpen(false)}
             >
               <span className="inline-flex items-center gap-2">
-                <span className="mobile-nav-avatar" aria-hidden="true">
-                  {profileInitials}
-                </span>
+                <UserAvatar
+                  avatarUrl={avatarUrl}
+                  displayName={displayName}
+                  className="h-7 w-7"
+                  sizes="28px"
+                />
                 Профиль
               </span>
               {pathname === "/profile" && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}

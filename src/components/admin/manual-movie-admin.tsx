@@ -13,7 +13,7 @@ import {
   slugifyContent
 } from "@/features/content/format";
 import type { ContentReleaseFormat } from "@/features/content/format";
-import type { Content, ContentStatus, ContentType, Dubber, Episode, Genre } from "@/types/content";
+import type { Content, ContentStatus, ContentType, Dubber, Episode, Genre, Season } from "@/types/content";
 
 type AdminContent = {
   id: string;
@@ -42,10 +42,12 @@ type AdminContent = {
   isPremium: boolean;
   isPublished: boolean;
   episodes: Episode[];
+  seasons: Season[];
 };
 
 type EpisodeDraft = {
   id: string;
+  seasonId: string;
   episodeNumber: string;
   title: string;
   hlsUrl: string;
@@ -147,13 +149,15 @@ function createEmptyContent(): AdminContent {
     hasKazakhSubtitles: true,
     isPremium: false,
     isPublished: false,
+    seasons: [],
     episodes: []
   };
 }
 
-function createEmptyEpisode(nextNumber = 1): EpisodeDraft {
+function createEmptyEpisode(nextNumber = 1, seasonId = ""): EpisodeDraft {
   return {
     id: "",
+    seasonId,
     episodeNumber: String(nextNumber),
     title: "",
     hlsUrl: "",
@@ -161,7 +165,7 @@ function createEmptyEpisode(nextNumber = 1): EpisodeDraft {
     durationMinutes: "",
     introStartSeconds: "",
     introEndSeconds: "",
-    isPublished: true
+    isPublished: false
   };
 }
 
@@ -181,7 +185,7 @@ function createEmptyDubber(): DubberDraft {
 }
 
 function sortEpisodes(episodes: Episode[]) {
-  return [...episodes].sort((left, right) => left.episodeNumber - right.episodeNumber);
+  return [...episodes].sort((left, right) => (left.seasonNumber ?? 0) - (right.seasonNumber ?? 0) || left.episodeNumber - right.episodeNumber);
 }
 
 function getReleaseFormat(content: Content): ContentReleaseFormat {
@@ -223,6 +227,7 @@ function toAdminContent(content: Content): AdminContent {
     hasKazakhSubtitles: content.hasKazakhSubtitles || !content.dubberId,
     isPremium: content.isPremium,
     isPublished: content.isPublished,
+    seasons: content.seasons,
     episodes: sortEpisodes(content.episodes)
   };
 }
@@ -230,9 +235,10 @@ function toAdminContent(content: Content): AdminContent {
 function toEpisodeDraft(episode: Episode): EpisodeDraft {
   return {
     id: episode.id,
+    seasonId: episode.seasonId ?? "",
     episodeNumber: String(episode.episodeNumber),
     title: episode.title ?? "",
-    hlsUrl: episode.hlsUrl,
+    hlsUrl: episode.hlsUrl ?? "",
     thumbnailUrl: episode.thumbnailUrl ?? "",
     durationMinutes: episode.durationMinutes ? String(episode.durationMinutes) : "",
     introStartSeconds: episode.introStartSeconds !== null && episode.introStartSeconds !== undefined ? String(episode.introStartSeconds) : "",
@@ -284,6 +290,8 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
   const [dubberDraft, setDubberDraft] = useState<DubberDraft>(() => createEmptyDubber());
   const [typeFilter, setTypeFilter] = useState<ContentType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<ContentStatus | "all">("all");
+  const [seasonNumber, setSeasonNumber] = useState("");
+  const [isSavingSeason, setIsSavingSeason] = useState(false);
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [isSavingEpisode, setIsSavingEpisode] = useState(false);
   const [isSavingDubber, setIsSavingDubber] = useState(false);
@@ -305,8 +313,9 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
   const selectedGenreNames = genres
     .filter((genre) => contentDraft.genreIds.includes(genre.id))
     .map((genre) => genre.name);
-  const nextEpisodeNumber = contentDraft.episodes.length > 0
-    ? Math.max(...contentDraft.episodes.map((episode) => episode.episodeNumber)) + 1
+  const seasonEpisodes = contentDraft.episodes.filter((episode) => (episode.seasonId ?? "") === episodeDraft.seasonId);
+  const nextEpisodeNumber = seasonEpisodes.length > 0
+    ? Math.max(...seasonEpisodes.map((episode) => episode.episodeNumber)) + 1
     : 1;
   const activeSlug = editingSlug ?? contentDraft.slug;
   const draftIsEpisodic = isEpisodicDraft(contentDraft);
@@ -323,7 +332,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
     contentDraft.genreIds.length > 0 &&
     (!draftIsEpisodic ? Boolean(contentDraft.hlsUrl) : true);
   const canSaveEpisode =
-    Boolean(contentDraft.id && activeSlug && episodeDraft.episodeNumber && episodeDraft.hlsUrl) &&
+    Boolean(contentDraft.id && activeSlug && episodeDraft.episodeNumber && (!episodeDraft.isPublished || episodeDraft.hlsUrl.trim())) &&
     draftIsEpisodic &&
     canHaveEpisodes(contentDraft.type);
   const canSaveDubber = Boolean(dubberDraft.name && dubberDraft.slug);
@@ -575,6 +584,28 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
     );
   }
 
+  async function saveSeason() {
+    if (isSavingSeason) return;
+    setIsSavingSeason(true);
+    setEpisodeError(null);
+    try {
+      const response = await fetch(`/api/contents/${encodeURIComponent(activeSlug)}/seasons`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seasonNumber: Number(seasonNumber) })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.data) throw new Error(result.error?.message || "Маусымды сақтау мүмкін болмады.");
+      const season = result.data as Season;
+      const seasons = [...contentDraft.seasons, season].sort((a, b) => a.seasonNumber - b.seasonNumber);
+      setContentDraft((current) => ({ ...current, seasons }));
+      setContents((current) => current.map((item) => item.id === contentDraft.id ? { ...item, seasons } : item));
+      setEpisodeDraft(createEmptyEpisode(1, season.id));
+      setSeasonNumber("");
+    } catch (error) {
+      setEpisodeError(error instanceof Error ? error.message : "Маусымды сақтау мүмкін болмады.");
+    } finally { setIsSavingSeason(false); }
+  }
+
   async function saveEpisode() {
     if (!canSaveEpisode || isSavingEpisode) {
       return;
@@ -585,9 +616,10 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
 
     try {
       const payload = {
+        seasonId: episodeDraft.seasonId || null,
         episodeNumber: Number(episodeDraft.episodeNumber),
         title: episodeDraft.title || null,
-        hlsUrl: episodeDraft.hlsUrl,
+        hlsUrl: episodeDraft.hlsUrl || null,
         thumbnailUrl: episodeDraft.thumbnailUrl || null,
         durationMinutes: episodeDraft.durationMinutes ? Number(episodeDraft.durationMinutes) : null,
         introStartSeconds: episodeDraft.introStartSeconds ? Number(episodeDraft.introStartSeconds) : null,
@@ -618,7 +650,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         : [...contentDraft.episodes, savedEpisode];
 
       updateLocalEpisodes(nextEpisodes);
-      setEpisodeDraft(createEmptyEpisode(Math.max(nextEpisodeNumber, savedEpisode.episodeNumber + 1)));
+      setEpisodeDraft(createEmptyEpisode(Math.max(nextEpisodeNumber, savedEpisode.episodeNumber + 1), episodeDraft.seasonId));
     } catch (error) {
       setEpisodeError(error instanceof Error ? error.message : "Серияны сақтау мүмкін болмады.");
     } finally {
@@ -649,7 +681,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
 
       updateLocalEpisodes(contentDraft.episodes.filter((item) => item.id !== episode.id));
       if (episodeDraft.id === episode.id) {
-        setEpisodeDraft(createEmptyEpisode(nextEpisodeNumber));
+        setEpisodeDraft(createEmptyEpisode(nextEpisodeNumber, episodeDraft.seasonId));
       }
     } catch (error) {
       setEpisodeError(error instanceof Error ? error.message : "Серияны өшіру мүмкін болмады.");
@@ -909,7 +941,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
               </div>
               <button
                 className="glass-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold tracking-[0.01em] text-white"
-                onClick={() => setEpisodeDraft(createEmptyEpisode(nextEpisodeNumber))}
+                onClick={() => setEpisodeDraft(createEmptyEpisode(nextEpisodeNumber, episodeDraft.seasonId))}
                 type="button"
               >
                 <Plus className="h-4 w-4" />
@@ -917,6 +949,14 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
               </button>
             </div>
 
+            {contentDraft.id ? (
+              <div className="mb-4 flex items-end gap-3">
+                <AdminInput label="Жаңа маусым нөмірі" value={seasonNumber} onChange={setSeasonNumber} placeholder="2" />
+                <button type="button" className="glass-button rounded-xl p-3 text-sm text-white" disabled={isSavingSeason || !seasonNumber} onClick={() => void saveSeason()}>
+                  {isSavingSeason ? "Сақталуда..." : "Маусым қосу"}
+                </button>
+              </div>
+            ) : null}
             {!contentDraft.id ? (
               <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-zinc-400">
                 Алдымен дорама, сериал немесе аниме контентін сақтаңыз. Содан кейін серияларды осы жерде қосасыз.
@@ -929,7 +969,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                       <article key={episode.id} className="glass flex flex-col gap-3 rounded-[24px] p-4 sm:flex-row sm:items-center">
                         <div className="min-w-0 flex-1">
                           <h4 className="font-semibold text-white">
-                            {episode.episodeNumber}-серия
+                            {episode.seasonNumber ? `${episode.seasonNumber}-маусым · ` : "Маусымы белгісіз · "}{episode.episodeNumber}-серия
                             {episode.title ? ` — ${episode.title}` : ""}
                           </h4>
                           <p className="mt-1 truncate text-xs text-zinc-500">
@@ -969,6 +1009,19 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                     {episodeDraft.id ? "Серияны өңдеу" : "Серия қосу"}
                   </h4>
                   <div className="grid gap-3">
+                    <label className="text-sm text-zinc-300">
+                      Маусым
+                      <select className="mt-2 w-full rounded-xl bg-zinc-900 p-3" value={episodeDraft.seasonId}
+                        onChange={(event) => {
+                          const seasonId = event.target.value;
+                          const items = contentDraft.episodes.filter((item) => (item.seasonId ?? "") === seasonId);
+                          setEpisodeDraft((current) => ({ ...current, seasonId,
+                            episodeNumber: current.id ? current.episodeNumber : String(Math.max(0, ...items.map((item) => item.episodeNumber)) + 1) }));
+                        }}>
+                        <option value="">Маусымы белгісіз</option>
+                        {contentDraft.seasons.map((season) => <option key={season.id} value={season.id}>{season.seasonNumber}-маусым{season.title ? ` — ${season.title}` : ""}</option>)}
+                      </select>
+                    </label>
                     <AdminInput
                       label="Серия нөмірі"
                       value={episodeDraft.episodeNumber}

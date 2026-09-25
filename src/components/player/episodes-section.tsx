@@ -54,7 +54,7 @@ export function EpisodesSection({ contentSlug, episodes, selectedEpisodeId }: Ep
               <>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-bold tracking-[0.01em] text-[var(--accent)]">
-                    {episode.episodeNumber}-серия
+                    {episode.seasonNumber ? `${episode.seasonNumber}-маусым · ` : ""}{episode.episodeNumber}-серия
                   </p>
                   {active ? (
                     <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[rgba(217,183,111,0.34)] bg-[rgba(217,183,111,0.14)] text-[var(--accent)]">

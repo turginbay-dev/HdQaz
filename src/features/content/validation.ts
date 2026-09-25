@@ -286,7 +286,17 @@ export function parseDubberInput(payload: Record<string, unknown>): ValidationRe
 export function parseEpisodeInput(payload: Record<string, unknown>): ValidationResult<EpisodeInput> {
   const errors: Record<string, string> = {};
   const episodeNumber = asNumber(payload.episodeNumber);
-  const hlsUrl = requireString(payload, "hlsUrl", errors);
+  const hlsUrl = asNullableString(payload.hlsUrl) || null;
+  const seasonId = asNullableString(payload.seasonId);
+  if (payload.seasonId !== undefined && payload.seasonId !== null && typeof payload.seasonId !== "string") {
+    errors.seasonId = "Must be a valid season ID.";
+  }
+  if (seasonId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(seasonId)) {
+    errors.seasonId = "Must be a valid season ID.";
+  }
+  if (asBoolean(payload.isPublished) && !hlsUrl) {
+    errors.hlsUrl = "Published episodes require an HLS URL.";
+  }
   const slug = asNullableString(payload.slug);
   const thumbnailUrl = optionalUrl(payload, "thumbnailUrl", errors);
   const durationMinutes = asNumber(payload.durationMinutes);
@@ -326,10 +336,11 @@ export function parseEpisodeInput(payload: Record<string, unknown>): ValidationR
     data: {
       episodeNumber: episodeNumber ?? 1,
       title: asNullableString(payload.title) ?? null,
-      slug: slug || String(episodeNumber ?? 1),
+      slug: slug || null,
       description: asNullableString(payload.description) ?? null,
       thumbnailUrl,
-      hlsUrl: hlsUrl ?? "",
+      hlsUrl,
+      ...(seasonId !== undefined ? { seasonId: seasonId || null } : {}),
       durationMinutes: durationMinutes ?? null,
       introStartSeconds: introStartSeconds ?? null,
       introEndSeconds: introEndSeconds ?? null,

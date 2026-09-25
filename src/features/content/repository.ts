@@ -1,3 +1,4 @@
+import { prepareEpisode } from "@/features/content/episodes";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "@/lib/api/errors";
 import { normalizeMovieImageUrl } from "@/lib/movie-images";
@@ -5,7 +6,7 @@ import { getOptionalAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { movies } from "@/features/movies/data";
 import { formatDurationMinutes, formatEpisodeCount, isEpisodicContent, slugifyContent } from "@/features/content/format";
-import type { Content, ContentInput, ContentStatus, ContentType, Dubber, DubberInput, Episode, EpisodeInput, Genre } from "@/types/content";
+import type { Content, ContentInput, ContentStatus, ContentType, Dubber, DubberInput, Episode, EpisodeInput, Genre, Season } from "@/types/content";
 import type { MovieRecord } from "@/types/backend";
 
 export type ContentListFilters = {
@@ -48,12 +49,13 @@ type ContentRow = {
 type EpisodeRow = {
   id: string;
   content_id: string;
+  season_id: string | null;
   episode_number: number;
   title: string | null;
   slug: string;
   description: string | null;
   thumbnail_url: string | null;
-  hls_url: string;
+  hls_url: string | null;
   duration_minutes: number | null;
   intro_start_seconds: number | null;
   intro_end_seconds: number | null;
@@ -178,6 +180,7 @@ function rowToEpisode(row: EpisodeRow): Episode {
   return {
     id: row.id,
     contentId: row.content_id,
+    seasonId: row.season_id,
     episodeNumber: row.episode_number,
     title: row.title,
     slug: row.slug,
@@ -199,6 +202,7 @@ function rowToContent(
     dubber?: Dubber | null;
     episodes?: Episode[];
     genres?: Genre[];
+    seasons?: Season[];
   } = {}
 ): Content {
   const episodes = relations.episodes ?? [];
@@ -224,6 +228,7 @@ function rowToContent(
     dubber: relations.dubber ?? null,
     genres: relations.genres ?? [],
     episodes,
+    seasons: relations.seasons ?? [],
     episodeCount: episodes.length,
     heroComment: row.hero_comment ?? null,
     heroOrder: row.hero_order ?? null,
@@ -282,6 +287,7 @@ function episodeToRow(input: EpisodeInput, contentId: string): EpisodeRowPatch {
   return {
     ...(input.id ? { id: input.id } : {}),
     content_id: contentId,
+    ...(input.seasonId !== undefined ? { season_id: input.seasonId } : {}),
     episode_number: input.episodeNumber,
     title: input.title ?? null,
     slug: input.slug?.trim() || String(input.episodeNumber),
@@ -336,6 +342,7 @@ function seedContents(): Content[] {
       slug: slugifyContent(name)
     })),
     episodes: [],
+    seasons: [],
     episodeCount: 0,
     heroComment: null,
     heroOrder: null,
@@ -397,11 +404,17 @@ async function hydrateContents(
     .order("content_id", { ascending: true })
     .order("episode_number", { ascending: true });
 
-  const [contentGenresResult, episodesResult, dubbersResult] = await Promise.all([
+  const [contentGenresResult, episodesResult, dubbersResult, seasonsResult] = await Promise.all([
     contentGenresQuery,
     options.includeDrafts ? episodesQuery : episodesQuery.eq("is_published", true),
-    dubberIds.length > 0 ? supabase.from("dubbers").select("*").in("id", dubberIds) : Promise.resolve({ data: [], error: null })
+    dubberIds.length > 0 ? supabase.from("dubbers").select("*").in("id", dubberIds) : Promise.resolve({ data: [], error: null }),
+    supabase.from("seasons").select("*").in("content_id", contentIds).order("season_number")
   ]);
+
+  if (seasonsResult.error) throwDatabaseError(seasonsResult.error, "Failed to load seasons.");
+  const seasons: Season[] = (seasonsResult.data ?? []).map((row) => ({
+    id: row.id, contentId: row.content_id, seasonNumber: row.season_number, title: row.title
+  }));
 
   if (contentGenresResult.error) {
     throwDatabaseError(contentGenresResult.error, "Failed to load content genres.");
@@ -441,7 +454,7 @@ async function hydrateContents(
   }
 
   for (const row of (episodesResult.data ?? []) as EpisodeRow[]) {
-    episodesByContentId.set(row.content_id, [...(episodesByContentId.get(row.content_id) ?? []), rowToEpisode(row)]);
+    episodesByContentId.set(row.content_id, [...(episodesByContentId.get(row.content_id) ?? []), { ...rowToEpisode(row), seasonNumber: seasons.find((season) => season.id === row.season_id)?.seasonNumber ?? null }]);
   }
 
   for (const row of (dubbersResult.data ?? []) as DubberRow[]) {
@@ -452,7 +465,9 @@ async function hydrateContents(
   return rows.map((row) =>
     rowToContent(row, {
       dubber: row.dubber_id ? dubbersById.get(row.dubber_id) ?? null : null,
-      episodes: episodesByContentId.get(row.id) ?? [],
+      seasons: seasons.filter((season) => season.contentId === row.id),
+      episodes: (episodesByContentId.get(row.id) ?? []).sort((a, b) =>
+        (a.seasonNumber ?? 0) - (b.seasonNumber ?? 0) || a.episodeNumber - b.episodeNumber),
       genres: genresByContentId.get(row.id) ?? []
     })
   );
@@ -689,7 +704,7 @@ export async function createEpisode(contentSlug: string, input: EpisodeInput) {
 
   const { data, error } = await supabase
     .from("episodes")
-    .insert(episodeToRow(input, content.id))
+    .insert(episodeToRow(prepareEpisode(input, content), content.id))
     .select("*")
     .single();
 
@@ -697,7 +712,7 @@ export async function createEpisode(contentSlug: string, input: EpisodeInput) {
     throwDatabaseError(error, "Failed to create episode.");
   }
 
-  return rowToEpisode(data as EpisodeRow);
+  return { ...rowToEpisode(data as EpisodeRow), seasonNumber: content.seasons.find((season) => season.id === data.season_id)?.seasonNumber ?? null };
 }
 
 export async function updateEpisode(contentSlug: string, episodeId: string, input: EpisodeInput) {
@@ -708,9 +723,12 @@ export async function updateEpisode(contentSlug: string, episodeId: string, inpu
     throw new ApiError(404, "not_found", "Content not found.");
   }
 
+  const existing = content.episodes.find((episode) => episode.id === episodeId);
+  if (!existing) throw new ApiError(404, "not_found", "Episode not found.");
+  const prepared = prepareEpisode({ ...input, seasonId: input.seasonId === undefined ? existing.seasonId : input.seasonId, slug: existing.slug }, content);
   const { data, error } = await supabase
     .from("episodes")
-    .update(episodeToRow(input, content.id))
+    .update(episodeToRow(prepared, content.id))
     .eq("id", episodeId)
     .eq("content_id", content.id)
     .select("*")
@@ -724,7 +742,7 @@ export async function updateEpisode(contentSlug: string, episodeId: string, inpu
     throw new ApiError(404, "not_found", "Episode not found.");
   }
 
-  return rowToEpisode(data as EpisodeRow);
+  return { ...rowToEpisode(data as EpisodeRow), seasonNumber: content.seasons.find((season) => season.id === data.season_id)?.seasonNumber ?? null };
 }
 
 export async function deleteEpisode(contentSlug: string, episodeId: string) {
@@ -819,4 +837,16 @@ export function contentToMovieRecord(content: Content): MovieRecord {
     createdAt: content.createdAt,
     updatedAt: content.updatedAt
   };
+}
+
+
+export async function createSeason(contentSlug: string, seasonNumber: number, title: string | null): Promise<Season> {
+  const content = await getContentBySlug(contentSlug, { includeDrafts: true });
+  if (!content) throw new ApiError(404, "not_found", "Content not found.");
+  if (content.type === "movie") throw new ApiError(400, "invalid_content_type", "Movies do not support seasons.");
+  const { data, error } = await requireDatabase().from("seasons").insert({
+    content_id: content.id, season_number: seasonNumber, title
+  }).select("*").single();
+  if (error) throwDatabaseError(error, "Failed to create season.");
+  return { id: data.id, contentId: data.content_id, seasonNumber: data.season_number, title: data.title };
 }

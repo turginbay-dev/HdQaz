@@ -35,15 +35,24 @@ export type DubberInput = {
   isActive?: boolean;
 };
 
+export type Season = {
+  id: string;
+  contentId: string;
+  seasonNumber: number;
+  title: string | null;
+};
+
 export type Episode = {
   id: string;
   contentId: string;
+  seasonId: string | null;
+  seasonNumber?: number | null;
   episodeNumber: number;
   title?: string | null;
   slug: string;
   description?: string | null;
   thumbnailUrl?: string | null;
-  hlsUrl: string;
+  hlsUrl: string | null;
   durationMinutes?: number | null;
   introStartSeconds?: number | null;
   introEndSeconds?: number | null;
@@ -73,6 +82,7 @@ export type Content = {
   dubber?: Dubber | null;
   genres: Genre[];
   episodes: Episode[];
+  seasons: Season[];
   episodeCount: number;
   heroComment?: string | null;
   heroOrder?: number | null;
@@ -114,12 +124,13 @@ export type ContentInput = {
 export type EpisodeInput = {
   id?: string;
   contentId?: string;
+  seasonId?: string | null;
   episodeNumber: number;
   title?: string | null;
   slug?: string | null;
   description?: string | null;
   thumbnailUrl?: string | null;
-  hlsUrl: string;
+  hlsUrl: string | null;
   durationMinutes?: number | null;
   introStartSeconds?: number | null;
   introEndSeconds?: number | null;

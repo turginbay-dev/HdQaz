@@ -1,0 +1,26 @@
+services:
+  worker:
+    build: .
+    init: true
+    restart: unless-stopped
+    env_file: .env
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 3g
+    cpus: 2.0
+    stop_grace_period: 45s
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    volumes:
+      - ./runtime/work:/work
+      - ./runtime/sources:/sources:ro
+      - ./runtime/assets:/assets:ro
+      - ./runtime/storage:/storage
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

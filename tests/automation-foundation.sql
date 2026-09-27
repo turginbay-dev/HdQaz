@@ -26,11 +26,12 @@ begin
   update public.episodes set season_id=null where id=e;
   if (select slug from public.episodes where id=e) <> 'legacy-url' then raise exception 'URL changed'; end if;
   insert into public.processing_jobs(content_id,idempotency_key) values(movie,gen_random_uuid()::text);
-  insert into public.processing_jobs(content_id,episode_id,idempotency_key) values(c,e,gen_random_uuid()::text) returning id into j;
   begin
     insert into public.processing_jobs(content_id,episode_id,idempotency_key) values(other_c,e,gen_random_uuid()::text);
     raise exception 'Cross-content episode job was accepted';
   exception when foreign_key_violation then null; end;
+  -- Check the FK before an active job for e can mask it with a unique violation.
+  insert into public.processing_jobs(content_id,episode_id,idempotency_key) values(c,e,gen_random_uuid()::text) returning id into j;
   begin
     insert into public.processing_jobs(content_id,idempotency_key) values(c,gen_random_uuid()::text);
     raise exception 'Series accepted as movie job';

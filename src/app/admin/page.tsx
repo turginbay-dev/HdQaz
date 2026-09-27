@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Film, FolderKanban, ShieldAlert, Tags } from "lucide-react";
 import { ManualMovieAdmin } from "@/components/admin/manual-movie-admin";
+import { ProcessingQueue } from "@/components/admin/processing-queue";
 import { LogoMark } from "@/components/layout/site-logo";
 import { listContents, listDubbers, listGenres } from "@/features/content/repository";
 import { getCurrentAdminUser } from "@/lib/admin-access";
@@ -65,6 +66,7 @@ export default async function AdminPage() {
           </div>
         </div>
 
+        <ProcessingQueue />
         <ManualMovieAdmin initialContents={initialContents} genres={genres} dubbers={dubbers} />
       </section>
     </main>

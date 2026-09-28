@@ -41,7 +41,7 @@ class R2Storage:
                 deadline=time.monotonic()+backoff(attempt,1,4)
                 while time.monotonic()<deadline:check();time.sleep(0.1)
     def verify_cdn(self,url,expected_size,expected_hash,check):
-        with self.opener.open(urllib.request.Request(url,headers={'Accept-Encoding':'identity'}),timeout=10) as response:
+        with self.opener.open(urllib.request.Request(url,headers={'Accept-Encoding':'identity','User-Agent':'HDQaz-Worker/1.0 (+https://hdqaz.online)'}),timeout=10) as response:
             if response.status!=200 or response.headers.get('Content-Encoding','identity')!='identity':raise Failure('upload_failed')
             total=0;h=hashlib.sha256();start=time.monotonic()
             while True:

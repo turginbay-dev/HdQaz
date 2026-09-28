@@ -29,6 +29,9 @@ class R2Tests(unittest.TestCase):
                 body,sha,kind=objects[self.path]
                 self.send_response(200);self.send_header('Content-Length',str(len(body)));self.send_header('x-amz-meta-sha256',sha);self.end_headers()
             def do_GET(self):
+                # Model the production BIC rejection without relaxing CDN verification.
+                if self.headers.get('User-Agent') != 'HDQaz-Worker/1.0 (+https://hdqaz.online)':
+                    self.send_response(403);self.end_headers();return
                 body,sha,kind=objects['/test-bucket'+self.path]
                 self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers()
                 self.wfile.write(b'X'*len(body) if state['corrupt'] else body)

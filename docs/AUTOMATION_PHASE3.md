@@ -195,6 +195,15 @@ claims via actual worker HTTP auth, processes synthetic media, verifies mock sto
 completes to real PostgreSQL Ready and checks the admin queue response and unchanged
 catalog. Stop the bridge with SIGTERM to shut down/remove its disposable cluster.
 
+## CDN client identification
+
+CDN verification sends `User-Agent: HDQaz-Worker/1.0 (+https://hdqaz.online)`.
+The production Cloudflare edge rejected Python urllib's default identification with
+HTTP 403 / error 1010 (Browser Integrity Check). An honest worker identifier passes
+without changing Cloudflare security settings, adding an IP bypass, impersonating a
+browser, or sending worker/R2 credentials to the CDN. Full size/SHA-256 verification,
+HTTPS, bounded reads and redirect rejection remain mandatory.
+
 ## Primary references
 
 - https://ffmpeg.org/ffmpeg-formats.html (VOD HLS and independent segments)

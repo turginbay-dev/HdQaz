@@ -1,0 +1,26 @@
+services:
+  bot:
+    build: .
+    init: true
+    restart: unless-stopped
+    env_file: .env
+    user: '10001:10001'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.5
+    stop_grace_period: 45s
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    volumes:
+      - /opt/hdqaz-worker/runtime/sources:/handoff
+    healthcheck:
+      test: [CMD, python, -c, 'import time,pathlib; assert time.time()-pathlib.Path("/tmp/bot-heartbeat").stat().st_mtime<120']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}

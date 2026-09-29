@@ -54,7 +54,11 @@ export async function listJobs(filters: ReturnType<typeof parseList>) {
   if (contents.error) databaseError(contents.error);
   const episodes = episodeIds.length ? await client.from("episodes").select("id,title,episode_number").in("id", episodeIds) : { data: [], error: null };
   if (episodes.error) databaseError(episodes.error);
+  const reviews = await client.from("telegram_workflows").select("job_id,state").in("job_id", visible.map(row => row.id));
+  // Additive rollout: old deployments remain usable before Phase 4 is installed.
+  if (reviews.error && !["42P01", "PGRST205"].includes(reviews.error.code)) databaseError(reviews.error);
   return { has_more: rows.length > filters.limit, items: visible.map(row => ({ ...jobView(row),
+    telegram_review_state: reviews.data?.find(review => review.job_id === row.id)?.state ?? null,
     content_title: contents.data?.find(content => content.id === row.content_id)?.title ?? "Content",
     episode_title: episodes.data?.find(episode => episode.id === row.episode_id)?.title ?? null,
     episode_number: episodes.data?.find(episode => episode.id === row.episode_id)?.episode_number })) };

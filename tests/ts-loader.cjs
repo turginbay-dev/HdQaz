@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
-module.exports = function loader(stubs = {}, env = {}) {
+module.exports = function loader(stubs = {}, env = {}, globals = {}) {
   const cache = new Map();
   function load(file) {
     file = path.resolve(file);
@@ -14,7 +14,7 @@ module.exports = function loader(stubs = {}, env = {}) {
     }).outputText;
     vm.runInNewContext(code, {
       exports, module: { exports }, process: { env }, Request, Response, URL, URLSearchParams,
-      TextDecoder, Uint8Array, Buffer, console,
+      TextDecoder, Uint8Array, Buffer, console, ...globals,
       require(name) {
         if (name === 'server-only') return {};
         if (Object.hasOwn(stubs, name)) return stubs[name];

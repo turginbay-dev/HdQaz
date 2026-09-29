@@ -90,9 +90,9 @@ export function ProcessingQueue() {
             {job.error_code && <p className="mt-2 text-sm text-red-300">{errorLabels[job.error_code] ?? "Өңдеу аяқталмады."}</p>}
             {job.status === "ready" && job.output_manifest_url && (
               <div className="mt-3 text-sm">
-                <p className="text-emerald-300">Дайын · тексеруді күтеді</p>
+                <p className="text-emerald-300">{job.telegram_review_state === "published" ? "Жарияланған · әкімші растады" : job.telegram_review_state === "rejected" ? "Қабылданбаған · жарияланбаған" : "Дайын · тексеруді күтеді"}</p>
                 <p className="mt-1 break-all text-zinc-300">{job.output_manifest_url}</p>
-                <p className="mt-1 text-zinc-500">Сайттағы видео сілтемесі өзгерген жоқ.</p>
+                <p className="mt-1 text-zinc-500">{job.telegram_review_state === "published" ? "Нәтиже әкімшінің нақты растауымен бекітілді." : "Сайттағы видео сілтемесі өзгерген жоқ."}</p>
               </div>
             )}
             {job.status === "failed" && (job.attempt_count < job.max_attempts

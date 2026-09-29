@@ -75,4 +75,22 @@ class Tests(unittest.TestCase):
   class Rejected(Telegram):
    def call(self,*args,**kw):raise SafeError('rejected',True)
   api=PostAPI();Bot(self.config(),api,Rejected(),object()).post();self.assertEqual(api.calls[-1][2]['data']['status'],'failed')
+ def test_manual_entry_does_not_call_tmdb(self):
+  w={'id':ID,'revision':0,'kind':'movie','state':'draft','metadata':{}}
+  api=API(w);tg=Telegram();b=Bot(self.config(),api,tg,object())
+  u={'update_id':22,'callback_query':{'id':'x','from':{'id':123},'message':{'chat':{'id':123,'type':'private'}},'data':button(w,'manual','Manual')['callback_data']}}
+  b.handle(u);self.assertEqual([x[0] for x in api.calls],['get']);self.assertIn('/edit title=',str(tg.calls))
+ def test_search_failure_offers_manual_entry(self):
+  class Offline(API):
+   def call(self,action,*args,**kw):
+    if action=='search':raise SafeError()
+    return super().call(action,*args,**kw)
+  w={'id':ID,'revision':0,'kind':'movie','state':'draft','metadata':{}}
+  tg=Telegram();Bot(self.config(),Offline(w),tg,object()).handle(update(text='Movie name'))
+  self.assertIn('Manual entry',str(tg.calls))
+ def test_manual_metadata_edit(self):
+  w={'id':ID,'revision':0,'kind':'movie','state':'draft','metadata':{'title':'Manual movie'}}
+  api=API(w);Bot(self.config(),api,Telegram(),object()).handle(update(text='/edit genres=Драма, Экшн'))
+  edit=[x for x in api.calls if x[0]=='edit'][0]
+  self.assertEqual(edit[1][3]['genres'],['Драма','Экшн'])
 if __name__=='__main__':unittest.main()

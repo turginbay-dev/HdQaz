@@ -30,7 +30,7 @@ class Bot:
         if w['state']=='draft':
             text+='\n/edit title=Қазақша атауы\n/edit description=Мәтін\n/edit year=2026\n/edit is_premium=false\n/dubbers → /edit dubber_id=UUID'
             if w['kind']=='series':text+='\n/edit season_number=1\n/edit episode_number=1\n/edit episode_title=Атауы'
-            text+='\n/source UUID — серверге алдын ала қойылған файл'
+            text+='\n/edit country=Қазақстан\n/edit duration_minutes=90\n/edit genres=Драма\n/source UUID — серверге алдын ала қойылған файл'
             if w.get('source_ref'):buttons.append([button(w,'prepare','Өңдеуге жіберуді растау')])
         if w['state']=='staging':buttons.append([button(w,'activate','Source handoff жалғастыру')])
         if w['state']=='published':buttons.append([button(w,'postretry','Арна постын қайта жіберу (қате болса)')])
@@ -62,7 +62,7 @@ class Bot:
             value=cb.get('data','')
             if value in ('menu_movie','menu_series'):
                 w=self.api.call('new',actor,data={'kind':value[5:]},key=request_key(actor,uid,'new'))
-                self.tg.send(actor,'TMDB іздеу үшін атауын жазыңыз. Series үшін /existing атауы арқылы бар title таңдауға болады.');return
+                self.tg.send(actor,'Атауын жазып TMDB іздеңіз немесе қолмен енгізуді таңдаңыз.',[[button(w,'manual','✍️ Қолмен енгізу / Manual entry')]]);return
             if value=='menu_queue':
                 rows=self.api.call('queue',actor)
                 if not rows:self.tg.send(actor,'Кезек бос.',MENU);return
@@ -70,6 +70,8 @@ class Bot:
                 return
             wid,revision,action=callback(value);w=self.api.call('get',actor,wid)
             if w['revision']!=revision:raise SafeError('stale')
+            if action=='manual':
+                self.show(actor,w);return
             if action.startswith('tmdb'):
                 w=self.mutate(w,actor,uid,'select',{'tmdb_id':int(action[4:])})
             elif action=='prepare':
@@ -97,14 +99,17 @@ class Bot:
             ref=str(uuid.UUID(text[8:].strip()));self.sources.source(ref);w=self.mutate(w,actor,uid,'source',{'source_ref':ref})
         elif text.startswith('/edit '):
             field,sep,value=text[6:].partition('=')
-            if not sep or field not in {'title','description','year','is_premium','dubber_id','season_number','episode_number','episode_title','episode_description'}:raise SafeError('invalid_input')
-            if field in ('year','season_number','episode_number'):value=int(value)
+            if not sep or field not in {'title','description','year','is_premium','dubber_id','season_number','episode_number','episode_title','episode_description','country','duration_minutes','genres','poster_url','banner_url'}:raise SafeError('invalid_input')
+            if field in ('year','season_number','episode_number','duration_minutes'):value=int(value)
+            elif field=='genres':value=[x.strip() for x in value.split(',') if x.strip()]
             elif field=='is_premium':
                 if value not in ('true','false'):raise SafeError('invalid_input')
                 value=value=='true'
             m={**w['metadata'],field:value};w=self.mutate(w,actor,uid,'edit',m)
         elif text and not text.startswith('/'):
-            rows=self.api.call('search',actor,data={'kind':w['kind'],'query':text})
+            try:rows=self.api.call('search',actor,data={'kind':w['kind'],'query':text})
+            except SafeError:
+                self.tg.send(actor,'TMDB әзірге қолжетімсіз. Қолмен енгізуге болады.',[[button(w,'manual','✍️ Қолмен енгізу / Manual entry')]]);return
             self.tg.send(actor,'TMDB: дұрыс нәтижені таңдаңыз.',[[button(w,'tmdb'+str(x['tmdb_id']),x['title'][:60]+' · '+str(x.get('year') or '—'))] for x in rows]);return
         else:raise SafeError('invalid_input')
         self.show(actor,w)

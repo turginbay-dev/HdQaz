@@ -58,3 +58,13 @@ Actual Telegram test used a short clip, not a multi-GB movie. Local API removes 
 5. Review the output. Only for your own real reviewed movie, press explicit Publish.
 
 Current ingestion+clean UI milestone is complete. Do not add Series, channel posting, REMAKE or unrelated work without a new task. Remaining unverified milestone: user's first real full-length movie and explicit publication/site playback. Preserve the synthetic fixture unpublished.
+
+## Telegram responsiveness incident — 2026-10-04
+
+Fix commit `d392488` (`Run Telegram movie ingestion asynchronously`) is pushed to `origin/main` and deployed to `/opt/hdqaz-bot`. Movie source staging now runs on a background thread; the polling loop can continue handling commands and buttons during download. Duplicate in-flight media is ignored, download staging remains atomic/retryable, and the existing SourceProvider → Phase 3 worker flow is unchanged. Focused tests passed before deploy: `test_movie.py` 15, `test_bot.py` 17, `test_ingestion.py` 10; compileall and `git diff --check` passed.
+
+Production diagnosis confirmed synchronous Telegram download/staging in the polling path was the original responsiveness risk. The incident movie itself completed to Ready 100 and remains unpublished. The rotated bot token was verified with `getMe` without outputting it; a read-only backend Queue request returned seven rows. Only the bot container was recreated. Local Bot API and the Phase 3 worker remained running and unchanged.
+
+Current production verification is blocked by a competing Telegram runtime/polling lease. Vercel production logs show repeated HTTP 409 responses from `telegram_runtime_lease` (`Bot already running`); the lease lasts 90 seconds. The server has one bot container and one bot process, and this Mac has no second local process. Do not clear the database lease manually or weaken lease checks: first locate and stop the other bot poller on its host, then let the lease expire and confirm the deployed bot becomes healthy and responds to `/start` and Queue. Latest observed bot state: running, unhealthy heartbeat, one restart; Local Bot API running, Phase 3 worker running. `getMe` and backend Queue passed, but no post-deploy real large-file concurrency test was completed.
+
+The temporary SSH key and local keypair were removed. Secret values are not recorded here. No production catalog, HLS, publication, or processing data was modified by this incident work.

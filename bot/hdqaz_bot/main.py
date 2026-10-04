@@ -3,6 +3,7 @@ import os
 import signal
 import threading
 import time
+import traceback
 import uuid
 from .movie import MovieFlow
 from .core import Backend,Config,SafeError,Sources,Telegram,authorized,button,callback,request_key
@@ -220,7 +221,12 @@ class Bot:
                     error_type='other'
                 safe_codes=('rejected','unavailable','configuration','start_required','stale','lease_lost','invalid_input','metadata_required','local_api_required','source_io','storage_full','invalid_media','invalid_source','download_timeout','source_changed','source_conflict','upload_busy')
                 safe_code=exc.code if isinstance(exc,SafeError) and exc.code in safe_codes else 'none'
-                print(json.dumps({'event':'bot_temporarily_unavailable','stage':stage,'error_type':error_type,'error_code':safe_code}),flush=True)
+                frames=traceback.extract_tb(exc.__traceback__)
+                frame=frames[-1] if frames else None
+                filename=frame.filename.rsplit('/',1)[-1] if frame else 'unknown'
+                if filename not in ('main.py','movie.py','core.py','ingestion.py'):filename='other'
+                line=frame.lineno if frame and filename!='other' else 0
+                print(json.dumps({'event':'bot_temporarily_unavailable','stage':stage,'error_type':error_type,'error_code':safe_code,'location':filename+':'+str(line)}),flush=True)
                 if time.monotonic()-self.last_success>180:raise SafeError('recovery_restart') from None
                 self.stop.wait(backoff);backoff=min(30,backoff*2)
 class PathHealth:

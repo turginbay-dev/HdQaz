@@ -215,10 +215,12 @@ class Bot:
                     stage='channel_post'
                     self.post();next_post=time.monotonic()+60
             except Exception as exc:
-                kind='safe_error'
-                if isinstance(exc,SafeError) and exc.code in ('rejected','unavailable','configuration'):
-                    kind=exc.code
-                print(json.dumps({'event':'bot_temporarily_unavailable','stage':stage,'kind':kind}),flush=True)
+                error_type=type(exc).__name__
+                if error_type not in ('SafeError','ValueError','KeyError','TypeError','OSError','TimeoutError','JSONDecodeError'):
+                    error_type='other'
+                safe_codes=('rejected','unavailable','configuration','start_required','stale','lease_lost','invalid_input','metadata_required','local_api_required','source_io','storage_full','invalid_media','invalid_source','download_timeout','source_changed','source_conflict','upload_busy')
+                safe_code=exc.code if isinstance(exc,SafeError) and exc.code in safe_codes else 'none'
+                print(json.dumps({'event':'bot_temporarily_unavailable','stage':stage,'error_type':error_type,'error_code':safe_code}),flush=True)
                 if time.monotonic()-self.last_success>180:raise SafeError('recovery_restart') from None
                 self.stop.wait(backoff);backoff=min(30,backoff*2)
 class PathHealth:

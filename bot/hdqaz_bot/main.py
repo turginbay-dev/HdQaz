@@ -16,7 +16,7 @@ class Bot:
         self.owner=str(uuid.uuid4());self.stop=threading.Event();self.last_success=time.monotonic();self.lease_deadline=None
     def show(self,actor,w):
         if w['kind']=='movie' and self.movie:
-            self.show_movie(actor,w);return
+            self.movie.detail(actor,w);return
         m=w['metadata'];j=w.get('job');text=m.get('title','Жаңа '+w['kind'])+'\n'+str(m.get('year',''))+'\n'+m.get('description','')[:900]
         text+='\nКүй: '+w['state']
         text+='\nЕлі: '+m.get('country','—')+' · Ұзақтығы: '+str(m.get('duration_minutes') or '—')
@@ -47,34 +47,37 @@ class Bot:
         if w['state']=='published':buttons.append([button(w,'postretry','Арна постын қайта жіберу (қате болса)')])
         buttons.append([button(w,'get','Жаңарту'),{'text':'📋 Queue','callback_data':'menu_queue'}])
         self.tg.send(actor,text,buttons)
-    def show_movie(self,actor,w):
+    def show_movie(self,actor,w,message_id=None,confirmed=False):
         m=w['metadata'];j=w.get('job');state=w['state']
-        text='🎬 '+m.get('title','Жаңа кино')
-        if m.get('year'):text+='\n📅 '+str(m['year'])
-        if m.get('country'):text+='\n🌍 '+m['country']
-        if m.get('genres'):text+='\n🎭 '+', '.join(m['genres'])
-        if m.get('duration_minutes'):text+='\n⏱ '+str(m['duration_minutes'])+' мин'
-        text+='\n💎 Premium: '+('Иә' if m.get('is_premium',False) else 'Жоқ')
-        if m.get('dubber_id'):text+='\n🎙 Дыбыстаушы таңдалған'
-        if m.get('description'):text+='\n\n'+m['description'][:900]
+        lines=['🎬 '+m.get('title','Жаңа кино')]
+        if m.get('year'):lines.append('📅 '+str(m['year']))
+        if m.get('country'):lines.append('🌍 '+m['country'])
+        if m.get('genres'):lines.append('🎭 '+', '.join(m['genres']))
+        if m.get('duration_minutes'):lines.append('⏱ '+str(m['duration_minutes'])+' мин')
+        lines.append('💎 Premium: '+('Иә' if m.get('is_premium',False) else 'Жоқ'))
+        if m.get('dubber_id'):lines.append('🗣 Дыбыстаушы таңдалған')
+        if m.get('description'):lines.extend(['',m['description'][:900]])
         buttons=[]
         if state=='draft':
-            buttons=[[button(w,'manual','✏️ Өзгерту'),button(w,'video','🎞 Видео қосу')],[button(w,'cancel','❌ Бас тарту')]]
-            if w.get('source_ref'):buttons.append([button(w,'prepare','Өңдеуге жіберуді растау')])
-        elif state=='staging':buttons=[[button(w,'activate','Қабылдауды жалғастыру')]]
+            ready=bool(m.get('title') and m.get('year'))
+            row=[button(w,'confirm','✅ Дұрыс'),button(w,'manual','✏️ Өзгерту')] if ready else [button(w,'manual','✏️ Өзгерту')]
+            buttons=[row]
+            if ready:buttons.append([button(w,'video','🎞 Видео қосу')])
+            buttons.append([button(w,'cancel','❌ Бас тарту')])
+        elif state=='staging':buttons=[[button(w,'activate','Жалғастыру')]]
         elif state=='published':
-            text+='\n\n✅ Жарияланды'
+            lines.extend(['','✅ Жарияланды'])
             buttons=[[{'text':'▶️ Сайтта көру','url':'https://hdqaz.online/tg-'+w['id']}]]
-        elif state=='rejected':text+='\n\n❌ Қабылданбады'
+        elif state=='rejected':lines.extend(['','❌ Қабылданбады'])
         if j and state not in ('published','rejected'):
             label={'queued':'⬇️ Кезекте','processing':'⚙️ Өңделуде','uploading':'☁️ CDN-ге жүктелуде','ready':'✅ Дайын','failed':'❌ Өңдеу аяқталмады'}.get(j['status'],'⚙️ Өңделуде')
-            text+='\n\n'+label+' — '+str(j['progress_percent'])+'%'
+            lines.extend(['',label+' — '+str(j['progress_percent'])+'%'])
             if j['status']=='ready' and state=='submitted':
-                buttons=[[{'text':'▶️ Тексеру','url':j['output_manifest_url']}],[button(w,'publish','✅ Тексердім — жариялау'),button(w,'reject','❌ Қабылдамау')]]
+                buttons=[[{'text':'▶️ Тексеру','url':j['output_manifest_url']}],[button(w,'publish','✅ Жариялау'),button(w,'reject','❌ Қабылдамау')]]
             elif j['status']=='failed' and state=='submitted' and j['attempt_count']<j['max_attempts']:
-                buttons=[[button(w,'retry','Қайта орындау')]]
-        buttons.append([button(w,'get','🔄 Жаңарту'),{'text':'📋 Кезек','callback_data':'menu_queue'}])
-        self.tg.send(actor,text,buttons)
+                buttons=[[button(w,'retry','Қайталау')]]
+        buttons.append([button(w,'get','🔄 Жаңарту'),{'text':'📋 Кезек','callback_data':'qback'}])
+        self.movie.panel(actor,'\n'.join(lines),buttons,message_id,'detail',workflow=w['id'],confirmed=confirmed)
     def current(self,actor):
         rows=self.api.call('queue',actor)
         if not rows:raise SafeError('start_required')
@@ -104,11 +107,8 @@ class Bot:
             if value in ('menu_movie','menu_series'):
                 w=self.api.call('new',actor,data={'kind':value[5:]},key=request_key(actor,uid,'new'))
                 self.tg.send(actor,'Атауын жазып TMDB іздеңіз немесе қолмен енгізуді таңдаңыз.',[[button(w,'manual','✍️ Қолмен енгізу / Manual entry')]]);return
-            if value=='menu_queue':
-                rows=self.api.call('queue',actor)
-                if not rows:self.tg.send(actor,'Кезек бос.',MENU);return
-                for w in rows[:8]:self.show(actor,w)
-                return
+            if value=='menu_queue' and self.movie:
+                self.movie.queue(actor,0,cb['message']['message_id']);return
             wid,revision,action=callback(value);w=self.api.call('get',actor,wid)
             if w['revision']!=revision:raise SafeError('stale')
             if action=='manual':
@@ -126,9 +126,14 @@ class Bot:
             elif action!='get':raise SafeError('invalid_input')
             self.show(actor,self.api.call('get',actor,w['id']));return
         text=u['message'].get('text','').strip()
-        if text in ('/start','/menu'):self.tg.send(actor,'HD Qaz · Private Admin',MENU);return
+        if text in ('/start','/menu'):
+            if self.movie:self.movie.panel(actor,'HD Qaz · Кино басқару',MENU,screen='home')
+            else:self.tg.send(actor,'HD Qaz · Private Admin',MENU)
+            return
         if text=='/queue':
-            for w in self.api.call('queue',actor)[:8]:self.show(actor,w)
+            if self.movie:self.movie.queue(actor,self.movie.panel_state(actor).get('page',0))
+            else:
+                for w in self.api.call('queue',actor)[:8]:self.show(actor,w)
             return
         if text=='/dubbers':self.tg.send(actor,'\n'.join(x['name']+' · '+x['id'] for x in self.api.call('dubbers',actor)));return
         w=self.current(actor)

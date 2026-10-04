@@ -191,13 +191,16 @@ class Bot:
     def run(self):
         offset=None;backoff=1;next_post=0;keeper=None
         while not self.stop.is_set():
+            stage='runtime_lease'
             try:
                 state=self.api.call('runtime',data={'owner':self.owner,**({'offset':offset} if offset is not None else {})})
                 offset=state['offset'];self.lease_deadline=time.monotonic()+60
                 if keeper is None:
                     keeper=threading.Thread(target=self.keep_lease,daemon=True);keeper.start()
+                stage='telegram_poll'
                 updates=self.tg.call('getUpdates',{'offset':offset,'timeout':20,'limit':1,'allowed_updates':['message','callback_query']},timeout=30)
                 for u in updates:
+                    stage='update_dispatch'
                     try:self.handle(u)
                     except (SafeError,ValueError,KeyError,OSError) as exc:
                         actor=authorized(u,self.c.admins)
@@ -205,11 +208,17 @@ class Bot:
                             errors={'storage_full':'Серверде видеоға жеткілікті бос орын жоқ. Файл өңдеуге жіберілген жоқ.', 'invalid_media':'MP4, MOV, MKV немесе WebM видео файлын жіберіңіз.', 'invalid_source':'Файл көлемі немесе түрі жарамсыз.', 'download_timeout':'Жүктеу уақыты аяқталды. Сол файлды қайта жіберуге болады.', 'source_io':'Файл қабылдау аяқталмады. Сол файлды қайта жіберіңіз.'}
                             self.tg.send(actor,errors.get(getattr(exc,'code',''),'Әрекет орындалмады немесе күйі өзгерді. /queue арқылы тексеріп, жаңартыңыз.'))
                     offset=u['update_id']+1
+                    stage='runtime_offset'
                     self.api.call('runtime',data={'owner':self.owner,'offset':offset})
                 self.last_success=time.monotonic();PathHealth.touch();backoff=1
-                if time.monotonic()>=next_post:self.post();next_post=time.monotonic()+60
-            except Exception:
-                print(json.dumps({'event':'bot_temporarily_unavailable'}),flush=True)
+                if time.monotonic()>=next_post:
+                    stage='channel_post'
+                    self.post();next_post=time.monotonic()+60
+            except Exception as exc:
+                kind='safe_error'
+                if isinstance(exc,SafeError) and exc.code in ('rejected','unavailable','configuration'):
+                    kind=exc.code
+                print(json.dumps({'event':'bot_temporarily_unavailable','stage':stage,'kind':kind}),flush=True)
                 if time.monotonic()-self.last_success>180:raise SafeError('recovery_restart') from None
                 self.stop.wait(backoff);backoff=min(30,backoff*2)
 class PathHealth:

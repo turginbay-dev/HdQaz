@@ -57,6 +57,10 @@ class MovieTests(unittest.TestCase):
   u={'update_id':22,'callback_query':{'id':'x','from':{'id':123},'message':{'message_id':55,'chat':{'id':123,'type':'private'}},'data':'menu_movie'}}
   self.b.handle(u);self.assertFalse(self.api.calls)
   self.assertIn('TMDB арқылы табу',str(self.tg.calls));self.assertIn('Қолмен енгізу',str(self.tg.calls))
+ def test_queue_invalid_persisted_page_falls_back_to_first_page(self):
+  for invalid_page in (None,'0',-1):
+   self.b.movie.queue(123,invalid_page)
+   self.assertEqual(self.b.movie.panel_state(123).get('page'),0)
  def test_queue_is_one_compact_message_and_refresh_reuses_it(self):
   self.api.w.update(metadata={'title':'Avatar','year':2026},job={'status':'processing','progress_percent':63})
   self.b.movie.queue(123)

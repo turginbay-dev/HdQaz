@@ -53,6 +53,7 @@ class MovieFlow:
  def queue(self,actor,page=0,message_id=None):
   rows=self.b.api.call('queue',actor)
   rows=[w for w in rows if w.get('state') not in ('published',)]
+  if type(page) is not int or page<0:page=0
   size=5;pages=max(1,(len(rows)+size-1)//size);page=max(0,min(page,pages-1));items=rows[page*size:(page+1)*size]
   lines=['📋 Кезек'];buttons=[]
   if not items:lines.append('Кезек бос.')

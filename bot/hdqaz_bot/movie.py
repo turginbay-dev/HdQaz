@@ -24,8 +24,8 @@ class MovieFlow:
  def panel_state(self,actor):
   with self.db_lock:
    row=self.db.execute('select data from panels where actor=?',(actor,)).fetchone();return json.loads(row[0]) if row else {}
- def panel(self,actor,text,buttons=None,message_id=None,screen=None,page=None,workflow=None,confirmed=None):
-  state=self.panel_state(actor);message_id=message_id or state.get('message_id')
+ def panel(self,actor,text,buttons=None,message_id=None,screen=None,page=None,workflow=None,confirmed=None,fresh=False):
+  state=self.panel_state(actor);message_id=None if fresh else message_id or state.get('message_id')
   if screen is not None:state['screen']=screen
   if page is not None:state['page']=page
   if workflow is not None:state['workflow']=workflow

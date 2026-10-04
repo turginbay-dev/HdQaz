@@ -29,6 +29,13 @@ class MovieTests(unittest.TestCase):
   self.addCleanup(self.b.movie.db.close)
  def cb(self,action,n=1):
   self.b.handle({'update_id':n,'callback_query':{'id':'x','from':{'id':123},'message':{'message_id':1,'chat':{'id':123,'type':'private'}},'data':button(self.api.w,action,'x')['callback_data']}})
+ def test_repeated_start_always_sends_visible_menu(self):
+  self.b.handle(update(text='/start'))
+  self.b.handle(update(text='/start'))
+  sends=[c for c in self.tg.calls if c[0]=='send']
+  self.assertEqual(len(sends),2)
+  self.assertIn('Кино басқару',sends[-1][1][1])
+  self.assertFalse(self.api.calls)
  def test_manual_conversation_is_durable(self):
   self.cb('manual');u=update(text='My movie');u['update_id']=2;self.b.handle(u)
   self.assertEqual(self.api.w['metadata']['title'],'My movie')

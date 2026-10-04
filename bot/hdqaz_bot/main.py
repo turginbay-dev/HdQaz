@@ -145,7 +145,7 @@ class Bot:
             self.show(actor,self.api.call('get',actor,w['id']));return
         text=u['message'].get('text','').strip()
         if text in ('/start','/menu'):
-            if self.movie:self.movie.panel(actor,'HD Qaz · Кино басқару',MENU,screen='home')
+            if self.movie:self.movie.panel(actor,'HD Qaz · Кино басқару',MENU,screen='home',fresh=True)
             else:self.tg.send(actor,'HD Qaz · Private Admin',MENU)
             return
         if text=='/queue':

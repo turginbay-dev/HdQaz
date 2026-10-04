@@ -109,7 +109,14 @@ class Bot:
     def handle(self,u):
         self.guard()
         actor=authorized(u,self.c.admins)
-        if actor is None:return
+        if actor is None:
+            event=u.get('callback_query') or u.get('message') or {}
+            message=event.get('message') if 'callback_query' in u else event
+            user=event.get('from',{})
+            user_id=user.get('id')
+            chat=(message or {}).get('chat',{})
+            print(json.dumps({'event':'telegram_update_ignored','admin_allowed':type(user_id) is int and user_id in self.c.admins,'private_chat':chat.get('type')=='private' and chat.get('id')==user_id}),flush=True)
+            return
         if self.movie and self.movie.handle(u,actor):return
         cb=u.get('callback_query');uid=u['update_id']
         if cb:

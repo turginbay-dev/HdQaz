@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -60,18 +61,19 @@ class Backend:
         if 'data' not in r:raise SafeError()
         return r['data']
 class Telegram:
-    def __init__(self,c):self.c=c;self.last_send={}
+    def __init__(self,c):self.c=c;self.last_send={};self.send_lock=threading.Lock()
     def call(self,method,data,timeout=20):
         r=request(getattr(self.c,'telegram_base','https://api.telegram.org')+'/bot'+self.c.token+'/'+method,data,timeout=timeout)
         if r.get('ok') is not True:raise SafeError('rejected',True)
         return r['result']
     def send(self,chat,text,buttons=None):
-        delay=1.05-(time.monotonic()-self.last_send.get(chat,0))
-        if delay>0:time.sleep(delay)
-        self.last_send[chat]=time.monotonic()
-        p={'chat_id':chat,'text':text[:3900],'link_preview_options':{'is_disabled':True}}
-        if buttons:p['reply_markup']={'inline_keyboard':buttons}
-        return self.call('sendMessage',p)
+        with self.send_lock:
+            delay=1.05-(time.monotonic()-self.last_send.get(chat,0))
+            if delay>0:time.sleep(delay)
+            self.last_send[chat]=time.monotonic()
+            p={'chat_id':chat,'text':text[:3900],'link_preview_options':{'is_disabled':True}}
+            if buttons:p['reply_markup']={'inline_keyboard':buttons}
+            return self.call('sendMessage',p)
 
 def authorized(update,admins):
     event=update.get('callback_query') or update.get('message') or {}

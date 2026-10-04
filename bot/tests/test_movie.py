@@ -1,4 +1,4 @@
-import tempfile,unittest,uuid
+import tempfile,threading,unittest,uuid
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -107,7 +107,8 @@ class MovieTests(unittest.TestCase):
   orig=self.tg.call
   self.tg.call=lambda method,*a,**kw: {'file_path':str(source),'file_size':source.stat().st_size} if method=='getFile' else orig(method,*a,**kw)
   u=update();u['message']['video']={'file_id':'file1','file_size':source.stat().st_size,'mime_type':'video/mp4'}
-  with patch('hdqaz_bot.movie.shutil.disk_usage',return_value=SimpleNamespace(free=10**12)):self.b.handle(u)
+  with patch('hdqaz_bot.movie.shutil.disk_usage',return_value=SimpleNamespace(free=10**12)):
+   self.b.handle(u);thread=self.b.ingestion_thread;thread.join(2);self.assertFalse(thread.is_alive())
   self.assertEqual(self.api.w['state'],'submitted');self.assertNotIn('publish',self.api.calls)
   self.assertTrue((self.c.root/(self.api.w['job_id']+'.media')).exists());self.assertIsNone(self.b.movie.get(123))
  def test_download_failure_can_be_retried(self):
@@ -115,6 +116,34 @@ class MovieTests(unittest.TestCase):
   self.tg.call=lambda *a,**kw: (_ for _ in ()).throw(SafeError())
   u=update();u['message']['video']={'file_id':'file1','file_size':100,'mime_type':'video/mp4'}
   with patch('hdqaz_bot.movie.shutil.disk_usage',return_value=SimpleNamespace(free=10**12)):
-   self.assertRaises(SafeError,self.b.handle,u)
+   self.b.handle(u);thread=self.b.ingestion_thread;thread.join(2);self.assertFalse(thread.is_alive())
   self.assertEqual(self.b.movie.get(123)['mode'],'video');self.assertNotIn('prepare',self.api.calls)
+  source=self.c.telegram_root/'retry';source.write_bytes(b'\x00\x00\x00\x18ftypisom'+b'x'*88)
+  self.tg.call=lambda method,*a,**kw: {'file_path':str(source),'file_size':100} if method=='getFile' else {'message_id':1}
+  retry=update();retry['update_id']=11;retry['message']['video']=u['message']['video']
+  with patch('hdqaz_bot.movie.shutil.disk_usage',return_value=SimpleNamespace(free=10**12)):
+   self.b.handle(retry);thread=self.b.ingestion_thread;thread.join(2);self.assertFalse(thread.is_alive())
+  self.assertEqual(self.api.w['state'],'submitted');self.assertEqual(self.api.calls.count('prepare'),1);self.assertEqual(self.api.calls.count('activate'),1)
+ def test_large_ingestion_runs_in_background_while_bot_handles_commands(self):
+  self.api.w['metadata']={'title':'Test','year':2026};self.cb('video')
+  source=self.c.telegram_root/'file';source.write_bytes(b'\x00\x00\x00\x18ftypisom'+b'x'*100)
+  entered=threading.Event();release=threading.Event();orig=self.tg.call
+  def call(method,*args,**kwargs):
+   if method=='getFile':
+    entered.set();release.wait(2);return {'file_path':str(source),'file_size':source.stat().st_size}
+   return orig(method,*args,**kwargs)
+  self.tg.call=call
+  u=update();u['message']['video']={'file_id':'large-file','file_size':source.stat().st_size,'mime_type':'video/mp4'}
+  with patch('hdqaz_bot.movie.shutil.disk_usage',return_value=SimpleNamespace(free=10**12)):
+   self.b.handle(u);self.assertTrue(entered.wait(1))
+   menu=update(text='/start');menu['update_id']=11;self.b.handle(menu)
+   self.assertIn('Кино басқару',str(self.tg.calls));self.assertTrue(self.b.ingestion_thread.is_alive())
+   queue={'update_id':12,'callback_query':{'id':'q','from':{'id':123},'message':{'message_id':1,'chat':{'id':123,'type':'private'}},'data':'menu_queue'}}
+   self.b.handle(queue)
+   refresh={'update_id':13,'callback_query':{'id':'r','from':{'id':123},'message':{'message_id':1,'chat':{'id':123,'type':'private'}},'data':'qrefresh'}}
+   self.b.handle(refresh)
+   duplicate=update();duplicate['update_id']=14;duplicate['message']['video']=u['message']['video'];self.b.handle(duplicate)
+   self.assertEqual(self.api.calls.count('prepare'),0)
+   release.set();self.b.ingestion_thread.join(2)
+  self.assertEqual(self.api.w['state'],'submitted');self.assertNotIn('publish',self.api.calls)
 if __name__=='__main__':unittest.main()

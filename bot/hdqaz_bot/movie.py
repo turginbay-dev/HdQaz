@@ -2,6 +2,7 @@
 import json
 import sqlite3
 import shutil
+import threading
 import uuid
 from pathlib import Path
 from .core import SafeError,button,callback,request_key
@@ -11,15 +12,18 @@ FIELDS=[('title','🎬 Кино атауын жазыңыз'),('year','📅 Шы
 class MovieFlow:
  def __init__(self,bot):
   self.b=bot;root=Path(bot.c.state_root);root.mkdir(mode=0o700,parents=True,exist_ok=True)
-  self.db=sqlite3.connect(root/'conversation.sqlite');self.db.execute('pragma journal_mode=WAL');self.db.execute('pragma synchronous=FULL')
+  self.db=sqlite3.connect(root/'conversation.sqlite',check_same_thread=False);self.db_lock=threading.RLock();self.db.execute('pragma journal_mode=WAL');self.db.execute('pragma synchronous=FULL')
   self.db.execute('create table if not exists sessions(actor integer primary key, data text not null)');self.db.execute('create table if not exists panels(actor integer primary key, data text not null)');self.db.commit()
  def get(self,actor):
-  row=self.db.execute('select data from sessions where actor=?',(actor,)).fetchone();return json.loads(row[0]) if row else None
+  with self.db_lock:
+   row=self.db.execute('select data from sessions where actor=?',(actor,)).fetchone();return json.loads(row[0]) if row else None
  def save(self,actor,s):
-  self.db.execute('insert or replace into sessions values(?,?)',(actor,json.dumps(s)));self.db.commit()
- def clear(self,actor):self.db.execute('delete from sessions where actor=?',(actor,));self.db.commit()
+  with self.db_lock:self.db.execute('insert or replace into sessions values(?,?)',(actor,json.dumps(s)));self.db.commit()
+ def clear(self,actor):
+  with self.db_lock:self.db.execute('delete from sessions where actor=?',(actor,));self.db.commit()
  def panel_state(self,actor):
-  row=self.db.execute('select data from panels where actor=?',(actor,)).fetchone();return json.loads(row[0]) if row else {}
+  with self.db_lock:
+   row=self.db.execute('select data from panels where actor=?',(actor,)).fetchone();return json.loads(row[0]) if row else {}
  def panel(self,actor,text,buttons=None,message_id=None,screen=None,page=None,workflow=None,confirmed=None):
   state=self.panel_state(actor);message_id=message_id or state.get('message_id')
   if screen is not None:state['screen']=screen
@@ -35,7 +39,8 @@ class MovieFlow:
   elif not message_id:
    result=self.b.tg.send(actor,text,keyboard);message_id=result['message_id']
   state.update(message_id=message_id,fingerprint=fingerprint)
-  self.db.execute('insert or replace into panels values(?,?)',(actor,json.dumps(state)));self.db.commit();return state
+  with self.db_lock:self.db.execute('insert or replace into panels values(?,?)',(actor,json.dumps(state)));self.db.commit()
+  return state
  def detail(self,actor,w,message_id=None):
   state=self.panel_state(actor);confirmed=bool(state.get('confirmed')) and state.get('workflow')==w['id']
   self.b.show_movie(actor,w,message_id=message_id,confirmed=confirmed)
@@ -67,7 +72,7 @@ class MovieFlow:
   if w['revision']!=revision:raise SafeError('stale')
   self.save(actor,{'id':wid,'mode':'detail','step':0,'last':0,'message_id':message_id})
   state=self.panel_state(actor);state.update(screen='detail',workflow=wid,confirmed=False)
-  self.db.execute('insert or replace into panels values(?,?)',(actor,json.dumps(state)));self.db.commit()
+  with self.db_lock:self.db.execute('insert or replace into panels values(?,?)',(actor,json.dumps(state)));self.db.commit()
   self.detail(actor,w,message_id)
  def prompt(self,actor,s):
   if s['mode']=='video':self.panel(actor,'🎞 Кино файлын осы чатқа жіберіңіз немесе forward жасаңыз. MP4, MOV, MKV немесе WebM.',[[{'text':'🔙 Карточка','callback_data':'mcard'}]],s.get('message_id'),'movie_video',workflow=s['id'],confirmed=True);return
@@ -167,7 +172,10 @@ class MovieFlow:
   if type(size) is not int or not 0<size<=b.c.max_source or not isinstance(file_id,str) or not 1<=len(file_id)<=1024:raise SafeError('invalid_source')
   mime=media.get('mime_type','')
   if mime not in ('video/mp4','video/quicktime','video/x-matroska','video/webm','application/octet-stream'):raise SafeError('invalid_media')
-  if s['mode']=='ingest' and s.get('update')!=uid:raise SafeError('upload_busy')
+  if s['mode']=='ingest' and s.get('file_id')!=file_id:raise SafeError('upload_busy')
+  if b.ingestion_active():
+   if b.ingestion_active(actor,file_id):return True
+   b.tg.send(actor,'Басқа видео қабылданып жатыр. Аяқталған соң қайта жіберіңіз.');return True
   w=b.api.call('get',actor,s['id'])
   if s.get('file_id')==file_id:uid=s.get('update',uid)
   ref=str(uuid.uuid5(uuid.NAMESPACE_URL,f'hdqaz-telegram:{actor}:{w["id"]}:{uid}'))
@@ -175,10 +183,17 @@ class MovieFlow:
   if w['state'] not in ('draft','staging'):raise SafeError('stale')
   if not w['metadata'].get('title') or not w['metadata'].get('year'):raise SafeError('metadata_required')
   if shutil.disk_usage(b.c.root).free<size*3+2*1024**3:raise SafeError('storage_full')
-  s.update(mode='ingest',update=uid,file_id=file_id);self.save(actor,s)
+  s.update(mode='ingest',update=uid,file_id=file_id,source_ref=ref,file_size=size);self.save(actor,s)
   b.tg.send(actor,'✅ Видео қабылданды\n⬇️ Серверге жүктелуде… Үлкен файлға уақыт қажет. Жарияланбайды.')
-  b.downloading=True
+  if not b.start_ingestion(self._ingest_background,actor,uid,s.copy(),size,file_id,ref,identity=(actor,file_id)):
+   current=self.get(actor)
+   if current and current.get('mode')=='ingest':return True
+   raise SafeError('upload_busy')
+  return True
+ def _ingest_background(self,actor,uid,s,size,file_id,ref):
+  b=self.b
   try:
+   w=b.api.call('get',actor,s['id'])
    if w['state']=='draft':
     try:b.sources.source(ref)
     except (OSError,SafeError):
@@ -187,11 +202,18 @@ class MovieFlow:
      stage_local(b.c.telegram_root,file['file_path'],b.c.root/'inbox',ref,size,b.c.max_source,check=b.guard)
     if w.get('source_ref')!=ref:w=b.mutate(w,actor,uid,'source',{'source_ref':ref})
     w=b.mutate(w,actor,uid,'prepare',{'source_ref':ref})
-   if w['source_ref']!=ref:raise SafeError('source_conflict')
+   if w.get('source_ref')!=ref:raise SafeError('source_conflict')
    b.sources.stage(ref,w['job_id']);w=b.mutate(w,actor,uid,'activate')
    self.clear(actor);b.show(actor,b.api.call('get',actor,w['id']))
-  except (SafeError,OSError,KeyError,ValueError):
+  except (SafeError,OSError,KeyError,ValueError) as exc:
    s.update(mode='video');self.save(actor,s)
-   raise
-  finally:b.downloading=False
-  return True
+   errors={'storage_full':'Серверде бос орын жеткіліксіз. Файлды өңдеуге жібермедім.', 'invalid_media':'MP4, MOV, MKV немесе WebM видео жіберіңіз.', 'invalid_source':'Файлдың көлемі не түрі жарамсыз.', 'download_timeout':'Жүктеу уақыты аяқталды. Сол видеоны қайта жіберіңіз.', 'source_io':'Файл қабылданбады. Сол видеоны қайта жіберіңіз.'}
+   try:b.tg.send(actor,errors.get(getattr(exc,'code',''),'Файл қабылданбады. Қайта жіберіп көріңіз.'))
+   except Exception:pass
+  except Exception:
+   s.update(mode='video');self.save(actor,s)
+   try:b.tg.send(actor,'Файлды қабылдау аяқталмады. Сол видеоны қайта жіберіп көріңіз.')
+   except Exception:pass
+   print('{"event":"movie_ingestion_failed"}',flush=True)
+  finally:
+   with b.ingestion_lock:b.downloading=False;b.ingestion_key=None

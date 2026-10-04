@@ -13,7 +13,17 @@ class Bot:
         self.c=c;self.api=backend or Backend(c);self.tg=telegram or Telegram(c);self.sources=sources or Sources(c)
         self.movie=MovieFlow(self) if hasattr(c,'state_root') else None
         self.downloading=False
+        self.ingestion_lock=threading.Lock();self.ingestion_thread=None;self.ingestion_key=None
         self.owner=str(uuid.uuid4());self.stop=threading.Event();self.last_success=time.monotonic();self.lease_deadline=None
+    def ingestion_active(self,actor=None,file_id=None):
+        with self.ingestion_lock:
+            active=self.ingestion_thread is not None and self.ingestion_thread.is_alive()
+            return active if actor is None else active and self.ingestion_key==(actor,file_id)
+    def start_ingestion(self,target,*args,identity=None):
+        with self.ingestion_lock:
+            if self.ingestion_thread is not None and self.ingestion_thread.is_alive():return False
+            thread=threading.Thread(target=target,args=args,daemon=True,name='telegram-movie-ingestion')
+            self.ingestion_thread=thread;self.ingestion_key=identity;self.downloading=True;thread.start();return True
     def show(self,actor,w):
         if w['kind']=='movie' and self.movie:
             self.movie.detail(actor,w);return

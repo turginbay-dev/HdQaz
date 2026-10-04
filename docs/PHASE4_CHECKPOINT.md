@@ -6,7 +6,9 @@ Code commit: `82ec8f21cd9c35c4402b0880db80fc2c3b5de3f0` (pushed to `origin/main`
 
 Validation: 41 focused bot tests passed locally, including TMDB search/selection/fallback, queue refresh/edit behavior, and the existing Telegram file-to-Phase-3 handoff regression. `git diff --check` passed. No broad suites were run.
 
-Deployment is pending: the read-only SSH connection check to `root@2.29.49.20` failed with `Permission denied (publickey,password)`. The production bot remains on its prior deployed image and must not be reported as having the new UX until the bot image is rebuilt/restarted and smoke-checked. No server files or production configuration were changed in this update.
+Production deployment completed on `2.29.49.20`: only `hdqaz-bot-bot-1` was rebuilt/replaced; the Local Telegram API and Phase 3 worker were left untouched. The running bot image is `sha256:ad5ad9b2934a697800ca9f1b26afbbd9e9d6764ce5d78a4e5ccda6bfcd72e22b`; health is `healthy`, restart count is 0, and restart policy remains `unless-stopped`. Exactly one bot and one Telegram API service are running. Focused tests were also run inside the production image: 41 passed.
+
+Read-only live smoke checks passed for Telegram `getMe` and the Admin Queue endpoint. Production TMDB search returned an unavailable response during this check; the bot's one-screen Manual Entry fallback is covered by the passing focused tests and remains the path to use when TMDB is unavailable. No test or real movie was published. The temporary SSH public key used for this deployment was removed from the server and its local keypair was deleted. No server secrets were read or changed.
 
 ## Working production movie MVP
 

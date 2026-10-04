@@ -39,20 +39,20 @@ No new database migration or backend/Vercel configuration was needed. `202609290
 
 ## Normal Movie UI
 
-Movie → Manual Entry asks one question at a time: title, year, description, country, comma-separated genres, duration, Premium buttons. Optional dubber defaults unset. Clean summary has Edit, Video and Cancel. Normal movie cards hide `/edit`, `/source UUID`, source/job IDs, raw workflow/error codes and developer instructions. Review link is a button; explicit Publish remains separate. Technical commands remain emergency operator fallbacks only.
+Movie offers TMDB search first and Manual Entry as fallback. Manual Entry asks one question at a time: title, year, description, country, comma-separated genres, duration, Premium buttons. Optional dubber defaults unset. The clean summary has confirm, Edit, Video and Cancel buttons. Normal movie cards hide `/edit`, `/source UUID`, source/job IDs, raw workflow/error codes and developer instructions. Review link is a button; explicit Publish remains separate. Technical commands remain emergency operator fallbacks only. Queue is one compact screen; selecting a row and refreshing edit that same message.
 
 Send/forward MP4/MOV/MKV/WebM after pressing Video. No SSH, manual Hetzner upload or UUID is needed for normal ingestion. Bot performs no transcoding; it copies completed API files in 1 MiB chunks with size/header/path/symlink/disk checks, partial cleanup, fsync and atomic publication. Existing worker validates and processes media.
 
 ## Validation and limits
 
-35 focused Python tests passed locally and inside final production Docker image; git diff --check passed. No broad suites rerun. Earlier Phase 4 baseline tests/TypeScript/build remain documented in history; no TS changed here.
+41 focused Python tests passed locally and inside the production Docker image for the current UX; `git diff --check` passed. No broad suites rerun. Earlier Phase 4 baseline tests/TypeScript/build remain documented in history; no TypeScript changed here.
 
 Actual Telegram test used a short clip, not a multi-GB movie. Local API removes cloud's 20 MB download limit; user Telegram upload limits still apply. Default source maximum is 8 GiB, subject to free disk (three source copies plus reserve). API cache and source retention need operator disk management as usage grows. During a large local download, bot commands are serialized and handled afterward; acceptance/downloading is shown first and job progress after activation is available by Queue/Refresh. No live download percentage is promised.
 
 ## First real movie
 
-1. Open @hdqaz_bot, press Movie, then Manual Entry.
-2. Answer the questions, review summary, press Video.
+1. Open @hdqaz_bot and press Movie. Search by title with TMDB; if unavailable or no match, choose Manual Entry.
+2. Select a match or answer the manual questions, review the summary, then press Video.
 3. Send/forward your actual movie file to this chat.
 4. Wait; Queue/Refresh shows processing and Ready.
 5. Review the output. Only for your own real reviewed movie, press explicit Publish.

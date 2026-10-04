@@ -4,30 +4,41 @@ import signal
 import threading
 import time
 import uuid
+from .movie import MovieFlow
 from .core import Backend,Config,SafeError,Sources,Telegram,authorized,button,callback,request_key
 
 MENU=[[{'text':'🎬 Movie','callback_data':'menu_movie'},{'text':'📺 Series','callback_data':'menu_series'}],[{'text':'📋 Queue / Status','callback_data':'menu_queue'}]]
 class Bot:
     def __init__(self,c,backend=None,telegram=None,sources=None):
         self.c=c;self.api=backend or Backend(c);self.tg=telegram or Telegram(c);self.sources=sources or Sources(c)
+        self.movie=MovieFlow(self) if hasattr(c,'state_root') else None
+        self.downloading=False
         self.owner=str(uuid.uuid4());self.stop=threading.Event();self.last_success=time.monotonic();self.lease_deadline=None
     def show(self,actor,w):
+        if w['kind']=='movie' and self.movie:
+            self.show_movie(actor,w);return
         m=w['metadata'];j=w.get('job');text=m.get('title','Жаңа '+w['kind'])+'\n'+str(m.get('year',''))+'\n'+m.get('description','')[:900]
         text+='\nКүй: '+w['state']
         text+='\nЕлі: '+m.get('country','—')+' · Ұзақтығы: '+str(m.get('duration_minutes') or '—')
         text+='\nЖанрлар: '+', '.join(m.get('genres',[]))
-        if w.get('source_ref'):text+='\nSource: '+w['source_ref']
+        if w.get('source_ref'):text+='\n✅ Видео қабылданды'
         if w['kind']=='series':text+='\nМаусым / серия: '+str(m.get('season_number','—'))+' / '+str(m.get('episode_number','—'))
         text+='\nPremium: '+str(m.get('is_premium',False))+'\nДыбыстаушы: '+str(m.get('dubber_id','—'))
         buttons=[]
         if j:
-            text+='\n'+j['status']+' '+str(j['progress_percent'])+'% · '+str(j['attempt_count'])+'/'+str(j['max_attempts'])
+            text+='\n'+{'queued':'⬇️ Кезекте','processing':'⚙️ Өңделуде','uploading':'☁️ CDN-ге жүктелуде','ready':'✅ Дайын','failed':'❌ Қате'}.get(j['status'],j['status'])+' '+str(j['progress_percent'])+'% · '+str(j['attempt_count'])+'/'+str(j['max_attempts'])
             if j.get('error_code'):text+='\nҚате: '+j['error_code']
             if j['status']=='ready' and w['state']=='submitted':
                 text+='\nТексеру: '+j['output_manifest_url']+'\nЖариялау тек төмендегі нақты растаудан кейін орындалады.'
+                buttons.append([{'text':'▶️ Тексеру','url':j['output_manifest_url']}])
                 buttons.append([button(w,'publish','✅ Тексердім — жариялау'),button(w,'reject','❌ Қабылдамау')])
             if j['status']=='failed' and j['attempt_count']<j['max_attempts'] and w['state']=='submitted':buttons.append([button(w,'retry','Қайта орындау')])
-        if w['state']=='draft':
+        if w['state']=='draft' and self.movie and w['kind']=='movie':
+            buttons.append([button(w,'manual','✏️ Өзгерту'),button(w,'video','🎞 Видео қосу')])
+            buttons.append([button(w,'cancel','❌ Бас тарту')])
+            text+='\nМәліметтерді қарап, Видео қосу түймесін басыңыз.'
+            if w.get('source_ref'):buttons.append([button(w,'prepare','Өңдеуге жіберуді растау')])
+        elif w['state']=='draft':
             text+='\n/edit title=Қазақша атауы\n/edit description=Мәтін\n/edit year=2026\n/edit is_premium=false\n/dubbers → /edit dubber_id=UUID'
             if w['kind']=='series':text+='\n/edit season_number=1\n/edit episode_number=1\n/edit episode_title=Атауы'
             text+='\n/edit country=Қазақстан\n/edit duration_minutes=90\n/edit genres=Драма\n/source UUID — серверге алдын ала қойылған файл'
@@ -35,6 +46,34 @@ class Bot:
         if w['state']=='staging':buttons.append([button(w,'activate','Source handoff жалғастыру')])
         if w['state']=='published':buttons.append([button(w,'postretry','Арна постын қайта жіберу (қате болса)')])
         buttons.append([button(w,'get','Жаңарту'),{'text':'📋 Queue','callback_data':'menu_queue'}])
+        self.tg.send(actor,text,buttons)
+    def show_movie(self,actor,w):
+        m=w['metadata'];j=w.get('job');state=w['state']
+        text='🎬 '+m.get('title','Жаңа кино')
+        if m.get('year'):text+='\n📅 '+str(m['year'])
+        if m.get('country'):text+='\n🌍 '+m['country']
+        if m.get('genres'):text+='\n🎭 '+', '.join(m['genres'])
+        if m.get('duration_minutes'):text+='\n⏱ '+str(m['duration_minutes'])+' мин'
+        text+='\n💎 Premium: '+('Иә' if m.get('is_premium',False) else 'Жоқ')
+        if m.get('dubber_id'):text+='\n🎙 Дыбыстаушы таңдалған'
+        if m.get('description'):text+='\n\n'+m['description'][:900]
+        buttons=[]
+        if state=='draft':
+            buttons=[[button(w,'manual','✏️ Өзгерту'),button(w,'video','🎞 Видео қосу')],[button(w,'cancel','❌ Бас тарту')]]
+            if w.get('source_ref'):buttons.append([button(w,'prepare','Өңдеуге жіберуді растау')])
+        elif state=='staging':buttons=[[button(w,'activate','Қабылдауды жалғастыру')]]
+        elif state=='published':
+            text+='\n\n✅ Жарияланды'
+            buttons=[[{'text':'▶️ Сайтта көру','url':'https://hdqaz.online/tg-'+w['id']}]]
+        elif state=='rejected':text+='\n\n❌ Қабылданбады'
+        if j and state not in ('published','rejected'):
+            label={'queued':'⬇️ Кезекте','processing':'⚙️ Өңделуде','uploading':'☁️ CDN-ге жүктелуде','ready':'✅ Дайын','failed':'❌ Өңдеу аяқталмады'}.get(j['status'],'⚙️ Өңделуде')
+            text+='\n\n'+label+' — '+str(j['progress_percent'])+'%'
+            if j['status']=='ready' and state=='submitted':
+                buttons=[[{'text':'▶️ Тексеру','url':j['output_manifest_url']}],[button(w,'publish','✅ Тексердім — жариялау'),button(w,'reject','❌ Қабылдамау')]]
+            elif j['status']=='failed' and state=='submitted' and j['attempt_count']<j['max_attempts']:
+                buttons=[[button(w,'retry','Қайта орындау')]]
+        buttons.append([button(w,'get','🔄 Жаңарту'),{'text':'📋 Кезек','callback_data':'menu_queue'}])
         self.tg.send(actor,text,buttons)
     def current(self,actor):
         rows=self.api.call('queue',actor)
@@ -47,6 +86,7 @@ class Bot:
             try:
                 self.api.call('runtime',data={'owner':self.owner})
                 self.lease_deadline=time.monotonic()+60
+                if self.downloading:PathHealth.touch()
             except Exception:
                 if self.lease_deadline is not None and time.monotonic()>=self.lease_deadline:self.stop.set()
     def mutate(self,w,actor,update,action,data=None):
@@ -56,6 +96,7 @@ class Bot:
         self.guard()
         actor=authorized(u,self.c.admins)
         if actor is None:return
+        if self.movie and self.movie.handle(u,actor):return
         cb=u.get('callback_query');uid=u['update_id']
         if cb:
             self.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']})
@@ -143,9 +184,11 @@ class Bot:
                 updates=self.tg.call('getUpdates',{'offset':offset,'timeout':20,'limit':1,'allowed_updates':['message','callback_query']},timeout=30)
                 for u in updates:
                     try:self.handle(u)
-                    except (SafeError,ValueError,KeyError,OSError):
+                    except (SafeError,ValueError,KeyError,OSError) as exc:
                         actor=authorized(u,self.c.admins)
-                        if actor:self.tg.send(actor,'Әрекет орындалмады немесе күйі өзгерді. /queue арқылы тексеріп, жаңартыңыз.')
+                        if actor:
+                            errors={'storage_full':'Серверде видеоға жеткілікті бос орын жоқ. Файл өңдеуге жіберілген жоқ.', 'invalid_media':'MP4, MOV, MKV немесе WebM видео файлын жіберіңіз.', 'invalid_source':'Файл көлемі немесе түрі жарамсыз.', 'download_timeout':'Жүктеу уақыты аяқталды. Сол файлды қайта жіберуге болады.', 'source_io':'Файл қабылдау аяқталмады. Сол файлды қайта жіберіңіз.'}
+                            self.tg.send(actor,errors.get(getattr(exc,'code',''),'Әрекет орындалмады немесе күйі өзгерді. /queue арқылы тексеріп, жаңартыңыз.'))
                     offset=u['update_id']+1
                     self.api.call('runtime',data={'owner':self.owner,'offset':offset})
                 self.last_success=time.monotonic();PathHealth.touch();backoff=1

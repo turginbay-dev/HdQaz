@@ -1,0 +1,33 @@
+# Opt-in production overlay. No host ports are exposed.
+services:
+  bot:
+    environment:
+      TELEGRAM_API_BASE: http://telegram-api:8081
+      BOT_STATE_ROOT: /state
+    volumes:
+      - ./runtime/state:/state
+      - ./runtime/telegram-data:/telegram-data:ro
+    depends_on:
+      - telegram-api
+  telegram-api:
+    image: hdqaz-telegram-api:e3e9dd8
+    build:
+      context: .
+      dockerfile: TelegramApi.Dockerfile
+    init: true
+    restart: unless-stopped
+    env_file: telegram-api.env
+    user: '10001:10001'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 128
+    stop_grace_period: 60s
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    volumes:
+      - ./runtime/telegram-data:/telegram-data
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}

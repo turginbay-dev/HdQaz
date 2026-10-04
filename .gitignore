@@ -48,3 +48,8 @@ Thumbs.db
 *.pem
 *.key
 *.crt
+
+# Private Telegram runtime
+**/__pycache__/
+bot/runtime/
+bot/telegram-api.env

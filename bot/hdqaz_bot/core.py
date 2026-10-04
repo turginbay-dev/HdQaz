@@ -39,6 +39,10 @@ class Config:
         if not raw or any(not re.fullmatch(r'[1-9][0-9]{0,15}',s.strip()) for s in raw):raise SafeError('configuration')
         self.admins={int(s.strip()) for s in raw}
         if any(x>9007199254740991 for x in self.admins):raise SafeError('configuration')
+        self.telegram_base=e.get('TELEGRAM_API_BASE','https://api.telegram.org')
+        if self.telegram_base not in ('https://api.telegram.org','http://telegram-api:8081'):raise SafeError('configuration')
+        self.telegram_root=Path('/telegram-data')
+        self.state_root=Path(e.get('BOT_STATE_ROOT','/state'))
         self.root=Path(e.get('BOT_SOURCE_ROOT','/handoff'))
         self.max_source=int(e.get('BOT_MAX_SOURCE_BYTES','8589934592'))
         if not self.root.is_absolute() or self.root.is_symlink() or not 1024<=self.max_source<=1024**4:raise SafeError('configuration')
@@ -58,7 +62,7 @@ class Backend:
 class Telegram:
     def __init__(self,c):self.c=c;self.last_send={}
     def call(self,method,data,timeout=20):
-        r=request('https://api.telegram.org/bot'+self.c.token+'/'+method,data,timeout=timeout)
+        r=request(getattr(self.c,'telegram_base','https://api.telegram.org')+'/bot'+self.c.token+'/'+method,data,timeout=timeout)
         if r.get('ok') is not True:raise SafeError('rejected',True)
         return r['result']
     def send(self,chat,text,buttons=None):

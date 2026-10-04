@@ -15,6 +15,7 @@ services:
     tmpfs: ["/tmp:size=16m,mode=1777"]
     volumes:
       - /opt/hdqaz-worker/runtime/sources:/handoff
+      - ./runtime/state:/state
     healthcheck:
       test: [CMD, python, -c, 'import time,pathlib; assert time.time()-pathlib.Path("/tmp/bot-heartbeat").stat().st_mtime<120']
       interval: 30s

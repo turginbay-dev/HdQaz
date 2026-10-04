@@ -1,5 +1,13 @@
 # HD Qaz checkpoint — 2026-10-04
 
+## Telegram Movie UX update
+
+Code commit: `82ec8f21cd9c35c4402b0880db80fc2c3b5de3f0` (pushed to `origin/main`). This adds the compact single-message Queue with inline movie selection and refresh, an easy TMDB-first Movie menu with inline search results and Manual Entry fallback, and a clean metadata review card. Queue/detail/menu/metadata/video prompts reuse and edit the saved Telegram message. UUIDs, source refs and job IDs stay out of visible Movie/Queue text. Selecting either “Дұрыс” or “Видео қосу” advances to the existing upload flow; processing and explicit Publish behavior are unchanged.
+
+Validation: 41 focused bot tests passed locally, including TMDB search/selection/fallback, queue refresh/edit behavior, and the existing Telegram file-to-Phase-3 handoff regression. `git diff --check` passed. No broad suites were run.
+
+Deployment is pending: the read-only SSH connection check to `root@2.29.49.20` failed with `Permission denied (publickey,password)`. The production bot remains on its prior deployed image and must not be reported as having the new UX until the bot image is rebuilt/restarted and smoke-checked. No server files or production configuration were changed in this update.
+
 ## Working production movie MVP
 
 Implementation commit: `89761a32761910b8974edc1ed6c4b82a82edec3e` (pushed to origin/main). Previous checkpoints c614fc4 and a2769bc are historical; do not redo Phase 1–3 or the completed Phase 4 migration.

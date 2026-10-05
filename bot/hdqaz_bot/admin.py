@@ -98,7 +98,7 @@ class AdminFlow:
    else:
     c=self.b.api.call('catalog_get',actor,id);state={'mode':'media','id':id,'field':field,'expected':c['updated_at']};back=btn('⬅️ Артқа','cm:'+compact(id))
    self.f.save(actor,state);self.panel(actor,('Постер' if field=='poster_url' else 'Баннер')+' суретін жіберіңіз. JPG, PNG немесе WEBP.',[[back]],mid);return True
-  if s.get('mode')=='media' and (u.get('message',{}).get('photo') or u.get('message',{}).get('document')):
+  if s.get('mode')=='media' and (u.get('message',{}).get('photo') or u.get('message',{}).get('document') or u.get('message',{}).get('sticker')):
    self.panel(actor,'⬆️ Сурет сақталуда…')
    try:url=upload(self.b,u['message'],s['field'],s['id'],self.uid,actor,s)
    except SafeError as error:

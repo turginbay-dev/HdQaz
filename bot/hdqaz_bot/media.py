@@ -24,7 +24,8 @@ def normalize(stream):
 
 def upload(bot,message,kind,target,uid,actor=None,state=None):
  if kind not in ('poster_url','banner_url'):raise SafeError('invalid_image')
- target=str(uuid.UUID(target));item=(message.get('photo') or [message.get('document') or {}])[-1]
+ target=str(uuid.UUID(target));item=(message.get('photo') or [message.get('document') or message.get('sticker') or {}])[-1]
+ if item.get('is_animated') or item.get('is_video'):raise SafeError('invalid_image')
  size=item.get('file_size')
  if type(size) is not int or not 0<size<=MAX_IMAGE or not item.get('file_id'):raise SafeError('invalid_image')
  if getattr(bot.c,'telegram_base','')!='http://telegram-api:8081':raise SafeError('local_api_required')

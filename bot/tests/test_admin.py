@@ -61,3 +61,9 @@ class AdminTests(unittest.TestCase):
   self.api.c.update(kind='movie',is_published=False,hls_url=None,section='default');self.cb('attach:'+ID.replace('-',''));self.assertEqual(self.b.movie.get(123)['mode'],'video');self.assertEqual(self.api.w['metadata']['existing_content_id'],ID);self.assertFalse(any(x[0]=='search' for x in self.api.actions))
  def test_published_movie_cannot_attach_replacement(self):
   self.api.c.update(kind='movie',is_published=True);self.assertRaises(SafeError,self.cb,'attach:'+ID.replace('-',''))
+
+ def test_static_webp_sticker_is_routed_only_in_media_mode(self):
+  from unittest.mock import patch
+  self.cb('cmup:'+ID.replace('-','')+':poster_url');u=update();u['update_id']=502;u['message']['sticker']={'file_id':'image','file_size':100,'is_animated':False}
+  with patch('hdqaz_bot.admin.upload',return_value='https://test.supabase.co/storage/v1/object/public/content-media/posters/test.webp') as upload:self.b.handle(u);upload.assert_called_once()
+  self.assertFalse(any(x[0] in ('source','prepare','activate','publish') for x in self.api.actions))

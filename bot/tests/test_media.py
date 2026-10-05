@@ -32,3 +32,7 @@ class MediaTests(unittest.TestCase):
     opener.return_value.open.return_value.__enter__.return_value=response
     result=upload(bot,{'document':{'file_id':'image','file_size':len(data)}},'poster_url','00000000-0000-4000-8000-000000000001',500,123,{'expected':'2026-10-05T00:00:00Z'})
     request=opener.return_value.open.call_args.args[0];self.assertEqual(request.full_url,'https://hdqaz.online/api/telegram/media');self.assertEqual(request.get_header('Content-type'),'image/webp');self.assertEqual(Image.open(io.BytesIO(request.data)).format,'WEBP');self.assertIn('content-media',result)
+
+ def test_animated_and_video_stickers_are_rejected_before_download(self):
+  for flag in ('is_animated','is_video'):
+   with self.assertRaises(SafeError):upload(object(),{'sticker':{'file_id':'id','file_size':100,flag:True}},'poster_url','00000000-0000-4000-8000-000000000001',1)

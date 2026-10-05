@@ -71,7 +71,7 @@ function isHlsManifestUrl(value: string) {
 }
 
 function validateSlug(value: string) {
-  return /^[a-z0-9а-яәғқңөұүһі-]+$/i.test(value);
+  return /^[a-z0-9а-яәғқңөұүһі_-]+$/i.test(value);
 }
 
 function requireString(source: Record<string, unknown>, key: string, errors: Record<string, string>) {

@@ -13,6 +13,7 @@ const errorLabels: Record<string, string> = {
 type QueueResult = { data?: { items: ProcessingJobView[]; has_more: boolean }; error?: { message?: string } };
 
 export function ProcessingQueue() {
+  const [cancelPending, setCancelPending] = useState<string | null>(null);
   const [items, setItems] = useState<ProcessingJobView[]>([]);
   const [status, setStatus] = useState("");
   const [offset, setOffset] = useState(0);
@@ -42,7 +43,7 @@ export function ProcessingQueue() {
     return () => clearInterval(timer);
   }, []);
   async function act(id: string, action: "retry" | "cancel" | "hide") {
-    if (action === "cancel" && !window.confirm("Өңдеуді тоқтату керек пе? Жарияланған видео өзгермейді.")) return;
+    setCancelPending(null);
     setRetrying(id);setError("");
     try {
       const response = await fetch(`/api/automation/jobs/${id}/${action}`,{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
@@ -75,8 +76,9 @@ export function ProcessingQueue() {
             <span className={job.status === "ready" ? "text-emerald-300" : "text-zinc-400"}>{job.cancelled ? "Тоқтатылған" : labels[job.status]}</span>
             <span className="w-12 text-right">{job.progress_percent}%</span>
             {job.status === "failed" && <><button disabled={retrying!==null || job.attempt_count>=job.max_attempts} onClick={()=>void act(job.id,"retry")}>Қайталау</button><button disabled={retrying!==null} onClick={()=>void act(job.id,"hide")}>Жасыру</button></>}
-            {["queued","downloading","processing","uploading"].includes(job.status) && <button disabled={retrying!==null} onClick={()=>void act(job.id,"cancel")}>Тоқтату</button>}
+            {["queued","downloading","processing","uploading"].includes(job.status) && <button disabled={retrying!==null} onClick={()=>setCancelPending(job.id)}>Тоқтату</button>}
           </div>
+          {cancelPending === job.id && <div role="dialog" aria-label="Өңдеуді тоқтату" className="mt-2 flex flex-wrap gap-3 rounded-lg border border-white/15 p-3 text-sm"><span>«{job.content_title}» өңдеуін тоқтату керек пе?</span><button onClick={()=>void act(job.id,"cancel")}>Иә, тоқтату</button><button onClick={()=>setCancelPending(null)}>Бас тарту</button></div>}
           <details className="mt-1 text-xs text-zinc-400"><summary className="cursor-pointer">Толығырақ</summary>
             <p className="mt-2">Әрекет {job.attempt_count}/{job.max_attempts} · {new Date(job.created_at).toLocaleString("kk-KZ")}</p>
             {job.error_code && <p>{job.cancelled ? "Әкімші тоқтатты." : errorLabels[job.error_code] ?? "Өңдеу аяқталмады."}</p>}

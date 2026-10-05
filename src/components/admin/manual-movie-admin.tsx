@@ -286,6 +286,7 @@ function getApiError(result: ContentApiResponse | EpisodeApiResponse | DubberApi
 }
 
 export function ManualMovieAdmin({ dubbers, genres, initialContents, readyContentIds = [] }: ManualMovieAdminProps) {
+  const [deletePending, setDeletePending] = useState<Content | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [search, setSearch] = useState("");
   const [publication, setPublication] = useState("all");
@@ -571,7 +572,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
   }
 
   async function removeContent(item: Content) {
-    if (!window.confirm(`«${item.title}» контентін жою керек пе? Тек қолданылмаған жоба жойылады.`)) return;
+    setDeletePending(null);
     setListError("");
     const response = await fetch(`/api/contents/${encodeURIComponent(item.slug)}`, {method:"DELETE"});
     if (!response.ok) {const result=await response.json();setListError(getApiError(result,"Жою мүмкін болмады."));return;}
@@ -1321,6 +1322,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
           <select aria-label="Жария күйі" value={publication} onChange={e=>{setPublication(e.target.value);setPage(0);}} className="rounded-xl bg-zinc-900 p-3"><option value="all">Бәрі</option><option value="published">Жарияланған</option><option value="draft">Жоба / жарияланбаған</option><option value="ready">Дайын / тексеру</option></select>
           <button className="glass-button rounded-xl px-4" onClick={startNewContent}>Жаңа контент</button>
         </div>
+        {deletePending && <div role="dialog" aria-label="Контентті жою" className="mb-3 flex flex-wrap gap-3 rounded-xl border border-red-400/30 p-4"><p>«{deletePending.title}» контентін жою керек пе? Тек қолданылмаған жоба жойылады.</p><button onClick={()=>void removeContent(deletePending)}>Иә, жою</button><button onClick={()=>setDeletePending(null)}>Бас тарту</button></div>}
         {listError && <p role="alert" className="mb-3 text-red-300">{listError}</p>}
         <div className="grid gap-3">
           {filteredContents.slice(page * 10, page * 10 + 10).map((item) => {
@@ -1358,7 +1360,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
                   <a className="glass-button rounded-full px-3 py-2 text-sm" href={`/${item.slug}`} target="_blank" rel="noreferrer">Ашу</a>
                   {!item.isPublished && <a className="glass-button rounded-full px-3 py-2 text-sm" href="https://t.me/hdqaz_bot" title="Telegram → Іздеу → осы контент → Видео қосу" target="_blank" rel="noreferrer">Видео</a>}
                   <button className="glass-button rounded-full px-3 py-2 text-sm" onClick={() => {startEditContent(item);setContentDraft(current=>({...current,isPublished:!item.isPublished}));}}> {item.isPublished ? "Жарияламау / Archive" : "Жариялау"}</button>
-                  {!item.isPublished && <button className="glass-button rounded-full px-3 py-2 text-sm" onClick={() => void removeContent(item)}>Жою</button>}
+                  {!item.isPublished && <button className="glass-button rounded-full px-3 py-2 text-sm" onClick={() => setDeletePending(item)}>Жою</button>}
 
                 </div>
               </article>

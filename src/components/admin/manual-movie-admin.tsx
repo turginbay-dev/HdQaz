@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, Eye, Film, ImageIcon, ListVideo, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import {
   canHaveEpisodes,
@@ -287,6 +287,10 @@ function getApiError(result: ContentApiResponse | EpisodeApiResponse | DubberApi
 
 export function ManualMovieAdmin({ dubbers, genres, initialContents, readyContentIds = [] }: ManualMovieAdminProps) {
   const [actionBusy, setActionBusy] = useState<string | null>(null);
+  const [cleanupRevision,setCleanupRevision]=useState(0);
+  const [fullPending,setFullPending]=useState<Content|null>(null);
+  const [fullConfirmation,setFullConfirmation]=useState("");
+  const [cleanups,setCleanups]=useState<{id:string;content_id:string;title:string;status:string;remaining:{kind:string;path:string}[];retained:{kind:string;path:string}[]}[]>([]);
   const [deletePending, setDeletePending] = useState<Content | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [search, setSearch] = useState("");
@@ -572,6 +576,16 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
     }
   }
 
+  useEffect(()=>{
+    let active=true;let timer:ReturnType<typeof setTimeout>|undefined;
+    async function refresh(){try{const response=await fetch("/api/admin/content-cleanup",{cache:"no-store"});if(!response.ok)return;const result=await response.json();if(active){setCleanups(result.data);if(cleanupRevision>0||result.data.length){const refreshed=await fetch("/api/contents?includeDrafts=true",{cache:"no-store"});const records=await refreshed.json();if(active&&refreshed.ok&&Array.isArray(records.data))setContents(records.data);}if(result.data.some((t:{status:string})=>['queued','running'].includes(t.status)))timer=setTimeout(()=>void refresh(),5000);}}catch{if(active)timer=setTimeout(()=>void refresh(),15000);}}
+    void refresh();return()=>{active=false;if(timer)clearTimeout(timer);};
+  },[cleanupRevision]);
+  async function fullDelete(item: Content,retry=false){
+    setActionBusy(item.id);setListError("");
+    try{const response=await fetch("/api/admin/content-cleanup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:retry?"retry":"start",contentId:item.id,expectedUpdatedAt:item.updatedAt,confirmation:fullConfirmation})});const result=await response.json();if(!response.ok)throw new Error(getApiError(result,"Толық жою басталмады."));setCleanups(current=>[...current.filter(t=>t.content_id!==item.id),result.data]);setFullPending(null);setFullConfirmation("");setCleanupRevision(v=>v+1);}
+    catch(e){setListError(e instanceof Error?e.message:"Тазарту орындалмады.");}finally{setActionBusy(null);}
+  }
   async function unpublish(item: Content) {
     setActionBusy(item.id);setListError("");
     try {
@@ -1340,6 +1354,16 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
           <select aria-label="Жария күйі" value={publication} onChange={e=>{setPublication(e.target.value);setPage(0);}} className="rounded-xl bg-zinc-900 p-3"><option value="all">Бәрі</option><option value="published">Жарияланған</option><option value="draft">Жоба / жарияланбаған</option><option value="ready">Дайын / тексеру</option></select>
           <button className="glass-button rounded-xl px-4" onClick={startNewContent}>Жаңа контент</button>
         </div>
+        {fullPending && <div role="dialog" aria-modal="true" aria-labelledby="full-delete-title" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-5 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-red-500/40 bg-zinc-950 p-7 shadow-2xl">
+            <h3 id="full-delete-title" className="text-xl font-semibold">🔥 Толық жою</h3>
+            <p className="mt-3 text-zinc-300">Бұл әрекет контентті, видеоны, HLS файлдарын және медиа файлдарын толық өшіреді. Қайтару мүмкін емес.</p>
+            <p className="mt-4 text-sm text-zinc-400">Растау үшін «{fullPending.title}» атауын қайталап жазыңыз.</p>
+            <input aria-label="Жою үшін атауды қайталаңыз" value={fullConfirmation} onChange={e=>setFullConfirmation(e.target.value)} className="mt-3 w-full rounded-xl border border-white/20 bg-white/5 p-3" />
+            <div className="mt-6 grid grid-cols-2 gap-3"><button disabled={actionBusy!==null} className="rounded-xl bg-white/10 p-3" onClick={()=>setFullPending(null)}>Жоқ, қалсын</button><button disabled={actionBusy!==null||fullConfirmation!==fullPending.title} className="rounded-xl bg-red-600 p-3 disabled:opacity-40" onClick={()=>void fullDelete(fullPending)}>Иә, толық өшіремін</button></div>
+          </div>
+        </div>}
+        {cleanups.map(task=><div key={task.id} className="mb-3 rounded-2xl border border-amber-500/30 p-4"><p>{task.title} · {task.status==='partial'?"Толық жойылмады":task.status==='done'?"Толық жойылды":"Тазартылуда…"}</p>{task.status==='partial'&&<><p className="mt-2 text-sm text-amber-300">Қалған файлдар / тексерілмеген жолдар:</p><ul className="mt-2 break-all text-xs text-zinc-400">{task.remaining.map((a,i)=><li key={i}>{a.kind}: {a.path}</li>)}</ul><button disabled={actionBusy!==null} className="mt-3 rounded-xl bg-white/10 p-3" onClick={()=>{const item=contents.find(c=>c.id===task.content_id);if(item)void fullDelete(item,true);}}>Қайта жалғастыру</button></>}{task.retained.length>0&&<p className="mt-2 text-sm text-zinc-400">Ортақ файлдар сақталады: {task.retained.length}</p>}</div>)}
         {deletePending && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-title">
           <div className="w-full max-w-md rounded-3xl border border-white/15 bg-zinc-950 p-7 shadow-2xl">
             <h3 id="delete-title" className="text-xl font-semibold">Шынмен өшіресіз бе?</h3>
@@ -1388,7 +1412,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
                   <a className="glass-button rounded-full px-3 py-2 text-sm" href={`/${item.slug}`} target="_blank" rel="noreferrer">Ашу</a>
                   {!item.isPublished && <a className="glass-button rounded-full px-3 py-2 text-sm" href="https://t.me/hdqaz_bot" title="Telegram → Іздеу → осы контент → Видео қосу" target="_blank" rel="noreferrer">Видео</a>}
                   {item.isPublished && <button disabled={actionBusy!==null} className="glass-button rounded-full px-3 py-2 text-sm disabled:opacity-50" onClick={() => void unpublish(item)}>{actionBusy===item.id?"Орындалуда…":"Жарияламау"}</button>}
-                  {!item.isPublished && <button className="glass-button rounded-full px-3 py-2 text-sm" onClick={() => setDeletePending(item)}>Жою</button>}
+                  {!item.isPublished && <><button className="glass-button rounded-full px-3 py-2 text-sm" onClick={() => setDeletePending(item)}>🗑 Жою</button><button disabled={actionBusy!==null||cleanups.some(t=>t.content_id===item.id&&t.status!=='done')} className="rounded-full border border-red-500/30 px-3 py-2 text-sm text-red-300 disabled:opacity-40" onClick={()=>{setFullPending(item);setFullConfirmation("");}}>🔥 Толық жою</button></>}
 
                 </div>
               </article>

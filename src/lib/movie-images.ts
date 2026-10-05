@@ -1,3 +1,5 @@
+import { isContentMediaUrl } from "@/features/telegram/media-url";
+
 export const MOVIE_BACKDROP_FALLBACK = "/movie-backdrop-fallback.svg";
 export const MOVIE_POSTER_FALLBACK = "/movie-poster-fallback.svg";
 
@@ -18,7 +20,7 @@ function normalizeRemoteMovieImageUrl(value: string): string | null {
       url.hostname = "image.tmdb.org";
     }
 
-    if (!allowedRemoteImageHosts.has(url.hostname)) {
+    if (!allowedRemoteImageHosts.has(url.hostname) && !isContentMediaUrl(url.toString())) {
       return null;
     }
 

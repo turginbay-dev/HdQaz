@@ -8,11 +8,13 @@ import uuid
 from .movie import MovieFlow
 from .core import Backend,Config,SafeError,Sources,Telegram,authorized,button,callback,request_key
 
-MENU=[[{'text':'🎬 Movie','callback_data':'menu_movie'},{'text':'📺 Series','callback_data':'menu_series'}],[{'text':'📋 Queue / Status','callback_data':'menu_queue'}]]
+from .admin import AdminFlow,MENU
+
 class Bot:
     def __init__(self,c,backend=None,telegram=None,sources=None):
         self.c=c;self.api=backend or Backend(c);self.tg=telegram or Telegram(c);self.sources=sources or Sources(c)
         self.movie=MovieFlow(self) if hasattr(c,'state_root') else None
+        self.admin=AdminFlow(self) if self.movie else None
         self.downloading=False
         self.ingestion_lock=threading.Lock();self.ingestion_thread=None;self.ingestion_key=None
         self.owner=str(uuid.uuid4());self.stop=threading.Event();self.last_success=time.monotonic();self.lease_deadline=None
@@ -26,7 +28,7 @@ class Bot:
             thread=threading.Thread(target=target,args=args,daemon=True,name='telegram-movie-ingestion')
             self.ingestion_thread=thread;self.ingestion_key=identity;self.downloading=True;thread.start();return True
     def show(self,actor,w):
-        if w['kind']=='movie' and self.movie:
+        if w['kind'] in ('movie','series') and self.movie:
             self.movie.detail(actor,w);return
         m=w['metadata'];j=w.get('job');text=m.get('title','Жаңа '+w['kind'])+'\n'+str(m.get('year',''))+'\n'+m.get('description','')[:900]
         text+='\nКүй: '+w['state']
@@ -60,7 +62,8 @@ class Bot:
         self.tg.send(actor,text,buttons)
     def show_movie(self,actor,w,message_id=None,confirmed=False):
         m=w['metadata'];j=w.get('job');state=w['state']
-        lines=['🎬 '+m.get('title','Жаңа кино')]
+        lines=[('🎬 ' if w['kind']=='movie' else '📺 ')+m.get('title','Жаңа контент')]
+        if w['kind']=='series':lines.append('📺 '+str(m.get('season_number') or '—')+' маусым · '+str(m.get('episode_number') or '—')+' серия')
         if m.get('year'):lines.append('📅 '+str(m['year']))
         if m.get('country'):lines.append('🌍 '+m['country'])
         if m.get('genres'):lines.append('🎭 '+', '.join(m['genres']))
@@ -78,7 +81,7 @@ class Bot:
         elif state=='staging':buttons=[[button(w,'activate','Жалғастыру')]]
         elif state=='published':
             lines.extend(['','✅ Жарияланды'])
-            buttons=[[{'text':'▶️ Сайтта көру','url':'https://hdqaz.online/tg-'+w['id']}]]
+            buttons=[[{'text':'▶️ Сайтта көру','url':w.get('watch_url') or 'https://hdqaz.online/'}]]
         elif state=='rejected':lines.extend(['','❌ Қабылданбады'])
         if j and state not in ('published','rejected'):
             label={'queued':'⬇️ Кезекте','processing':'⚙️ Өңделуде','uploading':'☁️ CDN-ге жүктелуде','ready':'✅ Дайын','failed':'❌ Өңдеу аяқталмады'}.get(j['status'],'⚙️ Өңделуде')
@@ -87,7 +90,10 @@ class Bot:
                 buttons=[[{'text':'▶️ Тексеру','url':j['output_manifest_url']}],[button(w,'publish','✅ Жариялау'),button(w,'reject','❌ Қабылдамау')]]
             elif j['status']=='failed' and state=='submitted' and j['attempt_count']<j['max_attempts']:
                 buttons=[[button(w,'retry','Қайталау')]]
+        if w['kind']=='series' and w.get('content_id'):
+            key=w['content_id'].replace('-','');buttons.extend([[{'text':'➕ Келесі серия','callback_data':'cn:'+key},{'text':'➕ Жаңа маусым','callback_data':'cs:'+key}],[{'text':'📋 Сериялар','callback_data':'cl:'+key}]])
         buttons.append([button(w,'get','🔄 Жаңарту'),{'text':'📋 Кезек','callback_data':'qback'}])
+        buttons.append([{'text':'⬅️ Мәзір','callback_data':'ahome'}])
         self.movie.panel(actor,'\n'.join(lines),buttons,message_id,'detail',workflow=w['id'],confirmed=confirmed)
     def current(self,actor):
         rows=self.api.call('queue',actor)
@@ -117,6 +123,7 @@ class Bot:
             chat=(message or {}).get('chat',{})
             print(json.dumps({'event':'telegram_update_ignored','admin_allowed':type(user_id) is int and user_id in self.c.admins,'private_chat':chat.get('type')=='private' and chat.get('id')==user_id}),flush=True)
             return
+        if self.admin and self.admin.handle(u,actor):return
         if self.movie and self.movie.handle(u,actor):return
         cb=u.get('callback_query');uid=u['update_id']
         if cb:
@@ -210,11 +217,11 @@ class Bot:
                 for u in updates:
                     stage='update_dispatch'
                     try:self.handle(u)
-                    except (SafeError,ValueError,KeyError,OSError) as exc:
+                    except (SafeError,ValueError,KeyError,TypeError,OSError) as exc:
                         actor=authorized(u,self.c.admins)
                         if actor:
                             errors={'storage_full':'Серверде видеоға жеткілікті бос орын жоқ. Файл өңдеуге жіберілген жоқ.', 'invalid_media':'MP4, MOV, MKV немесе WebM видео файлын жіберіңіз.', 'invalid_source':'Файл көлемі немесе түрі жарамсыз.', 'download_timeout':'Жүктеу уақыты аяқталды. Сол файлды қайта жіберуге болады.', 'source_io':'Файл қабылдау аяқталмады. Сол файлды қайта жіберіңіз.'}
-                            self.tg.send(actor,errors.get(getattr(exc,'code',''),'Әрекет орындалмады немесе күйі өзгерді. /queue арқылы тексеріп, жаңартыңыз.'))
+                            self.tg.send(actor,errors.get(getattr(exc,'code',''),'Әрекет орындалмады немесе күйі өзгерді. Карточканы жаңартып, қайта көріңіз.'))
                     offset=u['update_id']+1
                     stage='runtime_offset'
                     self.api.call('runtime',data={'owner':self.owner,'offset':offset})

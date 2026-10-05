@@ -1,4 +1,5 @@
 import 'server-only';
+import { catalogAction } from '@/features/telegram/catalog';
 import { botAuth } from '@/features/telegram/auth';
 import { integer, invalid, jsonBody, metadata, short } from '@/features/telegram/validation';
 import { tmdbDetails, tmdbSearch } from '@/features/telegram/tmdb';
@@ -43,7 +44,9 @@ export async function telegramRequest(request:Request){
    }
   }else{
    const actor=botAuth(request,true)!;
-   if(action==='search'){
+   if(action.startsWith('catalog')||action==='admin_options'){
+    result=await catalogAction(action,actor,b,d);
+   }else if(action==='search'){
     const kind=d.kind;if(kind!=='movie'&&kind!=='series')return invalid();result=await tmdbSearch(kind,short(d.query,150));
    }else if(action==='titles'){
     const q=short(d.query,100).replace(/[%_,()]/g,'');result=checked(await db.from('contents').select('id,title,year,type').neq('type','movie').ilike('title','%'+q+'%').limit(6));
@@ -53,16 +56,16 @@ export async function telegramRequest(request:Request){
     const ids=rows.flatMap(w=>w.job_id?[w.job_id]:[]);const jobs=ids.length?checked(await db.from('processing_jobs').select(jobColumns).in('id',ids)):[];
     result=rows.map(w=>({...w,job:jobs.find(j=>j.id===w.job_id)||null}));
    }else if(action==='get'){
-    const w=await workflow(actor,uuid(b.id));result={...w,job:w.job_id?checked(await db.from('processing_jobs').select(jobColumns).eq('id',w.job_id).single()):null};
+    const w=await workflow(actor,uuid(b.id));const c=w.content_id?checked(await db.from('contents').select('slug').eq('id',w.content_id).single()):null;result={...w,watch_url:c?'https://hdqaz.online/'+encodeURIComponent(c.slug):null,job:w.job_id?checked(await db.from('processing_jobs').select(jobColumns).eq('id',w.job_id).single()):null};
    }else{
     let op=action;let payload:Record<string,unknown>=d;
     const id=action==='new'?null:uuid(b.id);const revision=action==='new'?null:integer(b.revision,0,2147483647);
-    if(action==='new'){if(d.kind!=='movie'&&d.kind!=='series')return invalid();payload={kind:d.kind};}
+    if(action==='new'){if(d.kind!=='movie'&&d.kind!=='series')return invalid();if(d.section!=null&&!['default','anime','dorama'].includes(String(d.section)))return invalid();payload={kind:d.kind,section:d.section||'default'};}
     else{
      const w=await workflow(actor,id!);
-     if(action==='select') {if(w.metadata.title)throw new ApiError(409,'metadata_selected','Start a new draft to select another title.');payload=metadata(await tmdbDetails(w.kind,integer(d.tmdb_id,1,2147483647)));op='edit';}
+     if(action==='select') {if(w.metadata.title)throw new ApiError(409,'metadata_selected','Start a new draft to select another title.');payload=metadata({...w.metadata,...await tmdbDetails(w.kind,integer(d.tmdb_id,1,2147483647))});op='edit';}
      else if(action==='existing'){
-      if(w.kind!=='series')return invalid();const c=checked(await db.from('contents').select('id,title,year').eq('id',uuid(d.content_id)).neq('type','movie').single());payload={existing_content_id:c.id,title:c.title,year:c.year};op='edit';
+      if(w.kind!=='series')return invalid();const c=checked(await db.from('contents').select('id,title,year,type,section,description,country,duration_minutes,is_premium,dubber_id,poster_url,banner_url,hls_url').eq('id',uuid(d.content_id)).neq('type','movie').is('hls_url',null).single());payload=metadata({existing_content_id:c.id,title:c.title,year:c.year,section:c.section||(['anime','dorama'].includes(c.type)?c.type:'default'),description:c.description,country:c.country,duration_minutes:c.duration_minutes,is_premium:c.is_premium,dubber_id:c.dubber_id});op='edit';
      }else if(action==='edit')payload=metadata(d);
      else if(action==='source'){payload={source_ref:uuid(d.source_ref)};}
      else if(action==='prepare'){metadata(w.metadata);if(!w.metadata.title||!w.metadata.year)return invalid();payload={source_ref:uuid(d.source_ref)};}

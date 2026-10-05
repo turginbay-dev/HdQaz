@@ -23,6 +23,7 @@ type ContentRow = {
   title: string;
   slug: string;
   type: ContentType;
+  section?: 'default' | 'anime' | 'dorama' | null;
   description: string;
   poster_url: string;
   banner_url: string;
@@ -211,7 +212,7 @@ function rowToContent(
     id: row.id,
     title: row.title,
     slug: row.slug,
-    type: row.type,
+    type: row.section && row.section!=="default" ? row.section : row.type,
     description: row.description,
     posterUrl: normalizeStoredImageUrl(row.poster_url),
     bannerUrl: normalizeStoredImageUrl(row.banner_url),
@@ -487,7 +488,9 @@ export async function listContents(filters: ContentListFilters = {}) {
   }
 
   if (filters.type) {
-    query = query.eq("type", filters.type);
+    query = filters.type === "anime" || filters.type === "dorama"
+      ? query.or(`type.eq.${filters.type},section.eq.${filters.type}`)
+      : query.eq("type", filters.type);
   }
 
   if (filters.status) {

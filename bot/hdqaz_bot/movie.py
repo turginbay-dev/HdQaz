@@ -44,30 +44,32 @@ class MovieFlow:
  def detail(self,actor,w,message_id=None):
   state=self.panel_state(actor);confirmed=bool(state.get('confirmed')) and state.get('workflow')==w['id']
   self.b.show_movie(actor,w,message_id=message_id,confirmed=confirmed)
- def new_movie(self,actor,uid,message_id,kind='movie'):
-  w=self.b.api.call('new',actor,data={'kind':kind},key=request_key(actor,uid,'new'))
+ def context(self,actor):
+  p=self.panel_state(actor);return {'kind':p.get('content_kind','movie'),'section':p.get('content_section','default')}
+ def new_movie(self,actor,uid,message_id,kind=None):
+  w=self.b.api.call('new',actor,data={**self.context(actor),**({'kind':kind} if kind else {})},key=request_key(actor,uid,'new'))
   self.save(actor,{'id':w['id'],'mode':'manual','step':0,'last':uid,'message_id':message_id})
   self.prompt(actor,self.get(actor));return w
  def choice(self,actor,message_id):
-  return self.panel(actor,'🎬 Киноны қалай қосамыз?',[[{'text':'🔎 TMDB арқылы табу','callback_data':'movie_tmdb'},{'text':'✍️ Қолмен енгізу','callback_data':'movie_manual'}]],message_id,'movie_choice',workflow=None,confirmed=False)
+  return self.panel(actor,('🎬 Киноны' if self.context(actor)['kind']=='movie' else '📺 Сериалды')+' қалай қосамыз?',[[{'text':'🔎 TMDB арқылы табу','callback_data':'movie_tmdb'},{'text':'✍️ Қолмен енгізу','callback_data':'movie_manual'}]],message_id,'movie_choice',workflow=None,confirmed=False)
  def queue(self,actor,page=0,message_id=None):
   rows=self.b.api.call('queue',actor)
-  rows=[w for w in rows if w.get('state') not in ('published',)]
+  rows=[w for w in rows if isinstance(w,dict) and w.get('state') not in ('published',) and isinstance(w.get('id'),str) and type(w.get('revision')) is int]
   if type(page) is not int or page<0:page=0
   size=5;pages=max(1,(len(rows)+size-1)//size);page=max(0,min(page,pages-1));items=rows[page*size:(page+1)*size]
   lines=['📋 Кезек'];buttons=[]
   if not items:lines.append('Кезек бос.')
   for i,w in enumerate(items,page*size+1):
-   m=w.get('metadata') or {};j=w.get('job') or {};status={'draft':'✏️ Draft','staging':'⬇️ Қабылдау','rejected':'❌ Қабылданбады'}.get(w['state'],'⬇️ Кезекте')
+   m=w.get('metadata') if isinstance(w.get('metadata'),dict) else {};j=w.get('job') if isinstance(w.get('job'),dict) else {};status={'draft':'✏️ Draft','staging':'⬇️ Қабылдау','rejected':'❌ Қабылданбады'}.get(w.get('state'),'⬇️ Кезекте')
    if j:status={'queued':'⬇️ '+str(j.get('progress_percent',0))+'%','processing':'⚙️ '+str(j.get('progress_percent',0))+'%','uploading':'☁️ '+str(j.get('progress_percent',0))+'%','ready':'✅ Ready','failed':'❌ Failed'}.get(j.get('status'),status)
-   title=(m.get('title') or 'Жаңа кино').replace('\n',' ')[:36]
-   lines.append(f'{i}. 🎬 {title} — {status}')
+   title=str(m.get('title') or 'Жаңа кино').replace('\n',' ')[:36]
+   episode=(' · '+str(m.get('season_number','—'))+'×'+str(m.get('episode_number','—'))) if w.get('kind')=='series' else '';lines.append(f'{i}. 🎬 {title}{episode} — {status}')
    buttons.append([{'text':f'{i}. {title[:40]}','callback_data':'qrow:'+w['id'].replace('-','')+':'+str(w['revision'])}])
   nav=[]
   if page:nav.append({'text':'◀️','callback_data':'qprev'})
   nav.append({'text':'🔄 Жаңарту','callback_data':'qrefresh'})
   if page<pages-1:nav.append({'text':'▶️','callback_data':'qnext'})
-  buttons.append(nav);self.panel(actor,'\n'.join(lines),buttons,message_id,'queue',page)
+  buttons.append(nav);buttons.append([{'text':'⬅️ Мәзір','callback_data':'ahome'}]);self.panel(actor,'\n'.join(lines),buttons,message_id,'queue',page)
  def open_row(self,actor,wid,revision,message_id):
   w=self.b.api.call('get',actor,wid)
   if w['revision']!=revision:raise SafeError('stale')
@@ -87,11 +89,11 @@ class MovieFlow:
   b=self.b;cb=u.get('callback_query');value=cb.get('data','') if cb else '';uid=u['update_id'];s=self.get(actor)
   premium=bool(cb and s and value in (s.get('yes'),s.get('no')))
   if cb and value=='menu_movie':
-   b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});self.clear(actor);self.choice(actor,cb['message']['message_id']);return True
+   b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});self.clear(actor);self.b.admin.context(actor);self.choice(actor,cb['message']['message_id']);return True
   if cb and value=='menu_queue':
    b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});self.queue(actor,0,cb['message']['message_id']);return True
   if cb and value in ('qrefresh','qprev','qnext'):
-   b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});state=self.panel_state(actor);page=state.get('page',0)+(1 if value=='qnext' else -1 if value=='qprev' else 0);self.queue(actor,page,cb['message']['message_id']);return True
+   b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});state=self.panel_state(actor);page=state.get('page',0);page=(page if type(page) is int else 0)+(1 if value=='qnext' else -1 if value=='qprev' else 0);self.queue(actor,page,cb['message']['message_id']);return True
   if cb and value.startswith('qrow:'):
    b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});parts=value.split(':');wid=str(uuid.UUID(hex=parts[1]));self.open_row(actor,wid,int(parts[2]),cb['message']['message_id']);return True
   if cb and value=='qback':
@@ -103,7 +105,7 @@ class MovieFlow:
   if cb and value=='movie_search_manual':
    b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});self.clear(actor);self.new_movie(actor,u['update_id'],cb['message']['message_id']);return True
   if cb and value.startswith('tmdbselect:'):
-   b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});tmdb=int(value.split(':',1)[1]);w=b.api.call('new',actor,data={'kind':'movie'},key=request_key(actor,u['update_id'],'new'));w=b.api.call('select',actor,w['id'],w['revision'],{'tmdb_id':tmdb},request_key(actor,u['update_id'],'select'));self.save(actor,{'id':w['id'],'mode':'review','step':0,'last':u['update_id'],'message_id':cb['message']['message_id']});self.panel(actor,'✅ Кино таңдалды. Мәліметтерді қарап шығыңыз.',[[button(w,'confirm','✅ Дұрыс'),button(w,'manual','✏️ Өзгерту')],[button(w,'cancel','❌ Бас тарту')]],cb['message']['message_id'],'movie_review',w['id'],confirmed=False);self.detail(actor,w,cb['message']['message_id']);return True
+   b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});tmdb=int(value.split(':',1)[1]);w=b.api.call('new',actor,data=self.context(actor),key=request_key(actor,u['update_id'],'new'));w=b.api.call('select',actor,w['id'],w['revision'],{'tmdb_id':tmdb},request_key(actor,u['update_id'],'select'));self.save(actor,{'id':w['id'],'mode':'review','step':0,'last':u['update_id'],'message_id':cb['message']['message_id']});self.panel(actor,'✅ Кино таңдалды. Мәліметтерді қарап шығыңыз.',[[button(w,'confirm','✅ Дұрыс'),button(w,'manual','✏️ Өзгерту')],[button(w,'cancel','❌ Бас тарту')]],cb['message']['message_id'],'movie_review',workflow=w['id'],confirmed=False);self.detail(actor,w,cb['message']['message_id']);return True
   if cb and value=='mcard':
    b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});state=self.get(actor);w=b.api.call('get',actor,state['id']);self.detail(actor,w,cb['message']['message_id']);return True
   if cb and value in ('menu_series',):self.clear(actor);return False
@@ -112,7 +114,7 @@ class MovieFlow:
    except SafeError:return False
    if action not in ('manual','video','cancel','confirm','get','publish','reject','retry'):return False
    w=b.api.call('get',actor,wid)
-   if w['kind']!='movie':return False
+   if w['kind'] not in ('movie','series'):return False
    b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']})
    if w['revision']!=rev:raise SafeError('stale')
    if action in ('cancel','manual','video','confirm') and w['state']!='draft':raise SafeError('stale')
@@ -120,8 +122,10 @@ class MovieFlow:
     self.clear(actor);self.panel(actor,'Мәліметтер сақталды.',[[{'text':'🎬 Жаңа кино','callback_data':'menu_movie'},{'text':'📋 Кезек','callback_data':'menu_queue'}]],cb['message']['message_id'],'home');return True
    if action=='manual':
     s={'id':wid,'mode':'manual','step':0,'last':uid,'message_id':cb['message']['message_id']};self.save(actor,s);self.prompt(actor,s);return True
+   if action in ('confirm','video') and w['kind']=='series' and (not w['metadata'].get('season_number') or not w['metadata'].get('episode_number')):
+    b.admin.start_numbers(actor,w,cb['message']['message_id']);return True
    if action=='confirm':
-    self.panel_state(actor);self.panel(actor,'🎞 Енді кино файлын жіберіңіз немесе forward жасаңыз.',[[{'text':'🔙 Карточка','callback_data':'mcard'}]],cb['message']['message_id'],'movie_video',wid,confirmed=True);self.save(actor,{'id':wid,'mode':'video','step':0,'last':uid,'message_id':cb['message']['message_id'],'confirmed':True});return True
+    self.panel_state(actor);self.panel(actor,'🎞 Енді кино файлын жіберіңіз немесе forward жасаңыз.',[[{'text':'🔙 Карточка','callback_data':'mcard'}]],cb['message']['message_id'],'movie_video',workflow=wid,confirmed=True);self.save(actor,{'id':wid,'mode':'video','step':0,'last':uid,'message_id':cb['message']['message_id'],'confirmed':True});return True
    if action=='video' and (not w['metadata'].get('title') or not w['metadata'].get('year')):raise SafeError('metadata_required')
    if action=='video':
     s={'id':wid,'mode':'video','step':0,'last':uid,'message_id':cb['message']['message_id'],'confirmed':True};self.save(actor,s);self.prompt(actor,s);return True
@@ -136,7 +140,7 @@ class MovieFlow:
   if not s:return False
   text=message.get('text','').strip()
   if s['mode']=='tmdb_query' and text and not text.startswith('/'):
-   try:results=b.api.call('search',actor,data={'kind':'movie','query':text})
+   try:results=b.api.call('search',actor,data={'kind':self.context(actor)['kind'],'query':text})
    except SafeError:
     self.panel(actor,'TMDB қазір қолжетімсіз. Қолмен енгізіңіз.',[[{'text':'✍️ Қолмен енгізу','callback_data':'movie_search_manual'}]],s.get('message_id'),'tmdb_fallback');return True
    buttons=[[{'text':(r['title']+' · '+str(r.get('year') or '—'))[:56],'callback_data':'tmdbselect:'+str(r['tmdb_id'])}] for r in results[:6]]
@@ -163,7 +167,7 @@ class MovieFlow:
   w=b.mutate(w,actor,uid,'edit',{**w['metadata'],field:val});s['last']=uid;s['step']+=1
   if s['step']==len(FIELDS):
    s.update(mode='review',confirmed=False);self.save(actor,s)
-   self.panel(actor,'✅ Мәліметтер дайын. Кино карточкасын қарап шығыңыз.',[[button(w,'confirm','✅ Дұрыс'),button(w,'manual','✏️ Өзгерту')],[button(w,'cancel','❌ Бас тарту')]],s.get('message_id'),'movie_review',w['id'],confirmed=False);self.detail(actor,w,s.get('message_id'))
+   self.panel(actor,'✅ Мәліметтер дайын. Кино карточкасын қарап шығыңыз.',[[button(w,'confirm','✅ Дұрыс'),button(w,'manual','✏️ Өзгерту')],[button(w,'cancel','❌ Бас тарту')]],s.get('message_id'),'movie_review',workflow=w['id'],confirmed=False);self.detail(actor,w,s.get('message_id'))
   else:self.save(actor,s);self.prompt(actor,s)
   return True
  def ingest(self,actor,u,s,media):

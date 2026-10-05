@@ -4,6 +4,8 @@ from .core import SafeError
 from .ingestion import open_beneath
 MAX_IMAGE=10*1024*1024
 
+def configured():return all(os.environ.get(name) for name in ("R2_ENDPOINT_URL","R2_BUCKET","R2_ACCESS_KEY_ID","R2_SECRET_ACCESS_KEY"))
+
 def normalize(stream):
  from PIL import Image,ImageOps
  Image.MAX_IMAGE_PIXELS=10000000

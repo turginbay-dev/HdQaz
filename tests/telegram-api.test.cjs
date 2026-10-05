@@ -14,7 +14,7 @@ test('catalog actions require actor authorization before reading the database',a
 test('existing movie attach accepts only empty unpublished movie targets',async()=>{
  const id='11111111-1111-4111-8111-111111111111';
  for(const record of [{type:'movie',hls_url:null,is_published:false},{type:'movie',hls_url:null,is_published:true},{type:'movie',hls_url:'https://cdn.hdqaz.online/old.m3u8',is_published:false},{type:'series',hls_url:null,is_published:false}]){
-  let mutation;const c={id,title:'Web draft',year:2026,section:'default',...record};const w={id,kind:'movie',metadata:{},revision:0};
+  let mutation;const c={id,title:'Web draft',year:2026,section:'default',description:'',country:'',duration_minutes:null,dubber_id:null,is_premium:false,...record};const w={id,kind:'movie',metadata:{},revision:0};
   const db={from(table){const q={};for(const k of ['select','eq','single','maybeSingle'])q[k]=()=>q;q.then=resolve=>resolve({data:table==='contents'?c:w,error:null});return q;},rpc:async(name,data)=>{mutation=data;return {data:w,error:null};}};
   const mod=loader({'@/lib/supabase/admin':{createAdminClient:()=>db}},env)('src/features/telegram/http.ts');const response=await mod.telegramRequest(req({action:'existing',id,revision:0,request_id:id,data:{content_id:id}}));
   const valid=!record.is_published&&!record.hls_url&&record.type==='movie';assert.equal(response.status,valid?200:400);if(valid)assert.equal(mutation.p_data.existing_content_id,id);else assert.equal(mutation,undefined);

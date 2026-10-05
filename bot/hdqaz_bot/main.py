@@ -77,7 +77,8 @@ class Bot:
             row=[button(w,'confirm','✅ Дұрыс'),button(w,'manual','✏️ Өзгерту')] if ready else [button(w,'manual','✏️ Өзгерту')]
             buttons=[row]
             if ready:buttons.append([button(w,'video','🎞 Видео қосу')])
-            buttons.append([{'text':'🖼 Постер қосу','callback_data':'wm:'+w['id'].replace('-','')+':poster_url'},{'text':'🌄 Баннер қосу','callback_data':'wm:'+w['id'].replace('-','')+':banner_url'}])
+            from .media import configured
+            if configured():buttons.append([{'text':'🖼 Постер қосу','callback_data':'wm:'+w['id'].replace('-','')+':poster_url'},{'text':'🌄 Баннер қосу','callback_data':'wm:'+w['id'].replace('-','')+':banner_url'}])
             buttons.append([button(w,'cancel','❌ Бас тарту')])
         elif state=='staging':buttons=[[button(w,'activate','Жалғастыру')]]
         elif state=='published':

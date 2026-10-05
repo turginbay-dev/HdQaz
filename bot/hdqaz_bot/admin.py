@@ -1,7 +1,7 @@
 """Button-driven catalog administration through the private backend only."""
 import json,uuid
 from urllib.parse import urlencode
-from .media import upload,share
+from .media import upload,share,configured
 from .core import SafeError,button,request_key
 
 MENU=[[{'text':'➕ Контент қосу','callback_data':'aadd'},{'text':'🔎 Іздеу','callback_data':'asearch'}],[{'text':'📚 Каталог','callback_data':'acatalog'},{'text':'📋 Кезек','callback_data':'menu_queue'}],[{'text':'⚙️ Басқару','callback_data':'asettings'}]]
@@ -85,8 +85,9 @@ class AdminFlow:
    if op=='cm':
     c=self.b.api.call('catalog_get',actor,id);rows=[[btn('🖼 Постерді ауыстыру','cmup:'+compact(id)+':poster_url')],[btn('🌄 Баннерді ауыстыру','cmup:'+compact(id)+':banner_url')]]
     for field,label in [('poster_url','👁 Постер'),('banner_url','👁 Баннер')]:
-     if c.get(field):rows.append([{'text':label,'url':c[field]}])
-    rows.append([btn('⬅️ Артқа','ci:'+compact(id))]);self.panel(actor,'🖼 '+c['title'],rows,mid);return True
+     if c.get(field) and c[field].startswith('https://'):rows.append([{'text':label,'url':c[field]}])
+    if not configured():rows=[row for row in rows if 'url' in row[0]]
+    rows.append([btn('⬅️ Артқа','ci:'+compact(id))]);self.panel(actor,'🖼 '+c['title']+('' if configured() else '\nСурет сақтау әлі бапталмаған.'),rows,mid);return True
    field=parts[2]
    if field not in ('poster_url','banner_url'):raise SafeError('invalid_input')
    if op=='wm':

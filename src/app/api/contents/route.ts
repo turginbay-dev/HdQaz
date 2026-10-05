@@ -1,3 +1,4 @@
+import { requireSameOrigin } from "@/features/processing/auth";
 import { requireAdmin } from "@/lib/api/auth";
 import { getPagination, getSearchBoolean, getSearchString, readJsonObject } from "@/lib/api/request";
 import { created, handleApiError, ok, validationError } from "@/lib/api/responses";
@@ -41,6 +42,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    requireSameOrigin(request);
     await requireAdmin(request);
 
     const payload = await readJsonObject(request);

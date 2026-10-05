@@ -63,6 +63,7 @@ export type Episode = {
 
 export type Content = {
   storageType?: ContentType;
+  section?: "default" | "anime" | "dorama";
   id: string;
   title: string;
   slug: string;
@@ -96,6 +97,9 @@ export type Content = {
 };
 
 export type ContentInput = {
+  expectedUpdatedAt?: string;
+  kind?: "movie" | "series";
+  section?: "default" | "anime" | "dorama";
   id?: string;
   title: string;
   slug: string;

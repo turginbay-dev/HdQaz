@@ -30,11 +30,14 @@ export function isEpisodicType(type: ContentType | undefined) {
 }
 
 export function isEpisodicContent(content: {
+  storageType?: ContentType;
   episodeCount?: number | null;
   episodes?: Array<unknown> | null;
   hlsUrl?: string | null;
   type?: ContentType | null;
 }) {
+  if (content.storageType === "movie" || content.storageType === "cartoon") return false;
+  if (content.storageType === "series") return true;
   if (!content.type) {
     return false;
   }

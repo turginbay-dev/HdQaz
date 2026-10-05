@@ -2,7 +2,7 @@ import "server-only";
 import { ApiError, isApiError } from "@/lib/api/errors";
 import { requireAdmin } from "@/lib/api/auth";
 import { isProducer, requireSameOrigin, requireWorker } from "@/features/processing/auth";
-import { callJob, listJobs } from "@/features/processing/repository";
+import { callJob, listJobs, cancelJob, hideJob } from "@/features/processing/repository";
 import { parseClaim, parseComplete, parseCreate, parseFail, parseHeartbeat, parseList, uuid } from "@/features/processing/validation";
 
 const headers = { "Cache-Control": "no-store", Vary: "Authorization, Cookie" };
@@ -36,6 +36,12 @@ export async function processingRequest(request: Request, action: string, jobId?
     } else if (action === "create") {
       if (!isProducer(request)) await requireAdmin(request);
       data = await callJob("automation_create_job", parseCreate(await body(request)));
+    } else if (action === "hide") {
+      await requireAdmin(request);
+      data = await hideJob(uuid(jobId));
+    } else if (action === "cancel") {
+      await requireAdmin(request);
+      data = await cancelJob(uuid(jobId));
     } else if (action === "retry") {
       await requireAdmin(request);
       const id = uuid(jobId); parseClaim(await body(request));

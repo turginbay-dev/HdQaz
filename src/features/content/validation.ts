@@ -128,7 +128,13 @@ function validateIntroWindow(
 
 export function parseContentInput(payload: Record<string, unknown>): ValidationResult<ContentInput> {
   const errors: Record<string, string> = {};
-  const type = asString(payload.type) as ContentType | undefined;
+  const expectedUpdatedAt = asString(payload.expectedUpdatedAt);
+  if (payload.expectedUpdatedAt !== undefined && (!expectedUpdatedAt || !Number.isFinite(Date.parse(expectedUpdatedAt)))) errors.expectedUpdatedAt = "Контентті жаңартыңыз.";
+  const kind = asString(payload.kind);
+  const section = asString(payload.section);
+  if (payload.kind !== undefined && !["movie", "series"].includes(kind ?? "")) errors.kind = "Фильм немесе сериал таңдаңыз.";
+  if (payload.section !== undefined && !["default", "anime", "dorama"].includes(section ?? "")) errors.section = "Бөлімді дұрыс таңдаңыз.";
+  const type = (kind ?? asString(payload.type)) as ContentType | undefined;
   const status = asString(payload.status) as ContentStatus | undefined;
   const year = asNumber(payload.year);
   const durationMinutes = asNumber(payload.durationMinutes);
@@ -217,6 +223,8 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
 
   return {
     data: {
+      ...(expectedUpdatedAt ? {expectedUpdatedAt} : {}),
+      ...(kind ? { kind: kind as "movie" | "series", section: (section ?? "default") as "default" | "anime" | "dorama" } : {}),
       title: title ?? "",
       slug: slug ?? "",
       type: type ?? "movie",

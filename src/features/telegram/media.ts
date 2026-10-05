@@ -1,6 +1,7 @@
 import 'server-only';
 import sharp from 'sharp';
 import { createHash } from 'node:crypto';
+import { requireAdmin } from '@/lib/api/auth';
 import { botAuth } from '@/features/telegram/auth';
 import { MEDIA_BUCKET } from '@/features/telegram/media-url';
 import { uuid } from '@/features/processing/validation';
@@ -18,13 +19,13 @@ async function bytes(request:Request){
 export async function normalizeImage(data:Buffer){
  try{const image=sharp(data,{limitInputPixels:10000000,failOn:'warning'}),info=await image.metadata();if(!['jpeg','png','webp'].includes(info.format||'')||(info.pages||1)!==1)return invalid();const output=await image.rotate().resize(2560,2560,{fit:'inside',withoutEnlargement:true}).webp({quality:85}).toBuffer();if(output.length>2*1024*1024)return invalid();return output;}catch{return invalid();}
 }
-export async function mediaRequest(request:Request){
+export async function mediaRequest(request:Request, web=false){
  try{
-  requireSameOrigin(request);const actor=botAuth(request,true)!;
+  requireSameOrigin(request);const actor=web?(await requireAdmin(request),null):botAuth(request,true)!;
   if(!['image/jpeg','image/png','image/webp'].includes(request.headers.get('content-type')||''))return invalid();
   const id=uuid(request.headers.get('x-target-id')),key=uuid(request.headers.get('x-request-id')),field=request.headers.get('x-media-field');
   if(field!=='poster_url'&&field!=='banner_url')return invalid();
-  const scope=request.headers.get('x-workflow');if(scope!=='true'&&scope!=='false')return invalid();const flow=scope==='true',version=request.headers.get('x-version')||'';
+  const scope=request.headers.get('x-workflow');if(scope!=='true'&&scope!=='false')return invalid();const flow=scope==='true';if(web&&flow)return invalid();const version=request.headers.get('x-version')||'';
   if(flow?!/^(0|[1-9][0-9]{0,9})$/.test(version):!/^\d{4}-\d{2}-\d{2}T/.test(version)||!Number.isFinite(Date.parse(version)))return invalid();
   const db=createAdminClient();const selected=flow?await db.from('telegram_workflows').select('id,actor_id,state,revision,metadata,content_id').eq('id',id).eq('actor_id',actor).single():await db.from('contents').select('id,updated_at,poster_url,banner_url').eq('id',id).single();
   if(selected.error||!selected.data)throw new ApiError(404,'not_found','Content not found.');const target=selected.data as { state?:string; revision?:number; metadata?:Record<string,unknown>; content_id?:string; updated_at?:string; poster_url?:string; banner_url?:string };const meta=target.metadata||{};
@@ -40,8 +41,8 @@ export async function mediaRequest(request:Request){
   // A lost upload acknowledgement or retry is safe when stored bytes match exactly.
   // Verify through authenticated Storage, not an arbitrary external URL.
   const verified=await store.download(path);if(verified.error||!verified.data||verified.data.size!==data.length||!Buffer.from(await verified.data.arrayBuffer()).equals(data))throw new ApiError(503,'storage_unavailable','Сурет сақталмады.');
-  const result=flow?await db.rpc('telegram_workflow_action',{p_actor:actor,p_request:key,p_id:id,p_revision:Number(version),p_action:'edit',p_data:{...meta,[field]:url}}):await db.rpc('telegram_catalog_action',{p_actor:actor,p_request:key,p_id:id,p_expected:version,p_action:'edit',p_data:{[field]:url}});
-  if(result.error)throw new ApiError(409,'stale','Refresh and retry.');
+  const result=web?await db.from('contents').update({[field]:url}).eq('id',id).eq('updated_at',version).select('id').maybeSingle():flow?await db.rpc('telegram_workflow_action',{p_actor:actor,p_request:key,p_id:id,p_revision:Number(version),p_action:'edit',p_data:{...meta,[field]:url}}):await db.rpc('telegram_catalog_action',{p_actor:actor,p_request:key,p_id:id,p_expected:version,p_action:'edit',p_data:{[field]:url}});
+  if(result.error||(web&&!result.data))throw new ApiError(409,'stale','Refresh and retry.');
   return Response.json({data:{url}},{headers:{'Cache-Control':'no-store'}});
  }catch(error){const known=isApiError(error);return Response.json({error:{code:known?error.code:'media_unavailable',message:known?error.message:'Сурет сақталмады. Қайта көріңіз.'}},{status:known?error.status:503,headers:{'Cache-Control':'no-store'}});}
 }

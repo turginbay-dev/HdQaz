@@ -24,7 +24,7 @@ export function ProcessingQueue() {
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    const params = new URLSearchParams({ limit: "25", offset: String(offset) });
+    const params = new URLSearchParams({ limit: "8", offset: String(offset) });
     if (status) params.set("status", status);
     void fetch(`/api/automation/jobs?${params}`, { cache: "no-store", signal: controller.signal })
       .then(async response => {
@@ -41,16 +41,14 @@ export function ProcessingQueue() {
     const timer = setInterval(() => { if (document.visibilityState === "visible") setRevision(value => value + 1); }, 15000);
     return () => clearInterval(timer);
   }, []);
-  async function retry(id: string) {
-    setRetrying(id); setError("");
+  async function act(id: string, action: "retry" | "cancel" | "hide") {
+    if (action === "cancel" && !window.confirm("Өңдеуді тоқтату керек пе? Жарияланған видео өзгермейді.")) return;
+    setRetrying(id);setError("");
     try {
-      const response = await fetch(`/api/automation/jobs/${id}/retry`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
-      });
-      if (!response.ok) throw new Error("retry_failed");
-      setRevision(value => value + 1);
-    } catch { setError("Қайта кезекке қою мүмкін болмады. Күйі өзгерген немесе әрекет шегі біткен болуы мүмкін."); }
-    finally { setRetrying(null); }
+      const response = await fetch(`/api/automation/jobs/${id}/${action}`,{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+      const result=await response.json();if(!response.ok)throw new Error(result.error?.message ?? "Әрекет орындалмады.");
+      setRevision(value=>value+1);
+    }catch(error){setError(error instanceof Error ? error.message : "Әрекет орындалмады.");}finally{setRetrying(null);}
   }
   return (
     <section aria-labelledby="processing-queue-title" className="glass mb-8 rounded-3xl p-5 sm:p-6">
@@ -70,40 +68,27 @@ export function ProcessingQueue() {
       {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
       {loading && <p role="status" className="mt-4 text-sm text-zinc-400">Кезек жүктелуде…</p>}
       {!loading && !error && !items.length && <p className="mt-4 text-sm text-zinc-400">Бұл күйде тапсырма жоқ.</p>}
-      <div className="mt-4 grid gap-3">
-        {items.map(job => (
-          <article key={job.id} className="rounded-2xl border border-white/10 p-4">
-            <div className="flex flex-wrap justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="break-words font-semibold text-white">{job.content_title ?? job.content_id}</h3>
-                {job.episode_id && <p className="text-sm text-zinc-400">{job.episode_number}-серия{job.episode_title ? ` · ${job.episode_title}` : ""}</p>}
-              </div>
-              <span className={job.status === "ready" ? "text-emerald-300" : job.status === "failed" ? "text-red-300" : "text-zinc-300"}>{labels[job.status]}</span>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-zinc-400">
-              <span>Кезең: {job.stage ? labels[job.stage] : "—"}</span>
-              <span>{job.progress_percent}%</span>
-              <span>Әрекет: {job.attempt_count}/{job.max_attempts}</span>
-              <time dateTime={job.created_at}>{new Date(job.created_at).toLocaleString("kk-KZ")}</time>
-            </div>
-            <progress aria-label="Өңдеу барысы" max={100} value={job.progress_percent} className="mt-3 h-2 w-full accent-emerald-400" />
-            {job.error_code && <p className="mt-2 text-sm text-red-300">{errorLabels[job.error_code] ?? "Өңдеу аяқталмады."}</p>}
-            {job.status === "ready" && job.output_manifest_url && (
-              <div className="mt-3 text-sm">
-                <p className="text-emerald-300">{job.telegram_review_state === "published" ? "Жарияланған · әкімші растады" : job.telegram_review_state === "rejected" ? "Қабылданбаған · жарияланбаған" : "Дайын · тексеруді күтеді"}</p>
-                <p className="mt-1 break-all text-zinc-300">{job.output_manifest_url}</p>
-                <p className="mt-1 text-zinc-500">{job.telegram_review_state === "published" ? "Нәтиже әкімшінің нақты растауымен бекітілді." : "Сайттағы видео сілтемесі өзгерген жоқ."}</p>
-              </div>
-            )}
-            {job.status === "failed" && (job.attempt_count < job.max_attempts
-              ? <button type="button" disabled={retrying !== null} onClick={() => void retry(job.id)} className="glass-button mt-3 rounded-xl px-3 py-2 text-sm disabled:opacity-50">{retrying === job.id ? "Кезекке қойылуда…" : "Қайта орындау"}</button>
-              : <p className="mt-2 text-sm text-zinc-500">Әрекет шегіне жетті.</p>)}
-          </article>
-        ))}
+      <div className="mt-4 divide-y divide-white/10">
+        {items.map(job => <div key={job.id} className="py-2">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="min-w-0 flex-1 truncate text-white">{job.content_title ?? "Контент"}{job.episode_id ? ` · ${job.episode_number ?? ""}-серия` : ""}</span>
+            <span className={job.status === "ready" ? "text-emerald-300" : "text-zinc-400"}>{job.cancelled ? "Тоқтатылған" : labels[job.status]}</span>
+            <span className="w-12 text-right">{job.progress_percent}%</span>
+            {job.status === "failed" && <><button disabled={retrying!==null || job.attempt_count>=job.max_attempts} onClick={()=>void act(job.id,"retry")}>Қайталау</button><button disabled={retrying!==null} onClick={()=>void act(job.id,"hide")}>Жасыру</button></>}
+            {["queued","downloading","processing","uploading"].includes(job.status) && <button disabled={retrying!==null} onClick={()=>void act(job.id,"cancel")}>Тоқтату</button>}
+          </div>
+          <details className="mt-1 text-xs text-zinc-400"><summary className="cursor-pointer">Толығырақ</summary>
+            <p className="mt-2">Әрекет {job.attempt_count}/{job.max_attempts} · {new Date(job.created_at).toLocaleString("kk-KZ")}</p>
+            {job.error_code && <p>{job.cancelled ? "Әкімші тоқтатты." : errorLabels[job.error_code] ?? "Өңдеу аяқталмады."}</p>}
+            {job.status === "ready" && <p className="text-emerald-300">{job.telegram_review_state === "published" ? "Әкімші жариялаған" : "Адам тексеруін күтеді. Автоматты жарияланбайды."}</p>}
+            {job.output_manifest_url && <a className="break-all underline" href={job.output_manifest_url} target="_blank" rel="noreferrer">Нәтижені ашу</a>}
+            <p className="mt-1 break-all">Тапсырма: {job.id}</p>
+          </details>
+        </div>)}
       </div>
       <div className="mt-4 flex justify-end gap-3 text-sm">
-        <button type="button" disabled={loading || offset === 0} onClick={() => setOffset(value => Math.max(0, value - 25))} className="disabled:opacity-40">Алдыңғы</button>
-        <button type="button" disabled={loading || !hasMore} onClick={() => setOffset(value => value + 25)} className="disabled:opacity-40">Келесі</button>
+        <button type="button" disabled={loading || offset === 0} onClick={() => setOffset(value => Math.max(0, value - 8))} className="disabled:opacity-40">Алдыңғы</button>
+        <button type="button" disabled={loading || !hasMore} onClick={() => setOffset(value => value + 8)} className="disabled:opacity-40">Келесі</button>
       </div>
     </section>
   );

@@ -1,3 +1,4 @@
+import { requireSameOrigin } from "@/features/processing/auth";
 import { requireAdmin } from "@/lib/api/auth";
 import { getSearchBoolean, readJsonObject } from "@/lib/api/request";
 import { handleApiError, noContent, notFound, ok, validationError } from "@/lib/api/responses";
@@ -34,6 +35,7 @@ export async function GET(request: Request, context: ContentRouteContext) {
 
 export async function PATCH(request: Request, context: ContentRouteContext) {
   try {
+    requireSameOrigin(request);
     await requireAdmin(request);
 
     const { slug } = await context.params;
@@ -52,6 +54,7 @@ export async function PATCH(request: Request, context: ContentRouteContext) {
 
 export async function DELETE(request: Request, context: ContentRouteContext) {
   try {
+    requireSameOrigin(request);
     await requireAdmin(request);
 
     const { slug } = await context.params;

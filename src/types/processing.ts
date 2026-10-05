@@ -32,4 +32,4 @@ export type ProcessingJobView = Pick<ProcessingJob,
   "id" | "content_id" | "episode_id" | "status" | "progress_percent" | "attempt_count" | "max_attempts" |
   "next_attempt_at" | "heartbeat_at" | "lease_expires_at" | "output_manifest_url" | "output_metadata" |
   "error_code" | "error_message" | "created_at" | "updated_at" | "started_at" | "finished_at"
-> & { telegram_review_state?: string | null; stage: ProcessingStage | null; content_title?: string; episode_title?: string | null; episode_number?: number };
+> & { cancelled?: boolean; telegram_review_state?: string | null; stage: ProcessingStage | null; content_title?: string; episode_title?: string | null; episode_number?: number };

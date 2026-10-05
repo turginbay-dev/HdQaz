@@ -20,6 +20,7 @@ type AdminContent = {
   title: string;
   slug: string;
   type: ContentType;
+  section: "default" | "anime" | "dorama";
   releaseFormat: ContentReleaseFormat;
   description: string;
   posterUrl: string;
@@ -75,6 +76,7 @@ type ManualMovieAdminProps = {
   dubbers: Dubber[];
   genres: Genre[];
   initialContents: Content[];
+  readyContentIds?: string[];
 };
 
 type ContentApiResponse = {
@@ -128,6 +130,7 @@ function createEmptyContent(): AdminContent {
     title: "",
     slug: "",
     type: "movie",
+    section: "default",
     releaseFormat: "feature",
     description: "",
     posterUrl: "",
@@ -205,7 +208,8 @@ function toAdminContent(content: Content): AdminContent {
     id: content.id,
     title: content.title,
     slug: content.slug,
-    type: content.type,
+    type: getReleaseFormat(content) === "episodic" ? "series" : "movie",
+    section: content.section ?? (content.type === "anime" || content.type === "dorama" ? content.type : "default"),
     releaseFormat: getReleaseFormat(content),
     description: content.description,
     posterUrl: content.posterUrl,
@@ -281,7 +285,13 @@ function getApiError(result: ContentApiResponse | EpisodeApiResponse | DubberApi
   return details ? `${message} ${details}` : message;
 }
 
-export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMovieAdminProps) {
+export function ManualMovieAdmin({ dubbers, genres, initialContents, readyContentIds = [] }: ManualMovieAdminProps) {
+  const [showEditor, setShowEditor] = useState(false);
+  const [search, setSearch] = useState("");
+  const [publication, setPublication] = useState("all");
+  const [page, setPage] = useState(0);
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const [listError, setListError] = useState("");
   const [contents, setContents] = useState<Content[]>(initialContents);
   const [availableDubbers, setAvailableDubbers] = useState<Dubber[]>(dubbers);
   const [contentDraft, setContentDraft] = useState<AdminContent>(() => createEmptyContent());
@@ -302,12 +312,12 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
   const filteredContents = useMemo(
     () =>
       contents.filter((content) => {
-        const typeMatches = typeFilter === "all" || content.type === typeFilter;
+        const typeMatches = typeFilter === "all" || (typeFilter === "movie" || typeFilter === "series" ? getReleaseFormat(content) === (typeFilter === "series" ? "episodic" : "feature") : content.type === typeFilter);
         const statusMatches = statusFilter === "all" || content.status === statusFilter;
 
-        return typeMatches && statusMatches;
+        return typeMatches && statusMatches && content.title.toLocaleLowerCase().includes(search.toLocaleLowerCase()) && (publication === "all" || (publication === "ready" ? readyContentIds.includes(content.id) && !content.isPublished : content.isPublished === (publication === "published")));
       }),
-    [contents, statusFilter, typeFilter]
+    [contents, statusFilter, typeFilter, search, publication, readyContentIds]
   );
   const selectedDubber = availableDubbers.find((dubber) => dubber.id === contentDraft.dubberId);
   const selectedGenreNames = genres
@@ -390,6 +400,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
   }
 
   function startNewContent() {
+    setShowEditor(true);
     setContentDraft(createEmptyContent());
     setEditingSlug(null);
     setEpisodeDraft(createEmptyEpisode());
@@ -403,6 +414,8 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
   }
 
   function startEditContent(content: Content) {
+    setShowEditor(true);
+    requestAnimationFrame(() => document.getElementById("content-editor")?.scrollIntoView({ behavior: "smooth" }));
     const nextDraft = toAdminContent(content);
 
     setContentDraft(nextDraft);
@@ -505,9 +518,12 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
 
     try {
       const payload = {
+        ...(editingSlug ? {expectedUpdatedAt: contents.find(item=>item.id===contentDraft.id)?.updatedAt} : {}),
         title: contentDraft.title,
         slug: contentDraft.slug || slugifyContent(contentDraft.title),
         type: contentDraft.type,
+        kind: draftIsEpisodic ? "series" : "movie",
+        section: contentDraft.section,
         description: contentDraft.description,
         posterUrl: contentDraft.posterUrl,
         bannerUrl: contentDraft.bannerUrl,
@@ -552,6 +568,26 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
     } finally {
       setIsSavingContent(false);
     }
+  }
+
+  async function removeContent(item: Content) {
+    if (!window.confirm(`«${item.title}» контентін жою керек пе? Тек қолданылмаған жоба жойылады.`)) return;
+    setListError("");
+    const response = await fetch(`/api/contents/${encodeURIComponent(item.slug)}`, {method:"DELETE"});
+    if (!response.ok) {const result=await response.json();setListError(getApiError(result,"Жою мүмкін болмады."));return;}
+    setContents(current=>current.filter(row=>row.id!==item.id));if(contentDraft.id===item.id)setShowEditor(false);
+  }
+  async function uploadMedia(file: File, field: "poster_url" | "banner_url") {
+    if (file.size > 3*1024*1024) {setFormError("Сурет 3 МБ-тан аспауы керек.");return;}
+    const current=contents.find(item=>item.id===contentDraft.id);if(!current?.updatedAt)return;
+    setMediaBusy(true);setFormError(null);
+    try {
+      const response=await fetch("/api/admin/media",{method:"POST",headers:{"Content-Type":file.type,"X-Target-Id":current.id,"X-Media-Field":field,"X-Workflow":"false","X-Version":current.updatedAt,"X-Request-Id":crypto.randomUUID()},body:file});
+      const result=await response.json();if(!response.ok)throw new Error(getApiError(result,"Сурет сақталмады."));
+      const refreshed=await fetch(`/api/contents/${encodeURIComponent(current.slug)}?includeDrafts=true`,{cache:"no-store"});
+      const record=await refreshed.json();if(!refreshed.ok||!record.data)throw new Error("Контентті жаңартыңыз.");
+      upsertContent(record.data);setContentDraft(draft=>({...draft,[field === "poster_url" ? "posterUrl" : "bannerUrl"]:result.data.url}));
+    }catch(error){setFormError(error instanceof Error?error.message:"Сурет сақталмады.");}finally{setMediaBusy(false);}
   }
 
   function updateLocalEpisodes(nextEpisodes: Episode[]) {
@@ -682,7 +718,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-      <section className="glass-strong rounded-[34px] p-5 sm:p-7">
+      <section id="content-editor" className={showEditor ? "glass-strong rounded-[34px] p-5 sm:p-7" : "hidden"}>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
@@ -719,35 +755,9 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
             label="Түрі"
             value={contentDraft.type}
             onChange={(value) => updateContentField("type", value as ContentType)}
-            options={[
-              { label: "Фильм", value: "movie" },
-              { label: "Мультфильм", value: "cartoon" },
-              { label: "Дорама", value: "dorama" },
-              { label: "Аниме", value: "anime" },
-              { label: "Сериал", value: "series" }
-            ]}
+            options={[{ label: "Фильм", value: "movie" }, { label: "Сериал", value: "series" }]}
           />
-          {supportsReleaseFormatSwitch(contentDraft.type) ? (
-            <div className="md:col-span-2">
-              <span className="text-sm font-medium text-zinc-300">Форматы</span>
-              <div className="mt-2 flex flex-wrap gap-2 rounded-[26px] border border-white/10 bg-white/[0.04] p-2">
-                {releaseFormatOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    className={
-                      contentDraft.releaseFormat === option.value
-                        ? "rounded-full border border-[rgba(217,183,111,0.38)] bg-[rgba(217,183,111,0.16)] px-4 py-2 text-sm font-semibold text-[var(--accent)]"
-                        : "glass-button rounded-full px-4 py-2 text-sm font-semibold text-zinc-300"
-                    }
-                    onClick={() => updateContentField("releaseFormat", option.value)}
-                    type="button"
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
+          <AdminSelect label="Бөлім" value={contentDraft.section} onChange={value => updateContentField("section", value as AdminContent["section"])} options={[{label:"Негізгі",value:"default"},{label:"Аниме",value:"anime"},{label:"Дорама",value:"dorama"}]} />
           <AdminSelect
             label="Статус"
             value={contentDraft.status}
@@ -920,6 +930,10 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
           </p>
         ) : null}
 
+        {contentDraft.id && <div className="mt-4 flex flex-wrap gap-4" aria-label="Медиа">
+          {(["poster_url", "banner_url"] as const).map(field=><label key={field} className="glass-button cursor-pointer rounded-xl p-3 text-sm">{field === "poster_url" ? "Постер жүктеу / ауыстыру" : "Баннер жүктеу / ауыстыру"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={mediaBusy} onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)void uploadMedia(file,field);}} /></label>)}
+          <span className="text-sm text-zinc-400">{mediaBusy ? "Сурет сақталуда…" : "JPG · PNG · WEBP"}</span>
+        </div>}
         {draftIsEpisodic ? (
           <section className="mt-8 border-t border-white/10 pt-7">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -966,7 +980,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                             /{contentDraft.slug}?episode={episode.slug}#player
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <StatusPill active={episode.isPublished} label={episode.isPublished ? "Жарияланған" : "Жоба"} />
                           <button
                             className="glass-button flex h-10 w-10 items-center justify-center rounded-full text-white"
@@ -1083,7 +1097,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         ) : null}
       </section>
 
-      <aside className="space-y-4">
+      <aside className={showEditor ? "space-y-4" : "hidden"}>
         <section className="glass rounded-[30px] p-5">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(217,183,111,0.16)] text-[var(--accent)]">
@@ -1272,7 +1286,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
         </section>
       </aside>
 
-      <section className="xl:col-span-2">
+      <section className="order-first xl:col-span-2">
         <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-[var(--accent)]">
@@ -1286,7 +1300,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                 key={option.value}
                 active={typeFilter === option.value}
                 label={option.label}
-                onClick={() => setTypeFilter(option.value)}
+                onClick={() => {setTypeFilter(option.value);setPage(0);}}
               />
             ))}
           </div>
@@ -1297,13 +1311,19 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
               key={option.value}
               active={statusFilter === option.value}
               label={option.label}
-              onClick={() => setStatusFilter(option.value)}
+              onClick={() => {setStatusFilter(option.value);setPage(0);}}
             />
           ))}
         </div>
 
+        <div className="mb-4 flex flex-wrap gap-3">
+          <input aria-label="Контент іздеу" placeholder="Атауын іздеу" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} className="rounded-xl bg-zinc-900 p-3" />
+          <select aria-label="Жария күйі" value={publication} onChange={e=>{setPublication(e.target.value);setPage(0);}} className="rounded-xl bg-zinc-900 p-3"><option value="all">Бәрі</option><option value="published">Жарияланған</option><option value="draft">Жоба / жарияланбаған</option><option value="ready">Дайын / тексеру</option></select>
+          <button className="glass-button rounded-xl px-4" onClick={startNewContent}>Жаңа контент</button>
+        </div>
+        {listError && <p role="alert" className="mb-3 text-red-300">{listError}</p>}
         <div className="grid gap-3">
-          {filteredContents.map((item) => {
+          {filteredContents.slice(page * 10, page * 10 + 10).map((item) => {
             const itemIsEpisodic = isEpisodicContent(item);
 
             return (
@@ -1314,18 +1334,10 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                 <img
                   src={item.posterUrl}
                   alt={item.title}
-                  className="h-28 w-20 rounded-2xl object-cover"
+                  className="h-16 w-12 rounded-lg object-cover"
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="mb-2 flex flex-wrap gap-2">
-                    <StatusPill active label={contentTypeLabels[item.type]} />
-                    <StatusPill active label={itemIsEpisodic ? contentReleaseFormatLabels.episodic : contentReleaseFormatLabels.feature} />
-                    <StatusPill active={item.status !== "announced"} label={contentStatusLabels[item.status]} />
-                    {item.hasKazakhSubtitles ? <StatusPill active label="Қазақша субтитр" /> : null}
-                    {item.isPremium ? <StatusPill active label="Premium" /> : null}
-                    {item.isHero ? <StatusPill active label={`Баннер ${item.heroOrder ?? 0}`} /> : null}
-                    <StatusPill active={item.isPublished} label={item.isPublished ? "Жарияланған" : "Жоба"} />
-                  </div>
+                  <p className="text-xs text-zinc-400">{contentTypeLabels[item.type]} · {getReleaseFormat(item) === "episodic" ? "Сериал" : "Фильм"} · {item.isPublished ? "Жарияланған" : readyContentIds.includes(item.id) ? "Дайын · тексеруді күтеді" : "Жоба"}</p>
                   <h3 className="truncate font-semibold text-white">{item.title}</h3>
                   <p className="mt-1 truncate text-sm text-zinc-500">
                     {item.year} · {item.country || "Ел жоқ"} · {item.dubber?.name ?? "Дыбыстаушы жоқ"}
@@ -1335,12 +1347,6 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="glass hidden h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold text-zinc-300 sm:flex">
-                    {itemIsEpisodic ? <ListVideo className="h-4 w-4" /> : <Film className="h-4 w-4" />}
-                    {itemIsEpisodic
-                      ? formatEpisodeCount(item.episodeCount) || "0 серия"
-                      : formatDurationMinutes(item.durationMinutes) || "Фильм"}
-                  </div>
                   <button
                     className="glass-button inline-flex h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white"
                     onClick={() => startEditContent(item)}
@@ -1349,11 +1355,17 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
                     <Pencil className="h-4 w-4" />
                     Өңдеу
                   </button>
+                  <a className="glass-button rounded-full px-3 py-2 text-sm" href={`/${item.slug}`} target="_blank" rel="noreferrer">Ашу</a>
+                  {!item.isPublished && <a className="glass-button rounded-full px-3 py-2 text-sm" href="https://t.me/hdqaz_bot" title="Telegram → Іздеу → осы контент → Видео қосу" target="_blank" rel="noreferrer">Видео</a>}
+                  <button className="glass-button rounded-full px-3 py-2 text-sm" onClick={() => {startEditContent(item);setContentDraft(current=>({...current,isPublished:!item.isPublished}));}}> {item.isPublished ? "Жарияламау / Archive" : "Жариялау"}</button>
+                  {!item.isPublished && <button className="glass-button rounded-full px-3 py-2 text-sm" onClick={() => void removeContent(item)}>Жою</button>}
+
                 </div>
               </article>
             );
           })}
         </div>
+        <div className="mt-3 flex gap-4 text-sm"><button disabled={!page} onClick={()=>setPage(p=>p-1)}>Алдыңғы</button><span>{page+1}</span><button disabled={(page+1)*10>=filteredContents.length} onClick={()=>setPage(p=>p+1)}>Келесі</button></div>
       </section>
     </div>
   );

@@ -8,6 +8,8 @@ import { ProcessingQueue } from "@/components/admin/processing-queue";
 import { LogoMark } from "@/components/layout/site-logo";
 import { listContents, listDubbers, listGenres } from "@/features/content/repository";
 import { getCurrentAdminUser } from "@/lib/admin-access";
+import { getOptionalAdminClient } from "@/lib/supabase/admin";
+import { isEpisodicContent } from "@/features/content/format";
 import { getCanonicalUrl } from "@/lib/site-url";
 
 export const metadata: Metadata = {
@@ -33,6 +35,13 @@ export default async function AdminPage() {
     listDubbers({ includeInactive: true })
   ]);
 
+  const db = getOptionalAdminClient();
+  const queueCounts = db ? await Promise.all([
+    db.from("processing_jobs").select("id",{count:"exact",head:true}).eq("status","queued"),
+    db.from("processing_jobs").select("id",{count:"exact",head:true}).in("status",["downloading","processing","uploading"]),
+    db.from("processing_jobs").select("content_id",{count:"exact"}).eq("status","ready"),
+    db.from("processing_jobs").select("id",{count:"exact",head:true}).eq("status","failed")
+  ]) : [];
   return (
     <main className="ambient-page min-h-screen px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <section className="mx-auto w-full max-w-7xl">
@@ -53,21 +62,21 @@ export default async function AdminPage() {
               Контент басқару панелі
             </h1>
             <p className="mt-5 max-w-2xl text-base font-medium leading-7 tracking-[0.004em] text-zinc-400">
-              Контент сақтау `/api/contents` backend endpoint арқылы жүреді. Жазу операциялары
-              `.env.local` ішіндегі admin email allowlist арқылы қорғалады.
+              Контент, медиа және өңдеу кезегін басқарыңыз. Дайын видео тек растағаннан кейін жарияланады.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:w-[560px]">
-            <AdminMetric icon={<Film className="h-5 w-5" />} label="Контент" value={String(initialContents.length)} />
-            <AdminMetric icon={<Tags className="h-5 w-5" />} label="Genres" value={String(genres.length)} />
-            <AdminMetric icon={<FolderKanban className="h-5 w-5" />} label="Дыбыстаушылар" value={String(dubbers.length)} />
-            <AdminMetric icon={<ShieldAlert className="h-5 w-5" />} label="Guard" value="Email" />
+            <AdminMetric icon={<Film className="h-5 w-5" />} label="Сериал" value={String(initialContents.filter(isEpisodicContent).length)} />
+            <AdminMetric icon={<Tags className="h-5 w-5" />} label="Фильм" value={String(initialContents.filter(c => !isEpisodicContent(c)).length)} />
+            <AdminMetric icon={<FolderKanban className="h-5 w-5" />} label="Жоба" value={String(initialContents.filter(c => !c.isPublished).length)} />
+            <AdminMetric icon={<ShieldAlert className="h-5 w-5" />} label="Жарияланған" value={String(initialContents.filter(c => c.isPublished).length)} />
           </div>
         </div>
 
+        <div className="mb-4 flex flex-wrap gap-5 text-sm text-zinc-400">{["Кезекте","Өңделуде","Дайын","Қате / тоқтатылған"].map((label,index)=><span key={label}>{label}: {queueCounts[index]?.count ?? "—"}</span>)}</div>
         <ProcessingQueue />
-        <ManualMovieAdmin initialContents={initialContents} genres={genres} dubbers={dubbers} />
+        <ManualMovieAdmin initialContents={initialContents} genres={genres} dubbers={dubbers} readyContentIds={queueCounts[2]?.data?.map(row=>row.content_id) ?? []} />
       </section>
     </main>
   );

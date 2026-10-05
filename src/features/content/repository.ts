@@ -153,7 +153,9 @@ function throwDatabaseError(error: { code?: string; message: string }, fallback:
   // Log only schema diagnostics, never record values, URLs or credentials from DETAIL.
   const diagnostic = error.message.replace(/https?:\/\/\S+/g, "[url]").replace(/'[^']*'/g, "[value]").slice(0, 300);
   console.error("Content database operation failed", { operation: fallback, code: error.code, diagnostic });
-  throw new ApiError(500, "database_error", "Контентті сақтау мүмкін болмады. Қайта көріңіз.");
+  if (error.code === "23503") throw new ApiError(409,"invalid_relation","Таңдалған жанр немесе дыбыстаушы өзгерген. Тізімді жаңартыңыз.");
+  if (error.code === "23514") throw new ApiError(400,"invalid_content","Контент түрі, видео немесе маусым байланысы сәйкес емес. Өрістерді тексеріңіз.");
+  throw new ApiError(500, "database_error", "Контент сақталмады (" + (error.code ?? "database") + "). Қайта көріңіз.");
 }
 
 function rowToGenre(row: GenreRow): Genre {
@@ -217,6 +219,7 @@ function rowToContent(
     slug: row.slug,
     type: row.section && row.section!=="default" ? row.section : row.type,
     storageType: row.type,
+    section: row.section ?? (row.type === "anime" || row.type === "dorama" ? row.type : "default"),
     description: row.description,
     posterUrl: normalizeStoredImageUrl(row.poster_url),
     bannerUrl: normalizeStoredImageUrl(row.banner_url),
@@ -251,7 +254,8 @@ function contentToRow(input: ContentInput): ContentRowPatch {
     ...(input.id ? { id: input.id } : {}),
     title: input.title,
     slug: input.slug,
-    type: input.type,
+    type: input.kind ?? input.type,
+    ...(input.kind ? { section: input.section ?? "default" } : {}),
     description: input.description,
     poster_url: normalizeStoredImageUrl(input.posterUrl),
     banner_url: normalizeStoredImageUrl(input.bannerUrl),
@@ -644,6 +648,7 @@ async function syncContentGenres(supabase: SupabaseClient, contentId: string, ge
 }
 
 export async function createContent(input: ContentInput) {
+  if (input.isPublished && (input.kind === "series" || input.type === "series")) throw new ApiError(409,"review_required","Жаңа сериалды алдымен жоба ретінде сақтап, серия қосыңыз.");
   const supabase = requireDatabase();
   const { data, error } = await supabase.from("contents").insert(contentToRow(input)).select("*").single();
 
@@ -668,18 +673,26 @@ export async function updateContent(slug: string, input: ContentInput) {
   if (existingResult.error) throwDatabaseError(existingResult.error, "Failed to load content for update.");
   const existing = existingResult.data as { type: ContentType; section: string | null } | null;
   const row = contentToRow(input);
+  if (existing?.type === "cartoon" && input.kind === "movie") row.type = "cartoon";
   // The editor displays section as anime/dorama; it must not overwrite the job's movie/series kind.
-  if (existing && existing.section && existing.section !== "default" && input.type === existing.section) {
+  if (!input.kind && existing && existing.section && existing.section !== "default" && input.type === existing.section) {
     row.type = existing.type;
   }
-  const { data, error } = await supabase.from("contents").update(row).eq("slug", slug).select("*").maybeSingle();
+  if (input.isPublished && (input.kind === "series" || (!input.kind && input.type === "series"))) {
+    const episodes = await supabase.from("episodes").select("id").eq("content_id", (await getContentBySlug(slug,{includeDrafts:true}))?.id ?? "").eq("is_published",true).not("hls_url","is",null).limit(1);
+    if(episodes.error)throwDatabaseError(episodes.error,"Publication check failed.");
+    if(!episodes.data?.length)throw new ApiError(409,"review_required","Алдымен дайын серияны тексеріп жариялаңыз.");
+  }
+  let update = supabase.from("contents").update(row).eq("slug", slug);
+  if(input.expectedUpdatedAt)update=update.eq("updated_at",input.expectedUpdatedAt);
+  const { data, error } = await update.select("*").maybeSingle();
 
   if (error) {
     throwDatabaseError(error, "Failed to update content.");
   }
 
   if (!data) {
-    throw new ApiError(404, "not_found", "Content not found.");
+    throw new ApiError(input.expectedUpdatedAt ? 409 : 404, "stale_or_missing", "Контент өзгерген. Жаңартып қайта сақтаңыз.");
   }
 
   await syncContentGenres(supabase, (data as ContentRow).id, input.genreIds);
@@ -695,11 +708,9 @@ export async function updateContent(slug: string, input: ContentInput) {
 
 export async function deleteContent(slug: string) {
   const supabase = requireDatabase();
-  const { data, error } = await supabase.from("contents").delete().eq("slug", slug).select("id").maybeSingle();
-
-  if (error) {
-    throwDatabaseError(error, "Failed to delete content.");
-  }
+  const { data, error } = await supabase.rpc("admin_delete_unused_content", { p_slug: slug });
+  if (error?.code === "P0001" || error?.code === "23503") throw new ApiError(409, "content_in_use", "Контент қолданылып жатыр. Жою орнына жарияламаңыз.");
+  if (error) throwDatabaseError(error, "Failed to delete content.");
 
   return Boolean(data);
 }
@@ -712,7 +723,7 @@ export async function createEpisode(contentSlug: string, input: EpisodeInput) {
     throw new ApiError(404, "not_found", "Content not found.");
   }
 
-  if (content.type === "movie") {
+  if (["movie", "cartoon"].includes(content.storageType ?? content.type)) {
     throw new ApiError(400, "invalid_content_type", "Movies do not support episodes.");
   }
 
@@ -857,7 +868,7 @@ export function contentToMovieRecord(content: Content): MovieRecord {
 export async function createSeason(contentSlug: string, seasonNumber: number, title: string | null): Promise<Season> {
   const content = await getContentBySlug(contentSlug, { includeDrafts: true });
   if (!content) throw new ApiError(404, "not_found", "Content not found.");
-  if (content.type === "movie") throw new ApiError(400, "invalid_content_type", "Movies do not support seasons.");
+  if (["movie", "cartoon"].includes(content.storageType ?? content.type)) throw new ApiError(400, "invalid_content_type", "Movies do not support seasons.");
   const { data, error } = await requireDatabase().from("seasons").insert({
     content_id: content.id, season_number: seasonNumber, title
   }).select("*").single();

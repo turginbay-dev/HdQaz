@@ -28,22 +28,35 @@ class Executor:
    if any(not k['Key'].startswith(prefix) for k in keys):raise ValueError()
    if keys and self.client.delete_objects(Bucket=self.bucket,Delete={'Objects':keys,'Quiet':True}).get('Errors'):raise RuntimeError()
   if self.client.list_objects_v2(Bucket=self.bucket,Prefix=prefix,MaxKeys=1).get('KeyCount',0):raise RuntimeError()
- def busy(self,ids,refs=None):
+ def states(self):
   db=Path('/bot-state/conversation.sqlite')
-  if not db.exists():return False
+  if not db.exists():return []
   with sqlite3.connect('file:'+str(db)+'?mode=ro',uri=True,timeout=5) as c:
-   for (raw,) in c.execute('select data from sessions'):
-    s=json.loads(raw)
-    if s.get('id') in ids:
-     if s.get('mode')=='ingest':return True
-     ref=s.get('source_ref')
-     if ref and refs is not None and ref not in refs:
-      owned_uuid(ref)
-      if (Path('/sources/inbox')/(ref+'.media')).exists() or (Path('/sources/inbox')/('.tg-'+ref+'.partial')).exists():return True
-  return False
- def local(self,path):
+   tables=[r[0] for r in c.execute("select name from sqlite_master where type='table'")]
+   rows=[json.loads(raw) for table in ['sessions','ingestions'] if table in tables for (raw,) in c.execute('select data from '+table)]
+   return list({row.get('id'):row for row in rows}.values())
+ def busy(self,ids,refs=None):
+  return any(s.get('id') in ids and s.get('mode')=='ingest' for s in self.states())
+ def cancel(self,workflow):
+  owned_uuid(workflow);marker=Path('/sources')/('.cleanup-'+workflow)
+  if marker.is_symlink():raise ValueError()
+  try:
+   with marker.open('xb'):pass
+   marker.chmod(0o444)
+  except FileExistsError:
+   if not marker.is_file():raise ValueError()
+ def local(self,path,task=None):
   kind,value=path.split('/',1);owned_uuid(value)
-  if kind=='workflow':return
+  if kind=='workflow':
+   for state in self.states():
+    if state.get('id')!=value or not state.get('source_ref'):continue
+    ref=state['source_ref'];owned_uuid(ref)
+    if ref in (task or {}).get('protected_source_refs',[]):continue
+    if ref not in (task or {}).get('source_refs',[]):
+     expected=str(uuid.uuid5(uuid.NAMESPACE_URL,f"hdqaz-telegram:{state.get('actor')}:{value}:{state.get('update')}"))
+     if ref!=expected:raise ValueError()
+    self.local('source/'+ref)
+   return
   if kind=='job':
    paths=[Path('/sources')/(value+'.media')]
    for root in [Path('/work'),Path('/storage'),Path('/storage/candidates')]:
@@ -62,7 +75,10 @@ class Executor:
     shutil.rmtree(p)
    else:p.unlink()
  def execute(self,task):
-  results=[];busy=self.busy(task['workflow_ids'],task.get('source_refs',[]))
+  results=[]
+  for asset in task['assets']:
+   if asset['kind']=='local' and asset['path'].startswith('workflow/'):self.cancel(asset['path'].split('/',1)[1])
+  busy=self.busy(task['workflow_ids'],task.get('source_refs',[]))
   for a in task['assets']:
    result={'id':a['id'],'state':'done'}
    try:
@@ -71,7 +87,7 @@ class Executor:
     elif a['kind']=='image':result.update(state='error',error='storage_unavailable') # backend holds Storage credentials
     elif busy:result.update(state='error',error='local_busy')
     elif a['kind']=='r2':self.r2(a['path'])
-    elif a['kind']=='local':self.local(a['path'])
+    elif a['kind']=='local':self.local(a['path'],task)
     else:raise ValueError()
    except BlockingIOError:result.update(state='error',error='local_busy')
    except ValueError:result.update(state='error',error='unsafe_path')

@@ -53,7 +53,14 @@ class MountedSource:
         source=self.config.sources/(uuid(job['id'])+'.media')
         try:
             regular(source)
-            disk(destination.parent,source.stat().st_size,self.config.min_free)
+            info=source.stat()
+            if not 0<info.st_size<=self.config.max_source:raise Failure('download_failed')
+            # Telegram handoff is immutable and mounted read-only: use its owned
+            # file directly, never chmod/link/remove the Bot API's cached file.
+            if not info.st_mode & 0o222:
+                check();disk(destination.parent,0,self.config.min_free);progress(1)
+                return source
+            disk(destination.parent,info.st_size,self.config.min_free)
             exclusive_copy(source,destination,self.config.max_source,check,progress,
                 self.config.source_timeout,self.config.min_free)
             return destination

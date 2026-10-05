@@ -8,7 +8,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from .core import Failure
+from .core import Failure,log
 from .workspace import regular, disk
 
 @dataclass(frozen=True)
@@ -24,7 +24,7 @@ class Runner:
     def run(self,args,timeout=None,progress=None):
         # No shell, stdin, network input protocols or uncontrolled diagnostic output.
         proc=subprocess.Popen(args,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,start_new_session=True,env={k:v for k,v in os.environ.items() if k in {'PATH','LANG','LC_ALL','TMPDIR'}})
-        output=bytearray(); pending=b''; start=time.monotonic()
+        output=bytearray(); pending=b''; start=time.monotonic();last_log=start;metrics={}
         selector=selectors.DefaultSelector();selector.register(proc.stdout,selectors.EVENT_READ)
         try:
             while selector.get_map():
@@ -39,6 +39,13 @@ class Runner:
                         if len(pending)>65536: raise Failure('processing_failed')
                         while b'\n' in pending:
                             line,pending=pending.split(b'\n',1)
+                            if line.startswith((b'fps=',b'speed=')):
+                                try:
+                                    key,value=line.decode().split('=',1);value=float(value.rstrip('x'))
+                                    if math.isfinite(value):metrics[key]=value
+                                except ValueError:pass
+                            if line.startswith(b'progress=') and time.monotonic()-last_log>=30:
+                                log('ffmpeg_progress',stage='transcode' if 'libx264' in args else 'decode',seconds=round(time.monotonic()-start,1),**metrics);last_log=time.monotonic()
                             if line.startswith(b'out_time_us='):
                                 try: progress(max(0,int(line.split(b'=',1)[1]))/1e6)
                                 except ValueError: pass
@@ -79,6 +86,7 @@ class Runner:
             if not math.isfinite(duration) or not 0.1<=duration<=self.config.max_duration or not 1<=fps<=120: raise ValueError()
             start=float(v.get('start_time',0))
             if not math.isfinite(start) or abs(start)>3600: raise ValueError()
+            log('source_probe',width=w,height=h,seconds=round(duration,2),fps=round(fps,2),bytes=path.stat().st_size,codec=v['codec_name'])
             return Media(w,h,duration,fps,start)
         except (ValueError,KeyError,TypeError,ZeroDivisionError,Failure) as exc:
             from .core import LeaseLost

@@ -21,24 +21,28 @@ class Worker:
         self.workspaces=Workspaces(config)
     def process(self,job,allow_local_complete=False):
         lease=Lease(self.api,job,self.stop,self.config.heartbeat_seconds)
-        workspace=None
+        workspace=None;started=time.monotonic()
+        def timed(stage,operation):
+            before=time.monotonic()
+            try:return operation()
+            finally:log('stage_timing',job=job['id'],stage=stage,seconds=round(time.monotonic()-before,2))
         try:
             lease.start()
             workspace=self.workspaces.create(job)
-            source=self.source.acquire(job,workspace/'source.media',lease.check,lambda p:lease.set_progress(p*10))
+            source=timed('source_copy',lambda:self.source.acquire(job,workspace/'source.media',lease.check,lambda p:lease.set_progress(p*10)))
             lease.update('processing',10)
             runner=Runner(self.config,lease.check)
-            media=runner.probe(source)
-            intro=runner.probe(self.config.intro)
+            media=timed('probe',lambda:runner.probe(source))
+            intro=timed('branding_probe',lambda:runner.probe(self.config.intro))
             if intro.duration>60: raise Failure('invalid_media')
             runner.probe(self.config.watermark,image=True)
-            runner.decode(source,media.duration)
-            runner.decode(self.config.intro,intro.duration)
+            timed('source_validation',lambda:runner.decode(source,media.duration))
+            timed('branding_validation',lambda:runner.decode(self.config.intro,intro.duration))
             lease.set_progress(15)
-            variants,duration=encode(self.config,runner,source,media,intro,workspace/'hls',lambda p:lease.set_progress(15+p*65))
-            files=verify_local(workspace/'hls',duration,runner,variants)
+            variants,duration=timed('transcode',lambda:encode(self.config,runner,source,media,intro,workspace/'hls',lambda p:lease.set_progress(15+p*65)))
+            files=timed('hls_validation',lambda:verify_local(workspace/'hls',duration,runner,variants))
             lease.update('uploading',82)
-            manifest=self.storage.upload(workspace/'hls',files,job,lease.check,lambda p:lease.set_progress(82+p*16))
+            manifest=timed('r2_and_cdn',lambda:self.storage.upload(workspace/'hls',files,job,lease.check,lambda p:lease.set_progress(82+p*16)))
             if not self.storage.remotely_verified and not allow_local_complete:
                 raise Failure('upload_failed')
             lease.terminal('complete',{'output_manifest_url':manifest,'output_metadata':{
@@ -57,6 +61,7 @@ class Worker:
             except (LeaseLost,ApiFailure):log('terminal_unconfirmed',job=job['id'])
         finally:
             lease.close()
+            log('stage_timing',job=job['id'],stage='total',seconds=round(time.monotonic()-started,2))
             if workspace: os.utime(workspace,None)
             self.workspaces.cleanup()
         return False
@@ -71,7 +76,7 @@ class Worker:
                 job=self.api.claim()
                 if job:
                     self.process(job);attempt=0;continue
-            except (ApiFailure,Failure): log('poll_unavailable')
+            except (ApiFailure,Failure) as exc: log('poll_unavailable',status=exc.status if isinstance(exc,ApiFailure) else 0)
             delay=backoff(attempt,self.config.poll_min,self.config.poll_max);attempt+=1
             self.stop.wait(delay)
     def close(self):self.workspaces.close()

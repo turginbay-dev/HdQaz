@@ -31,7 +31,7 @@ class ApiFailure(Exception):
 
 def log(event, **fields):
     # Deliberately do not accept exception strings, URLs, paths, headers or tokens.
-    allowed = {'job', 'attempt', 'stage', 'progress', 'code', 'status', 'seconds'}
+    allowed = {'job', 'attempt', 'stage', 'progress', 'code', 'status', 'seconds', 'fps', 'speed', 'bytes', 'width', 'height', 'codec'}
     safe = {k: v for k, v in fields.items() if k in allowed and isinstance(v, (str, int, float))}
     print(json.dumps({'event': event, **safe}), flush=True)
 

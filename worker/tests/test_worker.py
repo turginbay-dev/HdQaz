@@ -109,6 +109,12 @@ class LogicTests(unittest.TestCase):
         self.assertEqual(target.read_bytes(),b'x'*128)
         target.unlink();p.unlink();p.symlink_to('/etc/passwd')
         with self.assertRaises(Failure):provider.acquire(JOB,target,lambda:None,lambda _:None)
+    def test_immutable_handoff_avoids_copy_and_preserves_source(self):
+        p=self.c.sources/(JOB['id']+'.media');p.write_bytes(b'x'*128);p.chmod(0o444)
+        destination=self.c.workspace/'source';progress=[]
+        self.assertEqual(MountedSource(self.c).acquire(JOB,destination,lambda:None,progress.append),p)
+        self.assertFalse(destination.exists());self.assertTrue(p.exists());self.assertEqual(progress,[1])
+        with self.assertRaises(LeaseLost):MountedSource(self.c).acquire(JOB,destination,lambda:(_ for _ in ()).throw(LeaseLost()),lambda _:None)
     def test_cleanup_boundary_and_lock(self):
         ws=Workspaces(replace(self.c,retention_seconds=0));p=ws.create(JOB)
         foreign=self.root/'foreign';foreign.mkdir();(foreign/'keep').write_text('keep')

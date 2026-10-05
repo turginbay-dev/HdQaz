@@ -155,6 +155,29 @@ class MovieTests(unittest.TestCase):
    self.b.handle(refresh)
    duplicate=update();duplicate['update_id']=14;duplicate['message']['video']=u['message']['video'];self.b.handle(duplicate)
    self.assertEqual(self.api.calls.count('prepare'),0)
+   next_id=str(uuid.uuid4());self.b.movie.save(123,{'id':next_id,'mode':'manual','step':0})
    release.set();self.b.ingestion_thread.join(2)
+  self.assertEqual(self.b.movie.get(123)['id'],next_id)
   self.assertEqual(self.api.w['state'],'submitted');self.assertNotIn('publish',self.api.calls)
+ def test_two_bounded_ingestions_duplicate_rejection_and_reserved_disk(self):
+  release=threading.Event();threads=[]
+  with patch('hdqaz_bot.main.shutil.disk_usage',return_value=SimpleNamespace(free=10**12)):
+   for n in range(2):
+    self.assertTrue(self.b.start_ingestion(lambda:release.wait(2),identity=(123,str(n),'file'+str(n)),reserve=100));threads.append(self.b.ingestion_thread)
+   self.assertEqual(self.b.ingestion_count(),2)
+   self.assertFalse(self.b.start_ingestion(lambda:None,identity=(123,'0','file0')))
+   self.assertFalse(self.b.start_ingestion(lambda:None,identity=(123,'third','file3')))
+  release.set()
+  for thread in threads:thread.join(2)
+  self.assertEqual(self.b.ingestion_count(),0)
+  with patch('hdqaz_bot.main.shutil.disk_usage',return_value=SimpleNamespace(free=1)):
+   with self.assertRaises(SafeError):self.b.start_ingestion(lambda:None,identity=(123,'new','file'),reserve=100)
+ def test_full_delete_marker_prevents_ingestion_source_or_job_creation(self):
+  self.api.w['metadata']={'title':'Test','year':2026};self.cb('video')
+  (self.c.root/('.cleanup-'+ID)).touch()
+  u=update();u['message']['video']={'file_id':'cancelled-file','file_size':112,'mime_type':'video/mp4'}
+  with patch('hdqaz_bot.movie.shutil.disk_usage',return_value=SimpleNamespace(free=10**12)):
+   self.b.handle(u);self.b.ingestion_thread.join(2)
+  self.assertNotIn('prepare',self.api.calls);self.assertNotIn('activate',self.api.calls)
+  self.assertFalse(list((self.c.root/'inbox').glob('*.media')))
 if __name__=='__main__':unittest.main()

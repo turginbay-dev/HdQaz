@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import signal
 import threading
 import time
@@ -16,17 +17,27 @@ class Bot:
         self.movie=MovieFlow(self) if hasattr(c,'state_root') else None
         self.admin=AdminFlow(self) if self.movie else None
         self.downloading=False
-        self.ingestion_lock=threading.Lock();self.ingestion_thread=None;self.ingestion_key=None
+        self.ingestion_lock=threading.Lock();self.ingestion_thread=None;self.ingestion_key=None;self.ingestions={}
         self.owner=str(uuid.uuid4());self.stop=threading.Event();self.last_success=time.monotonic();self.lease_deadline=None
-    def ingestion_active(self,actor=None,file_id=None):
+    def ingestion_active(self,actor=None,file_id=None,workflow=None):
         with self.ingestion_lock:
-            active=self.ingestion_thread is not None and self.ingestion_thread.is_alive()
-            return active if actor is None else active and self.ingestion_key==(actor,file_id)
-    def start_ingestion(self,target,*args,identity=None):
+            active=[key for key,(thread,_) in self.ingestions.items() if thread.is_alive()]
+            if actor is None:return bool(active)
+            return any(key[0]==actor and key[2]==file_id and (workflow is None or key[1]==workflow) for key in active)
+    def ingestion_count(self):
+        with self.ingestion_lock:return sum(thread.is_alive() for thread,_ in self.ingestions.values())
+    def start_ingestion(self,target,*args,identity=None,reserve=0):
         with self.ingestion_lock:
-            if self.ingestion_thread is not None and self.ingestion_thread.is_alive():return False
-            thread=threading.Thread(target=target,args=args,daemon=True,name='telegram-movie-ingestion')
-            self.ingestion_thread=thread;self.ingestion_key=identity;self.downloading=True;thread.start();return True
+            active={key:value for key,value in self.ingestions.items() if value[0].is_alive()}
+            if identity in active or len(active)>=2:return False
+            if shutil.disk_usage(self.c.root).free<sum(value[1] for value in active.values())+reserve+2*1024**3:raise SafeError('storage_full')
+            def run():
+                try:target(*args)
+                finally:
+                    with self.ingestion_lock:
+                        self.ingestions.pop(identity,None);self.downloading=bool(self.ingestions)
+            thread=threading.Thread(target=run,daemon=True,name='telegram-movie-ingestion')
+            self.ingestions[identity]=(thread,reserve);self.ingestion_thread=thread;self.ingestion_key=identity;self.downloading=True;thread.start();return True
     def show(self,actor,w):
         if w['kind'] in ('movie','series') and self.movie:
             self.movie.detail(actor,w);return

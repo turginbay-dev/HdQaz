@@ -1,6 +1,7 @@
 """Button-driven catalog administration through the private backend only."""
 import json,uuid
 from urllib.parse import urlencode
+from .media import upload,share
 from .core import SafeError,button,request_key
 
 MENU=[[{'text':'➕ Контент қосу','callback_data':'aadd'},{'text':'🔎 Іздеу','callback_data':'asearch'}],[{'text':'📚 Каталог','callback_data':'acatalog'},{'text':'📋 Кезек','callback_data':'menu_queue'}],[{'text':'⚙️ Басқару','callback_data':'asettings'}]]
@@ -37,6 +38,7 @@ class AdminFlow:
   lines.append('🎞 HLS сілтемесі бар · желі тексерілмеді' if c.get('hls_url') or any(e.get('hls_url') for e in c['episodes']) else '🎞 Видео әлі дайын емес')
   if c.get('description'):lines+=['',c['description'][:1100]]
   key=compact(id);rows=[[btn('ℹ️ Ақпарат / Жаңарту','ci:'+key),btn('✏️ Өзгерту','ce:'+key)]]
+  rows.append([btn('🖼 Медиа','cm:'+key)])
   if c['kind']=='series':rows.append([btn('➕ Серия қосу','cn:'+key),btn('📋 Сериялар','cl:'+key)])
   for w in c.get('workflows',[]):
    j=w.get('job') or {}
@@ -46,7 +48,7 @@ class AdminFlow:
    rows.append([btn('⛔ Жарияламау','cu:'+key)])
    rows.append([{'text':'▶️ Сайтта көру','url':c['watch_url']}])
    share=c['title']+'\n'+(c.get('description') or '')[:250]+'\n'+c['watch_url']
-   rows.append([{'text':'📱 WhatsApp','url':'https://wa.me/?'+urlencode({'text':share})},{'text':'📤 Telegram бөлісу','url':'https://t.me/share/url?'+urlencode({'url':c['watch_url'],'text':c['title']})}])
+   rows.append([{'text':'📱 WhatsApp','url':'https://wa.me/?'+urlencode({'text':share})},btn('📤 Telegram бөлісу','share:'+key)])
    rows.append([btn('📤 Telegram арнасына' if c.get('channel_enabled') else '📤 Арна бапталмаған','cp:'+key if c.get('channel_enabled') else 'channeloff')])
   elif c.get('hls_url') or any(e['is_published'] and e.get('hls_url') for e in c['episodes']):rows.append([btn('✅ Жариялау','cv:'+key)])
   self.panel(actor,'\n'.join(lines),rows,mid)
@@ -65,9 +67,43 @@ class AdminFlow:
   self.start_numbers(actor,w,mid,season,episode)
  def handle(self,u,actor):
   cb=u.get('callback_query');v=cb.get('data','') if cb else '';v='ak:series' if v=='menu_series' else v;mid=cb['message'].get('message_id') if cb else None;self.uid=u['update_id'];s=self.f.get(actor) or {};text=u.get('message',{}).get('text','').strip()
-  known=v in ('ahome','aadd','asearch','acatalog','asettings','channeloff','cprev','cnext','crefresh','series_existing') or v.startswith(('ak:','sec:','cf:','ci:','ce:','cn:','cs:','cl:','cu:','cv:','cp:','field:','save:','pub:','snum:','bool:','dub:'))
+  known=v in ('ahome','aadd','asearch','acatalog','asettings','channeloff','cprev','cnext','crefresh','series_existing') or v.startswith(('cm:','cmup:','wm:','share:','ak:','sec:','cf:','ci:','ce:','cn:','cs:','cl:','cu:','cv:','cp:','field:','save:','pub:','snum:','bool:','dub:'))
   if cb and not known:return False
   if cb:self.b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']})
+  if v.startswith(('cm:','cmup:','wm:','share:')):
+   parts=v.split(':');op=parts[0];id=cid(parts[1])
+   if op=='share':
+    c=self.b.api.call('catalog_get',actor,id)
+    if not c.get('is_published') or not c.get('watch_url'):raise SafeError('stale')
+    share(self.b,actor,c);return True
+   if op=='cm':
+    c=self.b.api.call('catalog_get',actor,id);rows=[[btn('🖼 Постерді ауыстыру','cmup:'+compact(id)+':poster_url')],[btn('🌄 Баннерді ауыстыру','cmup:'+compact(id)+':banner_url')]]
+    for field,label in [('poster_url','👁 Постер'),('banner_url','👁 Баннер')]:
+     if c.get(field):rows.append([{'text':label,'url':c[field]}])
+    rows.append([btn('⬅️ Артқа','ci:'+compact(id))]);self.panel(actor,'🖼 '+c['title'],rows,mid);return True
+   field=parts[2]
+   if field not in ('poster_url','banner_url'):raise SafeError('invalid_input')
+   if op=='wm':
+    w=self.b.api.call('get',actor,id)
+    if w['state']!='draft':raise SafeError('stale')
+    state={'mode':'media','id':id,'field':field,'workflow':True,'revision':w['revision']}
+    back=button(w,'get','⬅️ Артқа')
+   else:
+    c=self.b.api.call('catalog_get',actor,id);state={'mode':'media','id':id,'field':field,'expected':c['updated_at']};back=btn('⬅️ Артқа','cm:'+compact(id))
+   self.f.save(actor,state);self.panel(actor,('Постер' if field=='poster_url' else 'Баннер')+' суретін жіберіңіз. JPG, PNG немесе WEBP.',[[back]],mid);return True
+  if s.get('mode')=='media' and (u.get('message',{}).get('photo') or u.get('message',{}).get('document')):
+   self.panel(actor,'⬆️ Сурет сақталуда…')
+   try:url=upload(self.b,u['message'],s['field'],s['id'],self.uid)
+   except SafeError as error:
+    label='JPG, PNG немесе WEBP суретін жіберіңіз (10 МБ дейін).' if error.code=='invalid_image' else 'Сурет сақталмады. Қайта жіберіп көріңіз.'
+    self.panel(actor,label);return True
+   if s.get('workflow'):
+    w=self.b.api.call('get',actor,s['id'])
+    if w['state']!='draft' or w['revision']!=s['revision']:raise SafeError('stale')
+    w=self.b.mutate(w,actor,self.uid,'edit',{**w['metadata'],s['field']:url});self.f.clear(actor);self.f.detail(actor,w)
+   else:
+    self.b.api.call('catalog_edit',actor,s['id'],data={'expected':s['expected'],'patch':{s['field']:url}},key=request_key(actor,self.uid,'media'));self.card(actor,s['id'])
+   return True
   if v=='ahome':self.f.clear(actor);self.home(actor,mid);return True
   if v=='aadd':self.panel(actor,'➕ Контент түрін таңдаңыз.',[[btn('🎬 Фильм','ak:movie'),btn('📺 Сериал','ak:series')]],mid);return True
   if v.startswith('ak:'):

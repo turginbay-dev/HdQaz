@@ -44,3 +44,15 @@ class AdminTests(unittest.TestCase):
   original=self.api.call
   self.api.call=lambda action,*a,**kw: [None,{},'bad',{'id':ID,'revision':0,'state':'draft','metadata':{'title':42},'job':[]}] if action=='queue' else original(action,*a,**kw)
   self.b.movie.panel(123,'test',page='bad');self.cb('qnext');self.text('/start');self.assertEqual(self.tg.calls[-1][0],'send')
+
+ def test_media_upload_updates_only_existing_field(self):
+  from unittest.mock import patch
+  self.cb('cmup:'+ID.replace('-','')+':poster_url')
+  u=update();u['update_id']=500;u['message']['photo']=[{'file_id':'image','file_size':100}]
+  with patch('hdqaz_bot.admin.upload',return_value='https://cdn.hdqaz.online/poster/test.webp'):self.b.handle(u)
+  call=next(x for x in self.api.actions if x[0]=='catalog_edit');self.assertEqual(call[2]['data']['patch'],{'poster_url':'https://cdn.hdqaz.online/poster/test.webp'});self.assertNotIn('hls_url',call[2]['data']['patch'])
+ def test_workflow_banner_optional_and_stays_draft(self):
+  from unittest.mock import patch
+  self.cb('wm:'+ID.replace('-','')+':banner_url');u=update();u['update_id']=501;u['message']['document']={'file_id':'image','file_size':100}
+  with patch('hdqaz_bot.admin.upload',return_value='https://cdn.hdqaz.online/banner/test.webp'):self.b.handle(u)
+  self.assertFalse(any(x[0] in ('source','prepare','activate','publish') for x in self.api.actions))

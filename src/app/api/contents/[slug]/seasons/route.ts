@@ -8,7 +8,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     await requireAdmin(request);
     const { slug } = await context.params;
     const payload = await readJsonObject(request);
-    const seasonNumber = typeof payload.seasonNumber === "number" ? payload.seasonNumber : NaN;
+    const seasonNumber = typeof payload.seasonNumber === "number" ? payload.seasonNumber : typeof payload.seasonNumber === "string" && /^[1-9][0-9]*$/.test(payload.seasonNumber) ? Number(payload.seasonNumber) : NaN;
     if (!Number.isSafeInteger(seasonNumber) || seasonNumber < 1 || seasonNumber > 2147483647) {
       return validationError({ seasonNumber: "Season number must be a positive integer." });
     }

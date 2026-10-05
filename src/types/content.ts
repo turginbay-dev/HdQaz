@@ -62,6 +62,7 @@ export type Episode = {
 };
 
 export type Content = {
+  storageType?: ContentType;
   id: string;
   title: string;
   slug: string;

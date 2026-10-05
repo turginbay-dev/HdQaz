@@ -77,6 +77,7 @@ class Bot:
             row=[button(w,'confirm','✅ Дұрыс'),button(w,'manual','✏️ Өзгерту')] if ready else [button(w,'manual','✏️ Өзгерту')]
             buttons=[row]
             if ready:buttons.append([button(w,'video','🎞 Видео қосу')])
+            buttons.append([{'text':'🖼 Постер қосу','callback_data':'wm:'+w['id'].replace('-','')+':poster_url'},{'text':'🌄 Баннер қосу','callback_data':'wm:'+w['id'].replace('-','')+':banner_url'}])
             buttons.append([button(w,'cancel','❌ Бас тарту')])
         elif state=='staging':buttons=[[button(w,'activate','Жалғастыру')]]
         elif state=='published':
@@ -196,7 +197,7 @@ class Bot:
                 return
         p={'chat_id':r['channel_id'],'reply_markup':{'inline_keyboard':[[{'text':'▶ Көру','url':r['watch_url']}]]}}
         caption=r['title'][:700]+' · '+str(r['year'])
-        if r.get('poster_url'):method='sendPhoto';p.update(photo=r['poster_url'],caption=caption)
+        if r.get('poster_url') or r.get('banner_url'):method='sendPhoto';p.update(photo=r.get('poster_url') or r['banner_url'],caption=caption)
         else:method='sendMessage';p['text']=caption
         try:
             self.guard();sent=self.tg.call(method,p);status='sent';message=sent['message_id']

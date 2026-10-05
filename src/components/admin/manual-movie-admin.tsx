@@ -189,7 +189,7 @@ function sortEpisodes(episodes: Episode[]) {
 }
 
 function getReleaseFormat(content: Content): ContentReleaseFormat {
-  return isEpisodicContent(content) ? "episodic" : "feature";
+  return isEpisodicContent({ ...content, type: content.storageType ?? content.type }) ? "episodic" : "feature";
 }
 
 function supportsReleaseFormatSwitch(type: ContentType) {
@@ -197,7 +197,7 @@ function supportsReleaseFormatSwitch(type: ContentType) {
 }
 
 function isEpisodicDraft(content: AdminContent) {
-  return content.releaseFormat === "episodic";
+  return content.type !== "movie" && content.type !== "cartoon" && content.releaseFormat === "episodic";
 }
 
 function toAdminContent(content: Content): AdminContent {
@@ -224,7 +224,7 @@ function toAdminContent(content: Content): AdminContent {
     heroComment: content.heroComment ?? "",
     heroOrder: content.heroOrder !== null && content.heroOrder !== undefined ? String(content.heroOrder) : "",
     isHero: Boolean(content.isHero),
-    hasKazakhSubtitles: content.hasKazakhSubtitles || !content.dubberId,
+    hasKazakhSubtitles: Boolean(content.hasKazakhSubtitles),
     isPremium: content.isPremium,
     isPublished: content.isPublished,
     seasons: content.seasons,
@@ -319,18 +319,8 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents }: ManualMov
     : 1;
   const activeSlug = editingSlug ?? contentDraft.slug;
   const draftIsEpisodic = isEpisodicDraft(contentDraft);
-  const canSaveContent =
-    Boolean(
-      contentDraft.title &&
-        contentDraft.slug &&
-        contentDraft.description &&
-        contentDraft.posterUrl &&
-        contentDraft.bannerUrl &&
-        contentDraft.country &&
-        contentDraft.year
-    ) &&
-    contentDraft.genreIds.length > 0 &&
-    (!draftIsEpisodic ? Boolean(contentDraft.hlsUrl) : true);
+  const canSaveContent = Boolean(contentDraft.title.trim() && contentDraft.slug.trim() && contentDraft.year) &&
+    (!contentDraft.isPublished || draftIsEpisodic || Boolean(contentDraft.hlsUrl.trim()));
   const canSaveEpisode =
     Boolean(contentDraft.id && activeSlug && episodeDraft.episodeNumber && (!episodeDraft.isPublished || episodeDraft.hlsUrl.trim())) &&
     draftIsEpisodic &&

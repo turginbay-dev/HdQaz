@@ -33,14 +33,14 @@ export async function telegramRequest(request:Request){
    if(action==='post_claim'&&row){
     const w=checked(await db.from('telegram_workflows').select('content_id,episode_id,state').eq('id',row.workflow_id).single());
     if(w.state!=='published')throw new ApiError(409,'not_published','Publication required.');
-    const c=checked(await db.from('contents').select('title,slug,year,poster_url,is_published').eq('id',w.content_id).single());
+    const c=checked(await db.from('contents').select('title,slug,year,poster_url,banner_url,is_published').eq('id',w.content_id).single());
     if(!c.is_published)throw new ApiError(409,'not_published','Title is not public.');
     const base=new URL(process.env.TELEGRAM_SITE_URL||'https://hdqaz.online');
     if(base.protocol!=='https:'||base.username||base.password||base.pathname!=='/'||base.search||base.hash)return invalid();
     const link=new URL('/'+encodeURIComponent(c.slug),base);
     if(w.episode_id){const ep=checked(await db.from('episodes').select('slug,is_published').eq('id',w.episode_id).eq('content_id',w.content_id).single());if(!ep.is_published)throw new ApiError(409,'not_published','Episode is not public.');link.searchParams.set('episode',ep.slug);}
     link.searchParams.set('utm_source','telegram');link.searchParams.set('utm_medium','channel');
-    result={...row,mode,title:c.title,year:c.year,poster_url:c.poster_url,watch_url:link.href};
+    result={...row,mode,title:c.title,year:c.year,poster_url:c.poster_url,banner_url:c.banner_url,watch_url:link.href};
    }
   }else{
    const actor=botAuth(request,true)!;

@@ -139,10 +139,10 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
   const hlsUrl = asNullableString(payload.hlsUrl);
   const title = requireString(payload, "title", errors);
   const slug = requireString(payload, "slug", errors);
-  const description = requireString(payload, "description", errors);
-  const posterUrl = requireString(payload, "posterUrl", errors);
-  const bannerUrl = requireString(payload, "bannerUrl", errors);
-  const country = requireString(payload, "country", errors);
+  const description = asString(payload.description) ?? "";
+  const posterUrl = asString(payload.posterUrl) ?? "";
+  const bannerUrl = asString(payload.bannerUrl) ?? "";
+  const country = asString(payload.country) ?? "";
 
   if (!type || !contentTypes.includes(type)) {
     errors.type = "Unsupported content type.";
@@ -178,8 +178,8 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
     errors.heroOrder = "Hero order must be a non-negative whole number.";
   }
 
-  if (!genreIds || genreIds.length === 0) {
-    errors.genreIds = "At least one genre is required.";
+  if (payload.genreIds !== undefined && !genreIds) {
+    errors.genreIds = "Genres must be an array of identifiers.";
   }
 
   if (hlsUrl) {
@@ -188,7 +188,7 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
     } else if (!isHlsManifestUrl(hlsUrl)) {
       errors.hlsUrl = "HLS URL must end with .m3u8.";
     }
-  } else if (type === "movie" || type === "cartoon") {
+  } else if ((type === "movie" || type === "cartoon") && asBoolean(payload.isPublished)) {
     errors.hlsUrl = "Feature content HLS URL is required.";
   }
 

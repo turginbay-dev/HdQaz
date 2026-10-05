@@ -150,7 +150,10 @@ function throwDatabaseError(error: { code?: string; message: string }, fallback:
     throw new ApiError(409, "conflict", "A record with this slug or number already exists.");
   }
 
-  throw new ApiError(500, "database_error", fallback, error.message);
+  // Log only schema diagnostics, never record values, URLs or credentials from DETAIL.
+  const diagnostic = error.message.replace(/https?:\/\/\S+/g, "[url]").replace(/'[^']*'/g, "[value]").slice(0, 300);
+  console.error("Content database operation failed", { operation: fallback, code: error.code, diagnostic });
+  throw new ApiError(500, "database_error", "Контентті сақтау мүмкін болмады. Қайта көріңіз.");
 }
 
 function rowToGenre(row: GenreRow): Genre {
@@ -213,6 +216,7 @@ function rowToContent(
     title: row.title,
     slug: row.slug,
     type: row.section && row.section!=="default" ? row.section : row.type,
+    storageType: row.type,
     description: row.description,
     posterUrl: normalizeStoredImageUrl(row.poster_url),
     bannerUrl: normalizeStoredImageUrl(row.banner_url),
@@ -660,7 +664,14 @@ export async function createContent(input: ContentInput) {
 
 export async function updateContent(slug: string, input: ContentInput) {
   const supabase = requireDatabase();
+  const existingResult = await supabase.from("contents").select("type,section").eq("slug", slug).maybeSingle();
+  if (existingResult.error) throwDatabaseError(existingResult.error, "Failed to load content for update.");
+  const existing = existingResult.data as { type: ContentType; section: string | null } | null;
   const row = contentToRow(input);
+  // The editor displays section as anime/dorama; it must not overwrite the job's movie/series kind.
+  if (existing && existing.section && existing.section !== "default" && input.type === existing.section) {
+    row.type = existing.type;
+  }
   const { data, error } = await supabase.from("contents").update(row).eq("slug", slug).select("*").maybeSingle();
 
   if (error) {

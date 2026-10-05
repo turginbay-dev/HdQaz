@@ -1,6 +1,0 @@
-# Image storage only; excludes backend/worker/Supabase credentials.
-services:
-  bot:
-    env_file:
-      - .env
-      - media.env

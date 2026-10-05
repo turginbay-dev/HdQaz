@@ -100,16 +100,13 @@ class AdminFlow:
    self.f.save(actor,state);self.panel(actor,('Постер' if field=='poster_url' else 'Баннер')+' суретін жіберіңіз. JPG, PNG немесе WEBP.',[[back]],mid);return True
   if s.get('mode')=='media' and (u.get('message',{}).get('photo') or u.get('message',{}).get('document')):
    self.panel(actor,'⬆️ Сурет сақталуда…')
-   try:url=upload(self.b,u['message'],s['field'],s['id'],self.uid)
+   try:url=upload(self.b,u['message'],s['field'],s['id'],self.uid,actor,s)
    except SafeError as error:
     label='JPG, PNG немесе WEBP суретін жіберіңіз (10 МБ дейін).' if error.code=='invalid_image' else 'Сурет сақталмады. Қайта жіберіп көріңіз.'
-    self.panel(actor,label);return True
+    self.panel(actor,label,[[btn('⬅️ Мәзір','ahome')]]);return True
    if s.get('workflow'):
-    w=self.b.api.call('get',actor,s['id'])
-    if w['state']!='draft' or w['revision']!=s['revision']:raise SafeError('stale')
-    w=self.b.mutate(w,actor,self.uid,'edit',{**w['metadata'],s['field']:url});self.f.clear(actor);self.f.detail(actor,w)
-   else:
-    self.b.api.call('catalog_edit',actor,s['id'],data={'expected':s['expected'],'patch':{s['field']:url}},key=request_key(actor,self.uid,'media'));self.card(actor,s['id'])
+    w=self.b.api.call('get',actor,s['id']);self.f.clear(actor);self.f.detail(actor,w)
+   else:self.card(actor,s['id'])
    return True
   if v=='ahome':self.f.clear(actor);self.home(actor,mid);return True
   if v=='aadd':self.panel(actor,'➕ Контент түрін таңдаңыз.',[[btn('🎬 Фильм','ak:movie'),btn('📺 Сериал','ak:series')]],mid);return True

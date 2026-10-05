@@ -1,10 +1,11 @@
 """Bounded image-only upload. No video processing or backend database credentials."""
-import io,os,stat,uuid,warnings
+import io,os,stat,uuid,warnings,urllib.request,json
+from .core import NoRedirect,request_key
 from .core import SafeError
 from .ingestion import open_beneath
 MAX_IMAGE=10*1024*1024
 
-def configured():return all(os.environ.get(name) for name in ("R2_ENDPOINT_URL","R2_BUCKET","R2_ACCESS_KEY_ID","R2_SECRET_ACCESS_KEY"))
+def configured():return True
 
 def normalize(stream):
  from PIL import Image,ImageOps
@@ -16,12 +17,12 @@ def normalize(stream):
     if image.format not in ('JPEG','PNG','WEBP') or getattr(image,'n_frames',1)!=1:raise SafeError('invalid_image')
     image.load();image=ImageOps.exif_transpose(image).convert('RGB');image.thumbnail((2560,2560));out=io.BytesIO();image.save(out,'WEBP',quality=85)
     data=out.getvalue()
-    if len(data)>MAX_IMAGE:raise SafeError('invalid_image')
+    if len(data)>2*1024*1024:raise SafeError('invalid_image')
     return data
  except SafeError:raise
  except Exception:raise SafeError('invalid_image') from None
 
-def upload(bot,message,kind,target,uid):
+def upload(bot,message,kind,target,uid,actor=None,state=None):
  if kind not in ('poster_url','banner_url'):raise SafeError('invalid_image')
  target=str(uuid.UUID(target));item=(message.get('photo') or [message.get('document') or {}])[-1]
  size=item.get('file_size')
@@ -34,31 +35,13 @@ def upload(bot,message,kind,target,uid):
    info=os.fstat(src.fileno())
    if not stat.S_ISREG(info.st_mode) or info.st_size!=size:raise SafeError('invalid_image')
    data=normalize(src)
-  import boto3
-  from botocore.config import Config
-  names=('R2_ENDPOINT_URL','R2_BUCKET','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY')
-  values=[os.environ.get(n,'') for n in names]
-  if not all(values):raise SafeError('media_not_configured')
-  endpoint,bucket,key,secret=values
-  from urllib.parse import urlsplit
-  u=urlsplit(endpoint)
-  if u.scheme!='https' or not (u.hostname or '').endswith('.r2.cloudflarestorage.com') or u.username or u.password or u.query or u.fragment:raise SafeError('media_not_configured')
-  client=boto3.client('s3',endpoint_url=endpoint,aws_access_key_id=key,aws_secret_access_key=secret,region_name='auto',config=Config(connect_timeout=10,read_timeout=20,retries={'max_attempts':2}))
-  # Immutable revision paths prevent cache/stale-write conflicts; retries use the same object.
-  path=kind.split('_')[0]+'/'+target+'/'+str(uid)+'.webp'
-  client.put_object(Bucket=bucket,Key=path,Body=data,ContentType='image/webp',CacheControl='public,max-age=31536000,immutable')
-  url='https://cdn.hdqaz.online/'+path
-  import urllib.request
-  from .core import NoRedirect
-  try:
-   req=urllib.request.Request(url,headers={'User-Agent':'HDQaz-Worker/1.0 (+https://hdqaz.online)','Accept-Encoding':'identity'})
-   with urllib.request.build_opener(NoRedirect()).open(req,timeout=20) as response:
-    if response.status!=200 or response.read(16)!=data[:16]:raise SafeError('media_upload_failed')
-  except Exception:
-   try:client.delete_object(Bucket=bucket,Key=path)
-   except Exception:pass
-   raise SafeError('media_upload_failed') from None
-  return url
+  state=state or {};actor=actor or message.get('from',{}).get('id')
+  if not actor:raise SafeError('invalid_image')
+  headers={'Content-Type':'image/webp','Authorization':'Bearer '+bot.c.backend,'X-Telegram-User-Id':str(actor),'X-Target-Id':target,'X-Media-Field':kind,'X-Workflow':'true' if state.get('workflow') else 'false','X-Version':str(state.get('revision') if state.get('workflow') else state.get('expected','')),'X-Request-Id':request_key(actor,uid,'media')}
+  req=urllib.request.Request(bot.c.api+'/api/telegram/media',data=data,headers=headers,method='POST')
+  with urllib.request.build_opener(NoRedirect()).open(req,timeout=40) as response:
+   result=json.loads(response.read(32768));return result['data']['url']
+
  except SafeError:raise
  except Exception:raise SafeError('media_upload_failed') from None
 

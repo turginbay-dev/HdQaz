@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
+      ...(process.env.NEXT_PUBLIC_SUPABASE_URL ? [{ protocol: "https" as const, hostname: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname, pathname: "/storage/v1/object/public/content-media/**" }] : []),
       {
         protocol: "https",
         hostname: "image.tmdb.org",

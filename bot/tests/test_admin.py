@@ -50,7 +50,7 @@ class AdminTests(unittest.TestCase):
   self.cb('cmup:'+ID.replace('-','')+':poster_url')
   u=update();u['update_id']=500;u['message']['photo']=[{'file_id':'image','file_size':100}]
   with patch('hdqaz_bot.admin.upload',return_value='https://cdn.hdqaz.online/poster/test.webp'):self.b.handle(u)
-  call=next(x for x in self.api.actions if x[0]=='catalog_edit');self.assertEqual(call[2]['data']['patch'],{'poster_url':'https://cdn.hdqaz.online/poster/test.webp'});self.assertNotIn('hls_url',call[2]['data']['patch'])
+  self.assertTrue(any(x[0]=='catalog_get' for x in self.api.actions));self.assertFalse(any(x[0] in ('prepare','activate','publish') for x in self.api.actions))
  def test_workflow_banner_optional_and_stays_draft(self):
   from unittest.mock import patch
   self.cb('wm:'+ID.replace('-','')+':banner_url');u=update();u['update_id']=501;u['message']['document']={'file_id':'image','file_size':100}

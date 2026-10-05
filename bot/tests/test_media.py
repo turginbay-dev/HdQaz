@@ -21,3 +21,14 @@ class MediaTests(unittest.TestCase):
   calls=[];tg=SimpleNamespace(call=lambda m,d:calls.append((m,d)),send=lambda a,t,b:calls.append(('send',{'text':t,'buttons':b})));b=SimpleNamespace(tg=tg)
   c={'title':'Title','year':2026,'watch_url':'https://hdqaz.online/title','poster_url':'poster','banner_url':'banner'}
   share(b,123,c);self.assertEqual(calls[-1][1]['photo'],'poster');self.assertNotIn(c['watch_url'],calls[-1][1]['caption']);c['poster_url']='';share(b,123,c);self.assertEqual(calls[-1][1]['photo'],'banner');c['banner_url']='';share(b,123,c);self.assertEqual(calls[-1][0],'send')
+ def test_normalized_image_uses_private_backend_only(self):
+  import json
+  with tempfile.TemporaryDirectory() as directory:
+   root=Path(directory);path=root/'image.png';data=self.image();path.write_bytes(data)
+   c=SimpleNamespace(telegram_base='http://telegram-api:8081',telegram_root=root,api='https://hdqaz.online',backend='private-test-backend-token')
+   bot=SimpleNamespace(c=c,tg=SimpleNamespace(call=lambda *a,**k:{'file_path':str(path),'file_size':len(data)}),guard=lambda:None)
+   response=io.BytesIO(json.dumps({'data':{'url':'https://test.supabase.co/storage/v1/object/public/content-media/posters/test.webp'}}).encode())
+   with patch('hdqaz_bot.media.urllib.request.build_opener') as opener:
+    opener.return_value.open.return_value.__enter__.return_value=response
+    result=upload(bot,{'document':{'file_id':'image','file_size':len(data)}},'poster_url','00000000-0000-4000-8000-000000000001',500,123,{'expected':'2026-10-05T00:00:00Z'})
+    request=opener.return_value.open.call_args.args[0];self.assertEqual(request.full_url,'https://hdqaz.online/api/telegram/media');self.assertEqual(request.get_header('Content-type'),'image/webp');self.assertEqual(Image.open(io.BytesIO(request.data)).format,'WEBP');self.assertIn('content-media',result)

@@ -1,4 +1,5 @@
 import { ApiError } from '@/lib/api/errors';
+import { isContentMediaUrl } from '@/features/telegram/media-url';
 import { uuid } from '@/features/processing/validation';
 export const invalid=():never=>{throw new ApiError(400,'invalid_input','Invalid bot input.');};
 export function integer(v:unknown,min=0,max=9007199254740991){if(typeof v!=='number'||!Number.isSafeInteger(v)||v<min||v>max)return invalid();return v;}
@@ -10,7 +11,7 @@ export function metadata(v:unknown):Record<string,unknown>{
   if(value===null||value==='')continue;
   if(k in strings)out[k]=short(value,strings[k]);
   else if(k==='section'){if(!['default','anime','dorama'].includes(String(value)))return invalid();out[k]=value;}
-  else if(['poster_url','banner_url'].includes(k)){const s=short(value,500);const u=new URL(s);const origins=['https://image.tmdb.org','https://cdn.hdqaz.online'];if(!origins.includes(u.origin)||u.username||u.password||u.search||u.hash||!/^\/[A-Za-z0-9/_ .~-]+\.(jpg|jpeg|png|webp)$/i.test(u.pathname))return invalid();out[k]=s;}
+  else if(['poster_url','banner_url'].includes(k)){const s=short(value,500);const u=new URL(s);const origins=['https://image.tmdb.org','https://cdn.hdqaz.online'];if((!origins.includes(u.origin)&&!isContentMediaUrl(s))||u.username||u.password||u.search||u.hash||!/^\/[A-Za-z0-9/_ .~-]+\.(jpg|jpeg|png|webp)$/i.test(u.pathname))return invalid();out[k]=s;}
   else if(['existing_content_id','dubber_id'].includes(k))out[k]=uuid(value);
   else if(['tmdb_id','year','duration_minutes','season_number','episode_number'].includes(k))out[k]=integer(value,k==='year'?1888:1,k==='year'?2200:k==='tmdb_id'?2147483647:10080);
   else if(k==='is_premium'){if(typeof value!=='boolean')return invalid();out[k]=value;}

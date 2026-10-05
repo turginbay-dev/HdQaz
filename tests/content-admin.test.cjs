@@ -26,4 +26,26 @@ test('explicit publish/unpublish persists while preserving reviewed HLS',async()
  const repo=loader({'@/lib/supabase/admin':{getOptionalAdminClient:()=>db}})('src/features/content/repository.ts');
  for(const isPublished of [true,false]){const result=await repo.updateContent('reviewed',parse({...input,slug:'reviewed',kind:'movie',section:'default',hlsUrl:row.hls_url,isPublished}).data);assert.equal(result.isPublished,isPublished);assert.equal(result.hlsUrl,'https://cdn.hdqaz.online/candidates/fixture/master.m3u8');}
 });
-test('new series cannot bypass reviewed episode publication',async()=>{const repo=loader()('src/features/content/repository.ts');await assert.rejects(repo.createContent(parse({...input,kind:'series',section:'dorama',isPublished:true}).data),error=>error.code==='review_required');});
+test('published series root validates metadata only across every section',()=>{
+ for(const section of ['default','dorama','anime']){assert.equal(parse({...input,kind:'series',section,isPublished:true}).errors,null);}
+ assert.ok(parse({...input,kind:'series',section:'dorama',title:'',isPublished:true}).errors.title);
+});
+test('movie publication never uses child readiness or section semantics',()=>{
+ for(const section of ['default','dorama','anime']){
+  const r=parse({...input,kind:'movie',section,isPublished:true});assert.match(r.errors.hlsUrl,/Фильм/);assert.doesNotMatch(r.errors.hlsUrl,/серияны/);
+  assert.equal(parse({...input,kind:'movie',section,isPublished:true,hlsUrl:'https://cdn.hdqaz.online/candidates/fixture/master.m3u8'}).errors,null);
+ }
+});
+test('episode publication requires its own manifest',()=>{
+ const episode=loader()('src/features/content/validation.ts').parseEpisodeInput;
+ const base={episodeNumber:1,title:'Episode',isPublished:true};assert.match(episode(base).errors.hlsUrl,/Эпизод/);
+ assert.equal(episode({...base,hlsUrl:'https://cdn.hdqaz.online/candidates/fixture/master.m3u8'}).errors,null);
+});
+test('series update does not query child readiness',async()=>{
+ for(const section of ['default','dorama','anime']){
+ const row={id:'id',title:'Draft',slug:'draft',type:'series',section,description:'',poster_url:'',banner_url:'',country:'',year:2026,status:'announced',is_published:false};
+ const db={from(table){let one=false;const q={then(resolve){return resolve({data:table==='contents'?(one?row:[row]):[],error:null});}};for(const name of ['select','eq','in','order','delete','insert'])q[name]=()=>q;q.maybeSingle=()=>{one=true;return q;};q.update=data=>{Object.assign(row,data);return q;};return q;}};
+ const repo=loader({'@/lib/supabase/admin':{getOptionalAdminClient:()=>db}})('src/features/content/repository.ts');
+ assert.equal((await repo.updateContent('draft',parse({...input,kind:'series',section,isPublished:true}).data)).isPublished,true);
+ }
+});

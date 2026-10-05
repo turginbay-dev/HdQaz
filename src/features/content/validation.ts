@@ -195,11 +195,17 @@ export function parseContentInput(payload: Record<string, unknown>): ValidationR
       errors.hlsUrl = "HLS URL must end with .m3u8.";
     }
   } else if ((type === "movie" || type === "cartoon") && asBoolean(payload.isPublished)) {
-    errors.hlsUrl = "Feature content HLS URL is required.";
+    errors.hlsUrl = "Фильм видеосы дайын емес. Дайын видеоны тексеріңіз.";
   }
 
   if (type && isEpisodicType(type) && hlsUrl) {
     errors.hlsUrl = "Use episodes for series streams.";
+  }
+
+  if (type === "series" && asBoolean(payload.isPublished)) {
+    for (const field of ["title", "slug", "year", "status"]) {
+      if (errors[field]) errors[field] = `Сериал мәліметтері толық емес: ${field}.`;
+    }
   }
 
   validateIntroWindow(errors, introStartSeconds, introEndSeconds);
@@ -303,7 +309,7 @@ export function parseEpisodeInput(payload: Record<string, unknown>): ValidationR
     errors.seasonId = "Must be a valid season ID.";
   }
   if (asBoolean(payload.isPublished) && !hlsUrl) {
-    errors.hlsUrl = "Published episodes require an HLS URL.";
+    errors.hlsUrl = "Эпизод видеосы дайын емес. Дайын видеоны тексеріңіз.";
   }
   const slug = asNullableString(payload.slug);
   const thumbnailUrl = optionalUrl(payload, "thumbnailUrl", errors);

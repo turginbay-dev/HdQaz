@@ -4,7 +4,7 @@ import { ApiError } from '@/lib/api/errors';
 import { integer, invalid, metadata, short } from '@/features/telegram/validation';
 import { uuid } from '@/features/processing/validation';
 const columns='id,title,slug,type,section,description,year,country,duration_minutes,is_premium,dubber_id,poster_url,banner_url,hls_url,is_published,updated_at';
-function checked<T>(r:{data:T,error:unknown}):NonNullable<T>{if(r.error)throw new ApiError(409,'catalog_conflict','Refresh the content and try again.');if(r.data==null)throw new ApiError(404,'not_found','Content not found.');return r.data;}
+function checked<T>(r:{data:T,error:unknown}):NonNullable<T>{if(r.error){const message=(r.error as {message?:string}).message;const errors:Record<string,string>={'Series metadata incomplete':'Сериал мәліметтері толық емес.','Movie video not Ready':'Фильм видеосы дайын емес. Дайын видеоны тексеріңіз.'};throw new ApiError(409,'catalog_conflict',errors[message||'']||'Контентті жаңартып қайта көріңіз.');}if(r.data==null)throw new ApiError(404,'not_found','Content not found.');return r.data;}
 export function classification(c:{type:string,section?:string|null,hls_url?:string|null}){
  return {kind:c.type==='movie'||c.type==='cartoon'||(c.type!=='series'&&!!c.hls_url)?'movie':'series',section:c.section||(['anime','dorama'].includes(c.type)?c.type:'default')};
 }

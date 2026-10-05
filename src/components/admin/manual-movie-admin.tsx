@@ -916,6 +916,9 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
           </div>
         </div>
 
+        {contentDraft.isPublished && !draftIsEpisodic && !contentDraft.hlsUrl.trim() && (
+          <p className="mt-4 text-sm text-amber-300">Фильм видеосы дайын емес. Дайын видеоны тексеріңіз.</p>
+        )}
         <button
           className="cinema-sweep mt-6 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-black shadow-[0_18px_70px_rgba(255,255,255,0.16)] transition hover:bg-[#f3ead5] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           disabled={!canSaveContent || isSavingContent}
@@ -1079,6 +1082,9 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
                       onClick={() => setEpisodeDraft((current) => ({ ...current, isPublished: !current.isPublished }))}
                     />
                   </div>
+                  {episodeDraft.isPublished && !episodeDraft.hlsUrl.trim() && (
+                    <p className="text-sm text-amber-300">Эпизод видеосы дайын емес. Дайын видеоны тексеріңіз.</p>
+                  )}
                   <button
                     className="hero-watch-button mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!canSaveEpisode || isSavingEpisode}

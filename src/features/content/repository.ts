@@ -648,7 +648,6 @@ async function syncContentGenres(supabase: SupabaseClient, contentId: string, ge
 }
 
 export async function createContent(input: ContentInput) {
-  if (input.isPublished && (input.kind === "series" || input.type === "series")) throw new ApiError(409,"review_required","Жаңа сериалды алдымен жоба ретінде сақтап, серия қосыңыз.");
   const supabase = requireDatabase();
   const { data, error } = await supabase.from("contents").insert(contentToRow(input)).select("*").single();
 
@@ -678,10 +677,9 @@ export async function updateContent(slug: string, input: ContentInput) {
   if (!input.kind && existing && existing.section && existing.section !== "default" && input.type === existing.section) {
     row.type = existing.type;
   }
-  if (input.isPublished && (input.kind === "series" || (!input.kind && input.type === "series"))) {
-    const episodes = await supabase.from("episodes").select("id").eq("content_id", (await getContentBySlug(slug,{includeDrafts:true}))?.id ?? "").eq("is_published",true).not("hls_url","is",null).limit(1);
-    if(episodes.error)throwDatabaseError(episodes.error,"Publication check failed.");
-    if(!episodes.data?.length)throw new ApiError(409,"review_required","Алдымен дайын серияны тексеріп жариялаңыз.");
+  // Resolve publication from the stored kind, never the displayed section or child episodes.
+  if (input.isPublished && ["movie", "cartoon"].includes(String(row.type)) && !row.hls_url) {
+    throw new ApiError(409, "movie_not_ready", "Фильм видеосы дайын емес. Дайын видеоны тексеріңіз.");
   }
   let update = supabase.from("contents").update(row).eq("slug", slug);
   if(input.expectedUpdatedAt)update=update.eq("updated_at",input.expectedUpdatedAt);

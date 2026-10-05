@@ -135,3 +135,4 @@ Video/HLS stays entirely in the existing Cloudflare R2 worker pipeline; worker, 
 - Remaining scope: no current activation blocker. This task does not introduce automatic Ready publication, public-channel features, REMAKE, or a new ingestion architecture. For an empty web movie draft, save metadata, open Telegram, select it in Search/Catalog, then use the existing Video action. Human review and explicit publication remain required.
 
 - Final narrow-screen visual check found catalog actions overflowing the panel. This checkpoint additionally wraps actions, keeps poster/title together, and supplies the existing poster placeholder for empty drafts. Presentation only; application behavior and worker unchanged.
+- Final application commit: `66802ff8462cbc4cf4a63002f1551aef2c03aa7d`; production deployment `BUucCVamkzGWvmeSnW4a2rD56a8o` verified Ready. This following documentation-only commit records that exact deployment; no further application changes.

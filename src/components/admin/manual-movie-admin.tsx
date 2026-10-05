@@ -1331,12 +1331,12 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
             return (
               <article
                 key={item.id}
-                className="glass flex flex-col gap-4 rounded-[26px] p-3 sm:flex-row sm:items-center"
+                className="glass flex flex-wrap items-center gap-3 rounded-2xl p-3 sm:flex-nowrap"
               >
                 <img
-                  src={item.posterUrl}
+                  src={item.posterUrl || "/movie-poster-fallback.svg"}
                   alt={item.title}
-                  className="h-16 w-12 rounded-lg object-cover"
+                  className="h-16 w-12 shrink-0 rounded-lg object-cover"
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-zinc-400">{contentTypeLabels[item.type]} · {getReleaseFormat(item) === "episodic" ? "Сериал" : "Фильм"} · {item.isPublished ? "Жарияланған" : readyContentIds.includes(item.id) ? "Дайын · тексеруді күтеді" : "Жоба"}</p>
@@ -1348,7 +1348,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
                     {item.genres.map((genre) => genre.name).join(", ")}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:max-w-[55%]">
                   <button
                     className="glass-button inline-flex h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold text-white"
                     onClick={() => startEditContent(item)}

@@ -33,6 +33,12 @@ export async function mediaRequest(request:Request, web=false){
   const data=await normalizeImage(await bytes(request));const hash=createHash('sha256').update(data).digest('hex').slice(0,16);
   // Immutable revisions prevent stale requests overwriting the currently displayed image.
   const owner=flow?((target.content_id?uuid(target.content_id):meta.existing_content_id?uuid(meta.existing_content_id):'drafts/'+id)):id;
+  // The cleanup grace period exceeds this route's 60s lifetime, so existing
+  // uploads finish before cleanup; refuse every new write to a fenced owner.
+  const cleanup=db.from('content_cleanup_tasks').select('id');
+  const fenced=await (owner.startsWith('drafts/')?cleanup.contains('snapshot',{flows:[{id}]}):cleanup.eq('content_id',owner)).limit(1);
+  if(fenced.error)throw new ApiError(503,'storage_unavailable','Сурет сақталмады.');
+  if(fenced.data?.length)throw new ApiError(409,'cleanup_in_progress','Контент толық жойылып жатыр.');
   const path=(field==='poster_url'?'posters/':'banners/')+owner+'/'+(field==='poster_url'?'poster-':'banner-')+key+'-'+hash+'.webp';
   const store=db.storage.from(MEDIA_BUCKET),url=store.getPublicUrl(path).data.publicUrl;
   const current=flow?meta[field]:target[field];

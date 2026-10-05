@@ -65,7 +65,9 @@ export async function telegramRequest(request:Request){
      const w=await workflow(actor,id!);
      if(action==='select') {if(w.metadata.title)throw new ApiError(409,'metadata_selected','Start a new draft to select another title.');payload=metadata({...w.metadata,...await tmdbDetails(w.kind,integer(d.tmdb_id,1,2147483647))});op='edit';}
      else if(action==='existing'){
-      if(w.kind!=='series')return invalid();const c=checked(await db.from('contents').select('id,title,year,type,section,description,country,duration_minutes,is_premium,dubber_id,poster_url,banner_url,hls_url').eq('id',uuid(d.content_id)).neq('type','movie').is('hls_url',null).single());payload=metadata({existing_content_id:c.id,title:c.title,year:c.year,section:c.section||(['anime','dorama'].includes(c.type)?c.type:'default'),description:c.description,country:c.country,duration_minutes:c.duration_minutes,is_premium:c.is_premium,dubber_id:c.dubber_id});op='edit';
+      const c=checked(await db.from('contents').select('id,title,year,type,section,description,country,duration_minutes,is_premium,dubber_id,hls_url,is_published').eq('id',uuid(d.content_id)).single());
+      if(w.kind==='movie'?(c.type!=='movie'||c.is_published||c.hls_url):(c.type==='movie'||c.type==='cartoon'||c.hls_url))return invalid();
+      payload=metadata({existing_content_id:c.id,title:c.title,year:c.year,section:c.section||(['anime','dorama'].includes(c.type)?c.type:'default'),description:c.description,country:c.country,duration_minutes:c.duration_minutes,is_premium:c.is_premium,dubber_id:c.dubber_id});op='edit';
      }else if(action==='edit')payload=metadata(d);
      else if(action==='source'){payload={source_ref:uuid(d.source_ref)};}
      else if(action==='prepare'){metadata(w.metadata);if(!w.metadata.title||!w.metadata.year)return invalid();payload={source_ref:uuid(d.source_ref)};}

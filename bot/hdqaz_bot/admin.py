@@ -39,6 +39,7 @@ class AdminFlow:
   if c.get('description'):lines+=['',c['description'][:1100]]
   key=compact(id);rows=[[btn('ℹ️ Ақпарат / Жаңарту','ci:'+key),btn('✏️ Өзгерту','ce:'+key)]]
   rows.append([btn('🖼 Медиа','cm:'+key)])
+  if c['kind']=='movie' and not c['is_published'] and not c.get('hls_url'):rows.append([btn('🎞 Видео қосу','attach:'+key)])
   if c['kind']=='series':rows.append([btn('➕ Серия қосу','cn:'+key),btn('📋 Сериялар','cl:'+key)])
   for w in c.get('workflows',[]):
    j=w.get('job') or {}
@@ -67,10 +68,15 @@ class AdminFlow:
   self.start_numbers(actor,w,mid,season,episode)
  def handle(self,u,actor):
   cb=u.get('callback_query');v=cb.get('data','') if cb else '';v='ak:series' if v=='menu_series' else v;mid=cb['message'].get('message_id') if cb else None;self.uid=u['update_id'];s=self.f.get(actor) or {};text=u.get('message',{}).get('text','').strip()
-  known=v in ('ahome','aadd','asearch','acatalog','asettings','channeloff','cprev','cnext','crefresh','series_existing') or v.startswith(('cm:','cmup:','wm:','share:','ak:','sec:','cf:','ci:','ce:','cn:','cs:','cl:','cu:','cv:','cp:','field:','save:','pub:','snum:','bool:','dub:'))
+  known=v in ('ahome','aadd','asearch','acatalog','asettings','channeloff','cprev','cnext','crefresh','series_existing') or v.startswith(('attach:','cm:','cmup:','wm:','share:','ak:','sec:','cf:','ci:','ce:','cn:','cs:','cl:','cu:','cv:','cp:','field:','save:','pub:','snum:','bool:','dub:'))
   if cb and not known:return False
   if cb:self.b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']})
-  if v.startswith(('cm:','cmup:','wm:','share:')):
+  if v.startswith('attach:'):
+   id=cid(v[7:]);c=self.b.api.call('catalog_get',actor,id)
+   if c['kind']!='movie' or c['is_published'] or c.get('hls_url'):raise SafeError('stale')
+   self.context(actor,'movie',c['section']);w=self.b.api.call('new',actor,data={'kind':'movie','section':c['section']},key=request_key(actor,self.uid,'new'))
+   w=self.b.mutate(w,actor,self.uid,'existing',{'content_id':id});self.f.save(actor,{'id':w['id'],'mode':'video','step':0,'message_id':mid});self.f.prompt(actor,self.f.get(actor));return True
+  if v.startswith(('attach:','cm:','cmup:','wm:','share:')):
    parts=v.split(':');op=parts[0];id=cid(parts[1])
    if op=='share':
     c=self.b.api.call('catalog_get',actor,id)

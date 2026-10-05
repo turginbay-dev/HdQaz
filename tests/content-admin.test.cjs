@@ -11,3 +11,8 @@ test('metadata update preserves processing kind under classified section',async(
  const repo=loader({'@/lib/supabase/admin':{getOptionalAdminClient:()=>db}})('src/features/content/repository.ts');
  await repo.updateContent('draft',{...parse({...input,type:'anime'}).data});assert.equal(written.type,'movie');assert.equal(row.section,'anime');assert.equal(row.is_published,false);
 });
+test('season relation accepts number and numeric text, rejects empty/fraction/zero',async()=>{
+ const route=loader({'@/lib/api/auth':{requireAdmin:async()=>{}},'@/features/content/repository':{createSeason:async(slug,number)=>({slug,seasonNumber:number})}})('src/app/api/contents/[slug]/seasons/route.ts');
+ for(const value of [1,2,3,'1','2']){const response=await route.POST(new Request('https://hdqaz.online/api',{method:'POST',body:JSON.stringify({seasonNumber:value})}),{params:Promise.resolve({slug:'series'})});assert.equal(response.status,201);assert.equal((await response.json()).data.seasonNumber,Number(value));}
+ for(const value of ['',0,-1,1.5,'1.5']){const response=await route.POST(new Request('https://hdqaz.online/api',{method:'POST',body:JSON.stringify({seasonNumber:value})}),{params:Promise.resolve({slug:'series'})});assert.equal(response.status,400);}
+});

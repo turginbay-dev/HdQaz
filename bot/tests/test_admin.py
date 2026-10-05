@@ -56,3 +56,8 @@ class AdminTests(unittest.TestCase):
   self.cb('wm:'+ID.replace('-','')+':banner_url');u=update();u['update_id']=501;u['message']['document']={'file_id':'image','file_size':100}
   with patch('hdqaz_bot.admin.upload',return_value='https://cdn.hdqaz.online/banner/test.webp'):self.b.handle(u)
   self.assertFalse(any(x[0] in ('source','prepare','activate','publish') for x in self.api.actions))
+
+ def test_existing_web_movie_goes_directly_to_video(self):
+  self.api.c.update(kind='movie',is_published=False,hls_url=None,section='default');self.cb('attach:'+ID.replace('-',''));self.assertEqual(self.b.movie.get(123)['mode'],'video');self.assertEqual(self.api.w['metadata']['existing_content_id'],ID);self.assertFalse(any(x[0]=='search' for x in self.api.actions))
+ def test_published_movie_cannot_attach_replacement(self):
+  self.api.c.update(kind='movie',is_published=True);self.assertRaises(SafeError,self.cb,'attach:'+ID.replace('-',''))

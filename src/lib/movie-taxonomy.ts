@@ -62,6 +62,7 @@ export function formatMovieLanguages(
 }
 
 export const movieCatalogs = [
+  {id: "coming-soon", label: "Жақында", description: "Видеосы жақында қосылатын контент"},
   {
     id: "premium",
     label: "Premium",

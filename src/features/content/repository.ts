@@ -704,10 +704,19 @@ export async function updateContent(slug: string, input: ContentInput) {
   return content;
 }
 
+export async function unpublishContent(slug: string, expectedUpdatedAt: string) {
+  const supabase = requireDatabase();
+  const { data, error } = await supabase.from("contents").update({is_published:false})
+    .eq("slug",slug).eq("updated_at",expectedUpdatedAt).select("id").maybeSingle();
+  if(error) throwDatabaseError(error,"Publication update failed.");
+  if(!data) throw new ApiError(409,"stale_content","Контент өзгерген. Жаңартып қайта көріңіз.");
+  return getContentBySlug(slug,{includeDrafts:true});
+}
+
 export async function deleteContent(slug: string) {
   const supabase = requireDatabase();
-  const { data, error } = await supabase.rpc("admin_delete_unused_content", { p_slug: slug });
-  if (error?.code === "P0001" || error?.code === "23503") throw new ApiError(409, "content_in_use", "Контент қолданылып жатыр. Жою орнына жарияламаңыз.");
+  const { data, error } = await supabase.rpc("admin_delete_content", { p_slug: slug });
+  if (error?.code === "P0001" || error?.code === "23503") throw new ApiError(409, "content_in_use", "Алдымен контентті жарияламаңыз.");
   if (error) throwDatabaseError(error, "Failed to delete content.");
 
   return Boolean(data);
@@ -810,7 +819,7 @@ export function contentToMovieRecord(content: Content): MovieRecord {
     ...(hasKazakhSubtitles ? ["Қазақша субтитрмен" as const] : [])
   ];
   const fallbackCatalogs: MovieRecord["catalogs"] = [
-    "full-hd",
+    ...(content.status === "announced" ? ["coming-soon" as const] : ["full-hd" as const]),
     ...(content.isPremium ? ["premium" as const] : []),
     ...localizationCatalogs,
     ...(content.status === "ongoing" ? ["new-releases" as const] : [])

@@ -286,6 +286,7 @@ function getApiError(result: ContentApiResponse | EpisodeApiResponse | DubberApi
 }
 
 export function ManualMovieAdmin({ dubbers, genres, initialContents, readyContentIds = [] }: ManualMovieAdminProps) {
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
   const [deletePending, setDeletePending] = useState<Content | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [search, setSearch] = useState("");
@@ -571,12 +572,23 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
     }
   }
 
+  async function unpublish(item: Content) {
+    setActionBusy(item.id);setListError("");
+    try {
+      const response=await fetch(`/api/contents/${encodeURIComponent(item.slug)}/publication`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({isPublished:false,expectedUpdatedAt:item.updatedAt})});
+      const result=await response.json();if(!response.ok)throw new Error(getApiError(result,"Жарияламау орындалмады."));
+      upsertContent(result.data);if(contentDraft.id===item.id)setContentDraft(toAdminContent(result.data));
+    } catch(error) {setListError(error instanceof Error?error.message:"Әрекет орындалмады.");}
+    finally {setActionBusy(null);}
+  }
   async function removeContent(item: Content) {
-    setDeletePending(null);
-    setListError("");
-    const response = await fetch(`/api/contents/${encodeURIComponent(item.slug)}`, {method:"DELETE"});
-    if (!response.ok) {const result=await response.json();setListError(getApiError(result,"Жою мүмкін болмады."));return;}
-    setContents(current=>current.filter(row=>row.id!==item.id));if(contentDraft.id===item.id)setShowEditor(false);
+    setActionBusy(item.id);setListError("");
+    try {
+      const response = await fetch(`/api/contents/${encodeURIComponent(item.slug)}`, {method:"DELETE"});
+      if (!response.ok) {const result=await response.json();throw new Error(getApiError(result,"Жою мүмкін болмады."));}
+      setContents(current=>current.filter(row=>row.id!==item.id));if(contentDraft.id===item.id)setShowEditor(false);setDeletePending(null);
+    } catch(error) {setListError(error instanceof Error?error.message:"Жою мүмкін болмады.");}
+    finally {setActionBusy(null);}
   }
   async function uploadMedia(file: File, field: "poster_url" | "banner_url") {
     if (file.size > 3*1024*1024) {setFormError("Сурет 3 МБ-тан аспауы керек.");return;}
@@ -1328,7 +1340,17 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
           <select aria-label="Жария күйі" value={publication} onChange={e=>{setPublication(e.target.value);setPage(0);}} className="rounded-xl bg-zinc-900 p-3"><option value="all">Бәрі</option><option value="published">Жарияланған</option><option value="draft">Жоба / жарияланбаған</option><option value="ready">Дайын / тексеру</option></select>
           <button className="glass-button rounded-xl px-4" onClick={startNewContent}>Жаңа контент</button>
         </div>
-        {deletePending && <div role="dialog" aria-label="Контентті жою" className="mb-3 flex flex-wrap gap-3 rounded-xl border border-red-400/30 p-4"><p>«{deletePending.title}» контентін жою керек пе? Тек қолданылмаған жоба жойылады.</p><button onClick={()=>void removeContent(deletePending)}>Иә, жою</button><button onClick={()=>setDeletePending(null)}>Бас тарту</button></div>}
+        {deletePending && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+          <div className="w-full max-w-md rounded-3xl border border-white/15 bg-zinc-950 p-7 shadow-2xl">
+            <h3 id="delete-title" className="text-xl font-semibold">Шынмен өшіресіз бе?</h3>
+            <p className="mt-3 text-zinc-400">«{deletePending.title}» және оның сериялары жойылады. Бұл әрекетті кері қайтару мүмкін емес.</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button disabled={actionBusy!==null} className="rounded-2xl bg-white/10 px-4 py-3 font-semibold hover:bg-white/20 disabled:opacity-50" onClick={()=>setDeletePending(null)}>Жоқ, қалсын</button>
+              <button disabled={actionBusy!==null} className="rounded-2xl bg-red-600 px-4 py-3 font-semibold hover:bg-red-500 disabled:opacity-50" onClick={()=>void removeContent(deletePending)}>{actionBusy?"Өшірілуде…":"Иә, өшіремін"}</button>
+            </div>
+          </div>
+        </div>}
+
         {listError && <p role="alert" className="mb-3 text-red-300">{listError}</p>}
         <div className="grid gap-3">
           {filteredContents.slice(page * 10, page * 10 + 10).map((item) => {
@@ -1365,7 +1387,7 @@ export function ManualMovieAdmin({ dubbers, genres, initialContents, readyConten
                   </button>
                   <a className="glass-button rounded-full px-3 py-2 text-sm" href={`/${item.slug}`} target="_blank" rel="noreferrer">Ашу</a>
                   {!item.isPublished && <a className="glass-button rounded-full px-3 py-2 text-sm" href="https://t.me/hdqaz_bot" title="Telegram → Іздеу → осы контент → Видео қосу" target="_blank" rel="noreferrer">Видео</a>}
-                  <button className="glass-button rounded-full px-3 py-2 text-sm" onClick={() => {startEditContent(item);setContentDraft(current=>({...current,isPublished:!item.isPublished}));}}> {item.isPublished ? "Жарияламау / Archive" : "Жариялау"}</button>
+                  {item.isPublished && <button disabled={actionBusy!==null} className="glass-button rounded-full px-3 py-2 text-sm disabled:opacity-50" onClick={() => void unpublish(item)}>{actionBusy===item.id?"Орындалуда…":"Жарияламау"}</button>}
                   {!item.isPublished && <button className="glass-button rounded-full px-3 py-2 text-sm" onClick={() => setDeletePending(item)}>Жою</button>}
 
                 </div>

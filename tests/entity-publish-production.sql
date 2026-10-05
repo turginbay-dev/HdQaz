@@ -1,3 +1,5 @@
+-- Historical rollback verification: the named disposable fixtures were cleaned on 2026-10-05.
+-- Recreate isolated fixtures before using this script; never substitute real published titles.
 -- Run only against the named existing unpublished fixtures; transaction always rolls back.
 begin;
 do $test$

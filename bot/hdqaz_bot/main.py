@@ -30,7 +30,7 @@ class Bot:
         with self.ingestion_lock:
             active={key:value for key,value in self.ingestions.items() if value[0].is_alive()}
             if identity in active or len(active)>=2:return False
-            if shutil.disk_usage(self.c.root).free<sum(value[1] for value in active.values())+reserve+2*1024**3:raise SafeError('storage_full')
+            if shutil.disk_usage(self.c.root).free<sum(value[1] for value in active.values())+reserve+10*1024**3:raise SafeError('storage_full')
             def run():
                 try:target(*args)
                 finally:

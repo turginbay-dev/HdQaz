@@ -33,5 +33,6 @@ class Tests(unittest.TestCase):
    with patch.object(m,'Path',side_effect=paths):
     e.cancel(workflow);self.assertTrue((sources/('.cleanup-'+workflow)).exists())
     e.local('workflow/'+workflow,{'source_refs':[],'protected_source_refs':[ref]});self.assertTrue(file.exists())
-    e.local('workflow/'+workflow,{'source_refs':[],'protected_source_refs':[]});self.assertFalse(file.exists())
+    self.assertRaises(m.UnverifiedSource,e.local,'workflow/'+workflow,{'source_refs':[],'protected_source_refs':[]})
+    e.local('workflow/'+workflow,{'source_refs':[ref],'protected_source_refs':[]});self.assertFalse(file.exists())
 if __name__=='__main__':unittest.main()

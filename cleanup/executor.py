@@ -17,6 +17,8 @@ def call(body):
 def owned_uuid(value):
  if str(uuid.UUID(value))!=value:raise ValueError()
  return value
+class UnverifiedSource(ValueError):
+ def __init__(self,ref):self.ref=ref
 class Executor:
  def __init__(self,client=None):
   self.client=client or boto3.client('s3',endpoint_url=os.environ['R2_ENDPOINT_URL'],region_name='auto',aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'],aws_secret_access_key=os.environ['R2_SECRET_ACCESS_KEY'],config=Config(connect_timeout=5,read_timeout=15,retries={'total_max_attempts':3},request_checksum_calculation='when_required',response_checksum_validation='when_required',s3={'addressing_style':'path'}))
@@ -53,8 +55,8 @@ class Executor:
     ref=state['source_ref'];owned_uuid(ref)
     if ref in (task or {}).get('protected_source_refs',[]):continue
     if ref not in (task or {}).get('source_refs',[]):
-     expected=str(uuid.uuid5(uuid.NAMESPACE_URL,f"hdqaz-telegram:{state.get('actor')}:{value}:{state.get('update')}"))
-     if ref!=expected:raise ValueError()
+     if (Path('/sources/inbox')/(ref+'.media')).exists() or (Path('/sources/inbox')/('.tg-'+ref+'.partial')).exists():raise UnverifiedSource(ref)
+     continue
     self.local('source/'+ref)
    return
   if kind=='job':
@@ -90,6 +92,7 @@ class Executor:
     elif a['kind']=='local':self.local(a['path'],task)
     else:raise ValueError()
    except BlockingIOError:result.update(state='error',error='local_busy')
+   except UnverifiedSource as exc:result.update(state='error',error='unverified_ownership',paths=['source/'+exc.ref])
    except ValueError:result.update(state='error',error='unsafe_path')
    except Exception:result.update(state='error',error='storage_unavailable')
    results.append(result)

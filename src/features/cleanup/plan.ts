@@ -28,5 +28,5 @@ export function cleanupPlan(s:Snapshot,origins:string[],storageOrigin:string):As
  }
  return assets;
 }
-export type Result={id:string;state:'done'|'shared'|'error';error?:string};
-export function validResults(plan:Asset[],value:unknown):value is Result[]{return Array.isArray(value)&&value.length===plan.length&&new Set(value.map(r=>r?.id)).size===plan.length&&value.every(r=>r&&plan.some(a=>a.id===r.id)&&['done','shared','error'].includes(r.state)&&(!r.error||['storage_unavailable','local_busy','unsafe_path','unverified_ownership','executor_interrupted'].includes(r.error))&&!(r.state==='shared'&&!plan.find(a=>a.id===r.id)?.shared)&&!(r.state==='done'&&plan.find(a=>a.id===r.id)?.kind==='blocked'));}
+export type Result={id:string;state:'done'|'shared'|'error';error?:string;paths?:string[]};
+export function validResults(plan:Asset[],value:unknown):value is Result[]{return Array.isArray(value)&&value.length===plan.length&&new Set(value.map(r=>r?.id)).size===plan.length&&value.every(r=>r&&(!r.paths||(Array.isArray(r.paths)&&r.paths.length<=2&&r.paths.every((p:unknown)=>typeof p==='string'&&p.startsWith('source/')&&id.test(p.slice(7)))))&&plan.some(a=>a.id===r.id)&&['done','shared','error'].includes(r.state)&&(!r.error||['storage_unavailable','local_busy','unsafe_path','unverified_ownership','executor_interrupted'].includes(r.error))&&!(r.state==='shared'&&!plan.find(a=>a.id===r.id)?.shared)&&!(r.state==='done'&&plan.find(a=>a.id===r.id)?.kind==='blocked'));}

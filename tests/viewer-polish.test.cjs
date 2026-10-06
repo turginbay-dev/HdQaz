@@ -31,7 +31,7 @@ function playerHarness() {
   const tree=exports.HlsPlayer({progressKey:'watch-progress:episode:one',src:'https://cdn.hdqaz.online/test/master.m3u8',poster:'',languages:[]});
   function find(node,type){if(!node)return null;if(Array.isArray(node)){for(const x of node){const f=find(x,type);if(f)return f}return null}if(node.type===type)return node;return find(node.props?.children,type)}
   effects[0]();
-  return {handlers,changes,timers,video,store,requests,props:find(tree,'video').props};
+  return {handlers,changes,timers,video,store,requests,props:find(tree,'video').props,play:find(tree,'button').props.onClick};
 }
 test('player delays failure, bounds recovery and exposes friendly error',()=>{
  const h=playerHarness();
@@ -48,4 +48,14 @@ test('player saves seeked episode position locally without root-series API write
  assert.equal(h.requests.length,0);
  h.video.currentTime=3700;h.props.onTimeUpdate();
  assert.equal(JSON.parse(h.store.get('watch-progress:episode:one')).completed,true);
+});
+
+test('normal Play clears pending resume and starts at zero',async()=>{
+ const h=playerHarness();
+ h.store.set('watch-progress:episode:one',JSON.stringify({seconds:600,completed:false}));
+ h.props.onLoadedMetadata();
+ await h.play();
+ assert.equal(h.video.currentTime,0);
+ assert.equal(h.video.paused,false);
+ assert.equal(JSON.parse(h.store.get('watch-progress:episode:one')).seconds,0);
 });

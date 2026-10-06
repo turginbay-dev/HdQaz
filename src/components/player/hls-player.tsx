@@ -585,7 +585,7 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
       return;
     }
 
-    if (pendingResumeRef.current !== null) { chooseResume(true); return; }
+    if (pendingResumeRef.current !== null) { chooseResume(false); return; }
 
     if (!streamReadyRef.current) {
       setLoading(true);
@@ -1268,8 +1268,7 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
 
           {resumeSeconds !== null && !error ? (
             <div className="absolute left-3 right-3 top-16 z-[60] flex flex-wrap items-center gap-2 sm:left-5 sm:right-auto sm:top-20">
-              <button type="button" className="cinema-action-pill inline-flex min-h-11 items-center gap-2" onClick={() => chooseResume(true)}><Play className="h-4 w-4 fill-current" />{formatTime(resumeSeconds)} уақытынан жалғастыру</button>
-              <button type="button" className="cinema-action-pill min-h-11 text-xs" onClick={() => chooseResume(false)}>Басынан көру</button>
+              <button type="button" className="cinema-action-pill inline-flex min-h-11 items-center gap-2" onClick={() => chooseResume(true)}><Play className="h-4 w-4 fill-current" />Жалғастыру</button>
             </div>
           ) : null}
 

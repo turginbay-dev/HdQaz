@@ -1969,3 +1969,6 @@ label:has(> input[type="search"]):focus-within,
 .glass-button:has(> input[type="search"]):focus-within { border-color: rgba(255,255,255,.35); box-shadow: 0 0 0 2px rgba(255,255,255,.08); }
 .mobile-nav-search-panel { transform: translate3d(0,-8px,0); }
 .mobile-search-results, .desktop-search-results { min-height: 5rem; }
+/* Transparent control chrome must not intercept the circular Play button. */
+.cinema-player-controls { pointer-events: none; }
+.cinema-player-controls:not(.pointer-events-none) :is(button, input, a) { pointer-events: auto; }

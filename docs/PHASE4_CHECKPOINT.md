@@ -203,3 +203,5 @@ Final user layout correction: Continue and Skip Intro now share one centered row
 Final correction requested by user: restore a3c1ebc player layout with original circular center Play and original Skip Intro placement. Only Continue shifted 8px down (72px mobile / 84px desktop from player top). Centered shared action row is reverted. Continue-only label and normal Play-from-zero logic retained.
 
 Play click fix: real production elementFromPoint confirmed the full-width transparent Continue wrapper intercepted the center Play. Removed right inset and used content-sized width, preserving the 8px offset and appearance. Production build passed.
+
+Follow-up hit test on fresh production document found a second mobile blocker: transparent cinema-control-bar background over center Play. Control chrome now ignores pointer events; visible interactive buttons/inputs/links explicitly retain them. Hidden controls retain noninteractive behavior. No visual layout change. Production build passed.

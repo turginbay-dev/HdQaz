@@ -201,3 +201,5 @@ Verification limits: browser viewport override did not change actual 319px viewp
 Final user layout correction: Continue and Skip Intro now share one centered row in the player, equal 44px height and 128px mobile / 176px desktop widths. Original pill appearance preserved. Center Play hides while this action row is shown; control-bar Play remains and starts at zero. Next Episode stays in its previous position. Build passed. This supersedes the top-left / bottom-right description above.
 
 Final correction requested by user: restore a3c1ebc player layout with original circular center Play and original Skip Intro placement. Only Continue shifted 8px down (72px mobile / 84px desktop from player top). Centered shared action row is reverted. Continue-only label and normal Play-from-zero logic retained.
+
+Play click fix: real production elementFromPoint confirmed the full-width transparent Continue wrapper intercepted the center Play. Removed right inset and used content-sized width, preserving the 8px offset and appearance. Production build passed.

@@ -1267,7 +1267,7 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
           </div>
 
           {resumeSeconds !== null && !error ? (
-            <div className="absolute left-3 right-3 top-[4.5rem] z-[60] flex flex-wrap items-center gap-2 sm:left-5 sm:right-auto sm:top-[5.25rem]">
+            <div className="absolute left-3 top-[4.5rem] z-[60] flex w-max max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2 sm:left-5 sm:top-[5.25rem]">
               <button type="button" className="cinema-action-pill inline-flex min-h-11 items-center gap-2" onClick={() => chooseResume(true)}><Play className="h-4 w-4 fill-current" />Жалғастыру</button>
             </div>
           ) : null}

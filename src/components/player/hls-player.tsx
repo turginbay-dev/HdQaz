@@ -1228,7 +1228,8 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
               savePlaybackProgress();
             }}
             onProgress={syncVideoState}
-            onTimeUpdate={syncVideoState}
+            onTimeUpdate={() => { syncVideoState(); savePlaybackProgress(); }}
+            onSeeked={() => { syncVideoState(); savePlaybackProgress(); }}
             onEnded={() => {
               setPlaying(false);
               savePlaybackProgress();

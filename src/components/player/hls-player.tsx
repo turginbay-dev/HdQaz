@@ -422,6 +422,18 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
     setError("Видео әзірге қолжетімсіз. Біраздан кейін қайта көріңіз.");
   }, [contentId, initialWatchProgress, progressKey, src, retryVersion]);
 
+  // Bound initial native playback and post-manifest buffering as well as HLS loading.
+  useEffect(() => {
+    if (!loading || error) return;
+    const timeout = window.setTimeout(() => {
+      setLoading(false);
+      setError("Видео жүктелмеді. Байланысты тексеріп, қайта көріңіз.");
+      hlsRef.current?.stopLoad();
+    }, 25000);
+    return () => window.clearTimeout(timeout);
+  }, [loading, error, retryVersion, src]);
+
+
   useEffect(() => {
     const video = videoRef.current;
 

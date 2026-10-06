@@ -1,14 +1,5 @@
-import { LogoMark } from "@/components/layout/site-logo";
-
 export function AppLoadingScreen() {
-  return (
-    <div className="app-loading-screen" role="status" aria-label="HdQaz жүктелуде">
-      <div className="app-loading-mark">
-        <LogoMark className="h-20 w-28 p-1.5" priority sizes="112px" />
-      </div>
-      <div className="app-loading-bar" aria-hidden="true">
-        <span />
-      </div>
-    </div>
-  );
+  return <div className="viewer-container page-skeleton" role="status" aria-label="Контент жүктелуде">
+    <span className="sr-only">Жүктелуде…</span><div className="skeleton-heading" /><div className="movie-grid">{Array.from({ length: 6 }, (_, i) => <div key={i}><div className="skeleton-poster" /><div className="skeleton-line" /></div>)}</div>
+  </div>;
 }

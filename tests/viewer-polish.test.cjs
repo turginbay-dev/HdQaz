@@ -59,3 +59,30 @@ test('normal Play clears pending resume and starts at zero',async()=>{
  assert.equal(h.video.paused,false);
  assert.equal(JSON.parse(h.store.get('watch-progress:episode:one')).seconds,0);
 });
+
+const { selectViewerCategory, categoryLabel, selectViewerRelated, displayTitles } = load('src/lib/viewer-catalog.ts');
+test('viewer categories use the public type only, deduplicate IDs and never pad short rows', () => {
+ const records = [
+  {...movie,id:'harry',type:'movie',genres:['Отбасы','Фантастика']},
+  {...movie,id:'love',type:'dorama',genres:['Отбасы']},
+  {...movie,id:'swapped',type:'cartoon',genres:['Анимация']},
+  {...movie,id:'anime',type:'anime',genres:['Анимация']},
+ ];
+ const duplicate = [...records,records[2]];
+ assert.deepEqual(Array.from(selectViewerCategory(duplicate,'cartoon'),x=>x.id),['swapped']);
+ assert.deepEqual(Array.from(selectViewerCategory(duplicate,'movie'),x=>x.id),['harry']);
+ assert.equal(selectViewerCategory(duplicate,'series').length,0);
+ for(const type of ['movie','dorama','anime','cartoon']) {
+  const selected=selectViewerCategory(duplicate,type);
+  assert.ok(selected.every(x=>x.type===type));
+  assert.equal(new Set(selected.map(x=>x.id)).size,selected.length);
+  assert.ok(selected.every(x=>categoryLabel(x)!=='Санаты көрсетілмеген'));
+ }
+ assert.equal(selectViewerRelated(records,records[0]).length,0);
+});
+test('bilingual display preserves the stored title and exposes original separately', () => {
+ const source={title:'Бөтен денеде / Swapped',originalTitle:'Swapped'};
+ const titles=displayTitles(source);
+ assert.equal(titles.title,'Бөтен денеде');assert.equal(titles.original,'Swapped');
+ assert.equal(source.title,'Бөтен денеде / Swapped');
+});

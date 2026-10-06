@@ -1,26 +1,24 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { Calendar, Clapperboard, Crown, Globe2, Play, Radio } from "lucide-react";
+import { Play, Radio } from "lucide-react";
 import { CommentsSection } from "@/components/engagement/comments-section";
 import { MovieEngagementActions } from "@/components/engagement/movie-engagement-actions";
 import { MovieViewTracker } from "@/components/engagement/movie-view-tracker";
 import { GlassPanel } from "@/components/glass/glass-panel";
-import { MovieImage } from "@/components/movie/movie-image";
-import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieRow } from "@/components/movie/movie-row";
 import { ReadMoreDescription } from "@/components/movie/read-more-description";
 import { EpisodesSection } from "@/components/player/episodes-section";
 import { HlsPlayer } from "@/components/player/lazy-player";
 import { PremiumLockScreen } from "@/components/premium/premium-lock-screen";
-import { contentStatusLabels, contentTypeLabels, isEpisodicContent } from "@/features/content/format";
+import { contentStatusLabels, isEpisodicContent } from "@/features/content/format";
 import { getEngagementState, getMovieEngagementStats, listMovieComments } from "@/features/engagement/repository";
-import { getAllMovies, getMovieBySlug, getRelatedMovies } from "@/features/movies/queries";
+import { getAllMovies, getMovieBySlug } from "@/features/movies/queries";
 import { getViewerContext } from "@/features/users/session";
 import { getWatchProgressForContent } from "@/features/watch-history/repository";
 import { getMovieImageSrc } from "@/lib/movie-images";
 import { getCanonicalUrl } from "@/lib/site-url";
+import { categoryLabel, displayTitles, selectViewerRelated } from "@/lib/viewer-catalog";
 import type { Movie } from "@/types/movie";
 
 export const dynamic = "force-dynamic";
@@ -68,9 +66,10 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
     notFound();
   }
 
-  const typeLabel = content.type ? contentTypeLabels[content.type] : "Фильм";
+  const typeLabel = categoryLabel(content);
+  const titles = displayTitles(content);
   const statusLabel = content.status ? contentStatusLabels[content.status] : "Аяқталған";
-  const episodes = content.episodes ?? [];
+  const episodes = [...(content.episodes ?? [])].sort((a, b) => (a.seasonNumber ?? 1) - (b.seasonNumber ?? 1) || a.episodeNumber - b.episodeNumber);
   const contentIsEpisodic = isEpisodicContent(content);
   const selectedEpisodeSlug = getSearchParam(query?.episode);
   const selectedEpisode = contentIsEpisodic
@@ -83,7 +82,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
     selectedEpisodeIndex >= 0 && selectedEpisodeIndex < episodes.length - 1
       ? episodes[selectedEpisodeIndex + 1]
       : null;
-  const relatedMovies = getRelatedMovies(movies, content, 12);
+  const relatedMovies = selectViewerRelated(movies, content, 6);
   const [engagementState, comments, stats, watchProgress] = await Promise.all([
     getEngagementState(viewer.user?.id, content.id),
     listMovieComments(content.id, { isAdmin: viewer.isAdmin }),
@@ -96,76 +95,16 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
   const skipIntro = getSkipIntro(selectedEpisode ?? content);
 
   return (
-    <main className="min-h-screen pb-20">
-      <section className="relative min-h-[58svh] overflow-hidden sm:min-h-[64vh]">
-        <MovieImage
-          src={content.backdropUrl}
-          alt=""
-          fallback="backdrop"
-          fill
-          priority
-          sizes="100vw"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/72 to-black/20" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-transparent to-black/40" />
-
-        <div className="relative mx-auto flex min-h-[58svh] w-full max-w-7xl items-end px-4 pb-10 pt-28 sm:min-h-[64vh] sm:px-6 sm:pb-12 sm:pt-[7.5rem] lg:px-8">
-          <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_300px] lg:items-end">
-            <div className="max-w-3xl">
-              <div className="mb-4 flex flex-wrap gap-2">
-                <MovieBadge label={typeLabel} />
-                <MovieBadge label={statusLabel} />
-                {content.badges.map((badge) => (
-                  <MovieBadge key={badge} label={badge === "Қазақша субтитрмен" ? "Қазақша субтитр" : badge} />
-                ))}
-                {content.isPremium ? <MovieBadge label="Premium" /> : null}
-              </div>
-              <h1 className="break-words text-[clamp(2.25rem,9vw,3.2rem)] font-bold tracking-[-0.028em] text-white sm:text-[4.4rem]">
-                {content.title}
-              </h1>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {content.genres.map((genre) => (
-                  <span
-                    key={genre}
-                    className="glass-button rounded-full px-3 py-1.5 text-xs font-semibold tracking-[0.01em] text-white"
-                  >
-                    {genre}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-6 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
-                <InfoTile icon={<Calendar className="h-4 w-4" />} label="Жылы" value={String(content.year)} />
-                <InfoTile icon={<Globe2 className="h-4 w-4" />} label="Елі" value={content.country || "Белгісіз"} />
-                <InfoTile icon={<Clapperboard className="h-4 w-4" />} label="Түрі" value={typeLabel} />
-                <InfoTile icon={<Radio className="h-4 w-4" />} label="Статус" value={statusLabel} />
-              </div>
-              {content.dubber ? <HeroDubberInfo dubber={content.dubber} /> : null}
-              {content.isPremium ? (
-                <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[rgba(217,183,111,0.24)] bg-[rgba(217,183,111,0.1)] px-3 py-1.5 text-xs font-bold text-[var(--accent)]">
-                  <Crown className="h-3.5 w-3.5" />
-                  Premium
-                </div>
-              ) : null}
-            </div>
-
-            <GlassPanel className="hidden p-4 lg:block">
-              <MovieImage
-                src={content.posterUrl}
-                alt={content.title}
-                fallback="poster"
-                width={680}
-                height={1020}
-                className="aspect-[2/3] w-full rounded-md object-cover"
-              />
-            </GlassPanel>
-          </div>
-        </div>
+    <main className="detail-page" id="main-content">
+      <section className="viewer-container detail-heading">
+        <Link className="detail-back" href="/catalog">← Каталог</Link>
+        <h1>{titles.title}</h1>
+        {titles.original && <p className="detail-original">{titles.original}</p>}
+        <p className="detail-meta">{[content.year, typeLabel, content.country, statusLabel, ...content.badges].filter(Boolean).join(" · ")}</p>
+        <a href="#player" className="primary-button detail-watch"><Play size={16} />Көру</a>
       </section>
-
-      <section id="player" className="relative z-10 -mt-5 scroll-mt-24 px-3 sm:-mt-3 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-7xl">
+      <section id="player" className="viewer-container detail-player">
+        <div>
           {canWatch && playerStreamUrl ? (
             <>
               <MovieViewTracker movieSlug={content.slug} />
@@ -212,11 +151,12 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
         </div>
       </section>
 
-      <div className="mx-auto mt-14 w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="viewer-container detail-information">
         <div className="mb-14">
           <ReadMoreDescription description={content.description} />
         </div>
 
+        {content.dubber ? <HeroDubberInfo dubber={content.dubber} /> : null}
         <div className="mb-14">
           <CommentsSection
             comments={comments}
@@ -315,22 +255,4 @@ function getSkipIntro(source: {
         label: "Интроны өткізу"
       }
     : null;
-}
-
-function InfoTile({
-  icon,
-  label,
-  value
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="glass rounded-2xl p-3">
-      <div className="mb-2 text-[var(--accent)]">{icon}</div>
-      <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold text-white">{value}</p>
-    </div>
-  );
 }

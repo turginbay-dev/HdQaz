@@ -29,7 +29,7 @@ export default async function PremiumPage() {
   const viewer = await getViewerContext();
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
+    <main id="main-content" className="viewer-secondary mx-auto min-h-screen w-full max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <div className="mx-auto mb-10 max-w-3xl text-center">
         <LogoMark className="mx-auto mb-4 h-20 w-32 p-2" sizes="128px" />
         <p className="text-sm font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
@@ -39,13 +39,13 @@ export default async function PremiumPage() {
           Premium қосу
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-base font-medium leading-7 text-zinc-300">
-          Төлем жүйесі дайындықта. Жазылым кестесі қосылды, сондықтан Premium статусын әкімші SQL арқылы қоса алады.
+          Premium жазылымы жақында қолжетімді болады. Жаңалықтарды осы беттен қадағалаңыз.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <GlassPanel className="p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-zinc-500">Free plan</p>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-zinc-500">Тегін жоспар</p>
           <h2 className="mt-3 text-2xl font-bold tracking-[-0.018em] text-white">Free</h2>
           <p className="mt-3 text-sm font-medium leading-6 text-zinc-400">
             Ашық каталог, профиль, пікірлер, ұнату және жеке тізім.
@@ -60,9 +60,9 @@ export default async function PremiumPage() {
 
         <GlassPanel className="relative overflow-hidden p-6 ring-1 ring-[rgba(217,183,111,0.42)]">
           <div className="absolute right-5 top-5 rounded-full border border-[rgba(217,183,111,0.26)] bg-[rgba(217,183,111,0.12)] px-3 py-1 text-xs font-bold text-[var(--accent)]">
-            Coming soon
+            Жақында
           </div>
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Premium plan</p>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Premium жоспары</p>
           <h2 className="mt-3 text-2xl font-bold tracking-[-0.018em] text-white">Premium</h2>
           <p className="mt-3 text-sm font-medium leading-6 text-zinc-400">
             Premium контент, таңдаулы сапа және жарнамасыз көру тәжірибесі.

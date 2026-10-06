@@ -67,13 +67,13 @@ export function ProfileMovieSection({ emptyCta = false, movies, title, variant }
       </div>
 
       {items.length > 0 ? (
-        <div className="grid grid-cols-1 gap-x-4 gap-y-8 min-[380px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 xl:grid-cols-4">
           {items.map((movie) => (
             <div key={movie.id} className="relative">
               <MovieCard movie={movie} />
               {variant ? (
                 <button
-                  className="glass-button mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full px-3 text-xs font-bold text-white disabled:cursor-wait disabled:opacity-60"
+                  className="glass-button mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-3 text-xs font-bold text-white disabled:cursor-wait disabled:opacity-60"
                   type="button"
                   disabled={pendingSlug === movie.slug}
                   onClick={() => removeMovie(movie)}

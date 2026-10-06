@@ -10,7 +10,7 @@ const contactLabelPattern = /^[A-Za-z]+:$/;
 
 export function LegalDocumentPage({ document }: LegalDocumentPageProps) {
   return (
-    <main className="ambient-page relative min-h-screen overflow-hidden px-4 pb-20 pt-28 sm:px-6 lg:px-8">
+    <main id="main-content" className="viewer-secondary ambient-page relative min-h-screen overflow-hidden px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_8%,rgba(217,183,111,0.14),transparent_34%),radial-gradient(ellipse_at_12%_22%,rgba(143,183,255,0.11),transparent_30%)]" />
       <div className="cinematic-fog" />
 

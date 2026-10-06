@@ -14,6 +14,8 @@ type SearchResponse = {
 
 type MovieSearchResultsProps = {
   loading: boolean;
+  error?: boolean;
+  onRetry?: () => void;
   onSelect: (slug: string) => void;
   query: string;
   results: Movie[];
@@ -33,11 +35,14 @@ function getMovieMeta(movie: Movie) {
 }
 
 export function useMovieSearch(query: string, enabled: boolean, limit = 12) {
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Movie[]>([]);
 
   useEffect(() => {
     const trimmedQuery = query.trim();
+    setError(false);
 
     if (!enabled || !trimmedQuery) {
       setResults([]);
@@ -57,7 +62,7 @@ export function useMovieSearch(query: string, enabled: boolean, limit = 12) {
         });
 
         if (!response.ok) {
-          setResults([]);
+          if (!controller.signal.aborted) { setError(true); setResults([]); }
           return;
         }
 
@@ -65,6 +70,7 @@ export function useMovieSearch(query: string, enabled: boolean, limit = 12) {
         if (!controller.signal.aborted) setResults(payload.data?.items ?? []);
       } catch (error) {
         if (!controller.signal.aborted) {
+          setError(true);
           setResults([]);
         }
       } finally {
@@ -78,15 +84,19 @@ export function useMovieSearch(query: string, enabled: boolean, limit = 12) {
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [enabled, limit, query]);
+  }, [enabled, limit, query, attempt]);
 
   return {
+    error,
+    retry: () => setAttempt(value => value + 1),
     loading,
     results
   };
 }
 
 export function MovieSearchResults({
+  error,
+  onRetry,
   loading,
   onSelect,
   query,
@@ -101,7 +111,7 @@ export function MovieSearchResults({
 
   return (
     <div className={cn(desktop ? "desktop-search-results" : "mobile-search-results", "mt-3")}>
-      {loading ? (
+      {error ? <div role="alert" className="search-hint">Іздеу қолжетімсіз. <button type="button" className="secondary-button" onClick={onRetry}>Қайталау</button></div> : loading ? (
         <div className={desktop ? "desktop-search-state" : "mobile-search-state"}>Ізделіп жатыр...</div>
       ) : results.length > 0 ? (
         results.map((movie) => (

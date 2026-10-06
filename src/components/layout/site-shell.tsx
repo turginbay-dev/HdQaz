@@ -1,9 +1,7 @@
 import { Suspense } from "react";
-import { DesktopNav } from "@/components/layout/desktop-nav";
+import { ViewerHeader } from "@/components/layout/viewer-header";
 import { Footer } from "@/components/layout/footer";
 import { LanguagePreferenceSync } from "@/components/layout/language-switcher";
-import { MobileNav } from "@/components/layout/mobile-nav";
-import { NavigationLoadingOverlay } from "@/components/layout/navigation-loading-overlay";
 import { getViewerContext } from "@/features/users/session";
 
 type SiteShellProps = {
@@ -17,17 +15,7 @@ export async function SiteShell({ children }: SiteShellProps) {
     <>
       <Suspense fallback={null}>
         <LanguagePreferenceSync />
-        <NavigationLoadingOverlay />
-        <DesktopNav
-          avatarUrl={viewer.profile?.avatarUrl}
-          displayName={viewer.profile?.displayName}
-          isPremium={viewer.premium.isPremium}
-        />
-        <MobileNav
-          avatarUrl={viewer.profile?.avatarUrl}
-          displayName={viewer.profile?.displayName}
-          isPremium={viewer.premium.isPremium}
-        />
+        <ViewerHeader avatarUrl={viewer.profile?.avatarUrl} displayName={viewer.profile?.displayName} isAdmin={viewer.isAdmin} />
       </Suspense>
       {children}
       <Suspense fallback={null}>

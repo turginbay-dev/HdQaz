@@ -26,7 +26,7 @@ export default async function RequestsPage() {
   const requests = await listContentRequests();
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
+    <main id="main-content" className="viewer-secondary mx-auto min-h-screen w-full max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <div className="mb-8 max-w-2xl">
         <p className="text-sm font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
           Community roadmap

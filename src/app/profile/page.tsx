@@ -57,7 +57,7 @@ export default async function ProfilePage() {
   const joinedAt = viewer.profile?.createdAt ?? viewer.user.created_at;
 
   return (
-    <main className="ambient-page min-h-screen px-4 pb-20 pt-28 sm:px-6 lg:px-8">
+    <main id="main-content" className="viewer-secondary ambient-page min-h-screen px-4 pb-20 pt-28 sm:px-6 lg:px-8">
       <section className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="glass-strong h-fit rounded-[34px] p-6 lg:sticky lg:top-28">
           <UserAvatar

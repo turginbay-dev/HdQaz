@@ -1266,12 +1266,6 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
             </div>
           </div>
 
-          {resumeSeconds !== null && !error ? (
-            <div className="absolute left-3 right-3 top-16 z-[60] flex flex-wrap items-center gap-2 sm:left-5 sm:right-auto sm:top-20">
-              <button type="button" className="cinema-action-pill inline-flex min-h-11 items-center gap-2" onClick={() => chooseResume(true)}><Play className="h-4 w-4 fill-current" />Жалғастыру</button>
-            </div>
-          ) : null}
-
           {loading && !error ? (
             <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-black/18">
               <div className="cinema-loader-stack">
@@ -1295,7 +1289,7 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
           <button
             className={cn(
               "cinema-center-play absolute left-1/2 top-1/2 z-40 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white",
-              !playing && !loading && !error ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
+              !playing && !loading && !error && resumeSeconds === null && !showSkipIntro ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
             )}
             aria-label="Ойнату"
             onClick={() => void togglePlayback(false)}
@@ -1341,26 +1335,30 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
             </div>
           ) : null}
 
-          {showSkipIntro || showNextEpisode ? (
+          {!error && (resumeSeconds !== null || showSkipIntro) ? (
             <div
               className={cn(
-                "absolute right-3 z-40 flex flex-col items-end gap-2 transition duration-300 sm:right-6",
-                visibleChrome ? "bottom-[6rem] sm:bottom-36" : "bottom-4 sm:bottom-6",
-                visibleChrome ? "opacity-100" : "opacity-95"
+                "absolute left-1/2 top-1/2 z-[60] flex w-max max-w-[calc(100%-1.5rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-2"
               )}
             >
+              {resumeSeconds !== null ? (
+                <button className="cinema-action-pill !flex h-11 w-32 min-w-0 shrink-0 !items-center !justify-center gap-1.5 whitespace-nowrap !px-2 !py-0 !text-xs sm:w-44 sm:!text-sm" onClick={() => chooseResume(true)} type="button">
+                  <Play className="h-3.5 w-3.5 shrink-0 fill-current" />Жалғастыру
+                </button>
+              ) : null}
               {showSkipIntro ? (
-                <button className="cinema-action-pill" onClick={skipIntroSegment} type="button">
+                <button className="cinema-action-pill !flex h-11 w-32 min-w-0 shrink-0 !items-center !justify-center whitespace-nowrap !px-2 !py-0 !text-xs sm:w-44 sm:!text-sm" onClick={skipIntroSegment} type="button">
                   {skipIntro?.label ?? "Интроны өткізу"}
                 </button>
               ) : null}
-              {showNextEpisode && nextEpisode ? (
-                <a className="cinema-action-pill inline-flex items-center gap-2" href={nextEpisode.href}>
-                  <span className="max-w-[12rem] truncate">{nextEpisode.label ?? "Келесі серия"}</span>
-                  <ChevronRight className="h-4 w-4" />
-                </a>
-              ) : null}
             </div>
+          ) : null}
+
+          {showNextEpisode && nextEpisode ? (
+            <a className={cn("cinema-action-pill absolute right-3 z-40 inline-flex items-center gap-2 sm:right-6", visibleChrome ? "bottom-[6rem] sm:bottom-36" : "bottom-4 sm:bottom-6")} href={nextEpisode.href}>
+              <span className="max-w-[12rem] truncate">{nextEpisode.label ?? "Келесі серия"}</span>
+              <ChevronRight className="h-4 w-4" />
+            </a>
           ) : null}
 
           <div

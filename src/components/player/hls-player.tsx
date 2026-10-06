@@ -17,6 +17,7 @@ import {
   Volume2,
   VolumeX
 } from "lucide-react";
+import { resumableSeconds } from "@/lib/watch-progress";
 import { cn } from "@/lib/cn";
 import { formatMovieLanguages } from "@/lib/movie-taxonomy";
 import type { MovieLanguageId } from "@/lib/movie-taxonomy";
@@ -184,6 +185,7 @@ function initialSnapshot(progress: InitialWatchProgress | null | undefined): Sav
 export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, poster, languages, skipIntro, nextEpisode }: HlsPlayerProps) {
   const [resumeSeconds, setResumeSeconds] = useState<number | null>(null);
   const [retryVersion, setRetryVersion] = useState(0);
+  const pendingResumeRef = useRef<number | null>(null);
   const playerRef = useRef<HTMLElement | null>(null);
   const settingsAnchorRef = useRef<HTMLDivElement | null>(null);
   const settingsMenuRef = useRef<HTMLDivElement | null>(null);
@@ -254,6 +256,7 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
     }
 
     setResumeSeconds(null);
+    pendingResumeRef.current = null;
     setCurrentTime(0);
     setDuration(0);
     setBufferedEnd(0);
@@ -581,6 +584,8 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
     if (!video) {
       return;
     }
+
+    if (pendingResumeRef.current !== null) { chooseResume(true); return; }
 
     if (!streamReadyRef.current) {
       setLoading(true);
@@ -927,6 +932,7 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
   }
 
   function savePlaybackProgress(options: { keepalive?: boolean } = {}) {
+    if (pendingResumeRef.current !== null) return;
     const snapshot = getProgressSnapshot();
 
     if (!snapshot || !hasMeaningfulProgressChange(snapshot)) {
@@ -949,23 +955,20 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
     if (videoDuration <= 0) return;
     let seconds = initialWatchProgress && initialWatchProgress.contentId === contentId && !initialWatchProgress.completed && initialWatchProgress.progressPercent < 90
       ? initialWatchProgress.lastPositionSeconds : 0;
+    let raw: string | null = null;
     if (progressKey) {
-      try {
-        const raw = localStorage.getItem(progressKey);
-        if (raw) {
-          const saved = JSON.parse(raw);
-          seconds = saved.completed ? 0 : saved.seconds;
-        }
-      } catch { /* Ignore unavailable or malformed storage. */ }
+      try { raw = localStorage.getItem(progressKey); } catch { /* Optional storage. */ }
     }
+    seconds = resumableSeconds(raw, videoDuration, seconds);
     resumeAppliedRef.current = true;
-    if (Number.isFinite(seconds) && seconds >= 30 && seconds < videoDuration * 0.9) setResumeSeconds(seconds);
+    if (seconds) { pendingResumeRef.current = seconds; setResumeSeconds(seconds); }
   }
 
   function chooseResume(resume: boolean) {
     const video = videoRef.current;
     if (!video) return;
-    video.currentTime = resume ? resumeSeconds ?? 0 : 0;
+    video.currentTime = resume ? pendingResumeRef.current ?? 0 : 0;
+    pendingResumeRef.current = null;
     if (!resume && progressKey) {
       try { localStorage.setItem(progressKey, JSON.stringify({ seconds: 0, completed: false })); } catch { /* Optional storage. */ }
     }
@@ -1263,14 +1266,9 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
           </div>
 
           {resumeSeconds !== null && !error ? (
-            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
-              <div className="rounded-2xl bg-zinc-900 p-4 text-center text-white">
-                <p>{formatTime(resumeSeconds)} уақытынан жалғастыру</p>
-                <div className="mt-3 flex flex-wrap justify-center gap-3">
-                  <button type="button" className="min-h-11 rounded-full bg-white px-4 text-black" onClick={() => chooseResume(true)}>▶ Жалғастыру</button>
-                  <button type="button" className="min-h-11 rounded-full border border-white/30 px-4" onClick={() => chooseResume(false)}>Басынан көру</button>
-                </div>
-              </div>
+            <div className="absolute left-3 right-3 top-16 z-[60] flex flex-wrap items-center gap-2 sm:left-5 sm:right-auto sm:top-20">
+              <button type="button" className="cinema-action-pill inline-flex min-h-11 items-center gap-2" onClick={() => chooseResume(true)}><Play className="h-4 w-4 fill-current" />{formatTime(resumeSeconds)} уақытынан жалғастыру</button>
+              <button type="button" className="cinema-action-pill min-h-11 text-xs" onClick={() => chooseResume(false)}>Басынан көру</button>
             </div>
           ) : null}
 

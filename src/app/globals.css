@@ -1962,3 +1962,10 @@ body:has(.app-loading-screen) {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Search uses a quiet container focus ring; text input never draws a yellow line. */
+input[type="search"]:focus-visible { outline: none; box-shadow: none; }
+label:has(> input[type="search"]):focus-within,
+.glass-button:has(> input[type="search"]):focus-within { border-color: rgba(255,255,255,.35); box-shadow: 0 0 0 2px rgba(255,255,255,.08); }
+.mobile-nav-search-panel { transform: translate3d(0,-8px,0); }
+.mobile-search-results, .desktop-search-results { min-height: 5rem; }

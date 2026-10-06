@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Crown, Search, X } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
 import { UserAvatar } from "@/components/user/user-avatar";
 import { MovieSearchResults, useMovieSearch } from "@/components/layout/movie-search-results";
-import { mainNavigation, searchSuggestions } from "@/lib/navigation";
+import { mainNavigation } from "@/lib/navigation";
 import { cn } from "@/lib/cn";
 
 type DesktopNavProps = {
@@ -26,13 +26,12 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [focused, setFocused] = useState(false);
-  const [hintIndex, setHintIndex] = useState(0);
   const [searchValue, setSearchValue] = useState("");
   const currentSearchQuery = searchParams.get("q") ?? "";
   const trimmedSearch = searchValue.trim();
   const searchActive = desktopActive && (focused || searchOpen);
   const searchHasQuery = searchActive && Boolean(trimmedSearch);
-  const search = useMovieSearch(searchValue, searchActive, 50);
+  const search = useMovieSearch(searchValue, searchActive, 12);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -86,18 +85,6 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
     setSearchValue(currentSearchQuery);
   }, [currentSearchQuery]);
 
-  useEffect(() => {
-    if (!desktopActive) {
-      return;
-    }
-
-    const id = window.setInterval(() => {
-      setHintIndex((current) => (current + 1) % searchSuggestions.length);
-    }, 2200);
-
-    return () => window.clearInterval(id);
-  }, [desktopActive]);
-
   function focusSearchInput() {
     setSearchOpen(true);
     window.requestAnimationFrame(() => searchInputRef.current?.focus());
@@ -117,6 +104,7 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (search.results[0]) { openMovie(search.results[0].slug); return; }
     if (!searchOpen && !focused) {
       focusSearchInput();
     }
@@ -146,7 +134,7 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
               ? "border-white/[0.16] bg-black/[0.58] shadow-[0_22px_80px_rgba(0,0,0,0.5)] backdrop-blur-3xl"
               : "border-white/[0.12] bg-white/[0.055] shadow-[0_18px_70px_rgba(0,0,0,0.34)] backdrop-blur-2xl"
           )}
-          initial={{ opacity: 0, y: -18, scale: 0.98 }}
+          initial={false}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
@@ -193,7 +181,7 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
         <div className="ml-1 flex items-center gap-2 border-l border-white/10 pl-3">
           <motion.form
             className="relative"
-            animate={{ width: searchOpen || focused ? 300 : 44 }}
+            style={{ width: 280 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
             onSubmit={handleSearchSubmit}
             onHoverStart={() => setSearchOpen(true)}
@@ -216,12 +204,15 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
               >
                 <Search className="h-4 w-4" />
               </button>
-              {(searchOpen || focused) && (
+              {true && (
                 <>
                   <input
                     ref={searchInputRef}
-                    className="min-w-0 flex-1 bg-transparent text-sm tracking-[0.01em] text-white outline-none placeholder:text-transparent"
+                    className="min-w-0 flex-1 bg-transparent text-sm tracking-[0.01em] text-white outline-none placeholder:text-zinc-400"
                     aria-label="Кино іздеу"
+                    placeholder="Атауы немесе жылы"
+                    type="search"
+                    onKeyDown={(event) => { if (event.key === "Escape") closeSearch(); }}
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
                     onFocus={() => {
@@ -246,20 +237,7 @@ export function DesktopNav({ avatarUrl, displayName, isPremium = false }: Deskto
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
-                  {!focused && !searchValue && (
-                    <AnimatePresence mode="wait">
-                      <motion.span
-                        key={searchSuggestions[hintIndex]}
-                        className="pointer-events-none absolute left-10 right-4 truncate text-sm tracking-[0.01em] text-zinc-400"
-                        initial={{ opacity: 0, y: 8, filter: "blur(6px)" }}
-                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                        exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
-                        transition={{ duration: 0.24 }}
-                      >
-                        {searchSuggestions[hintIndex]}
-                      </motion.span>
-                    </AnimatePresence>
-                  )}
+
                 </>
               )}
             </div>

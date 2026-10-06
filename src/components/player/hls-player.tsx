@@ -22,6 +22,7 @@ import { formatMovieLanguages } from "@/lib/movie-taxonomy";
 import type { MovieLanguageId } from "@/lib/movie-taxonomy";
 
 type HlsPlayerProps = {
+  progressKey?: string;
   contentId?: string;
   initialWatchProgress?: InitialWatchProgress | null;
   src: string;
@@ -180,7 +181,9 @@ function initialSnapshot(progress: InitialWatchProgress | null | undefined): Sav
   };
 }
 
-export function HlsPlayer({ contentId, initialWatchProgress, src, poster, languages, skipIntro, nextEpisode }: HlsPlayerProps) {
+export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, poster, languages, skipIntro, nextEpisode }: HlsPlayerProps) {
+  const [resumeSeconds, setResumeSeconds] = useState<number | null>(null);
+  const [retryVersion, setRetryVersion] = useState(0);
   const playerRef = useRef<HTMLElement | null>(null);
   const settingsAnchorRef = useRef<HTMLDivElement | null>(null);
   const settingsMenuRef = useRef<HTMLDivElement | null>(null);
@@ -235,19 +238,6 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     currentTime < (skipIntro?.endSeconds ?? 0) &&
     (skipIntro?.endSeconds ?? 0) > skipIntroStart;
   const showNextEpisode = Boolean(nextEpisode && duration > 0 && currentTime >= Math.max(duration - 45, duration * 0.92));
-  const resumePercent = initialWatchProgress?.progressPercent ?? 0;
-  const hasResumeProgress = Boolean(
-    initialWatchProgress &&
-      initialWatchProgress.lastPositionSeconds > 0 &&
-      resumePercent > 2 &&
-      resumePercent < 90 &&
-      !initialWatchProgress.completed
-  );
-  const resumeBadgeLabel = hasResumeProgress
-    ? `Жалғастыру: ${resumePercent}%`
-    : initialWatchProgress && (initialWatchProgress.completed || resumePercent >= 90)
-      ? "Қайта көру"
-      : null;
   const progressStyle = {
     "--buffered": `${bufferedPercent}%`,
     "--progress": `${progressPercent}%`
@@ -263,6 +253,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
       return;
     }
 
+    setResumeSeconds(null);
     setCurrentTime(0);
     setDuration(0);
     setBufferedEnd(0);
@@ -288,6 +279,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     video.removeAttribute("src");
     video.load();
 
+    let recoveryAttempts = 0;
     const hlsManifest = isHlsManifestUrl(src);
 
     if (!hlsManifest) {
@@ -323,7 +315,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
             src
           });
           setLoading(false);
-          setError("HLS manifest жүктелмеді. .m3u8 URL және CORS баптауын тексеріңіз.");
+          setError("Видео әзірге қолжетімсіз. Біраздан кейін қайта көріңіз.");
           hls.stopLoad();
         }
       }, 20000);
@@ -355,7 +347,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
       };
 
       const handleError = (_event: string, data: ErrorData) => {
-        console.error("[HlsPlayer] ERROR", data);
+        console.error("[HlsPlayer] ERROR", { type: data.type, details: data.details, fatal: data.fatal });
 
         if (!data.fatal) {
           return;
@@ -372,25 +364,14 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
           return;
         }
 
+        if (recoveryAttempts++ < 2) {
+          setLoading(true);
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) { hls.startLoad(); return; }
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) { hls.recoverMediaError(); return; }
+        }
         setLoading(false);
-
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          setError(
-            streamReadyRef.current
-              ? "HLS желісі үзілді. Қайта қосып көріңіз."
-              : "HLS manifest жүктелмеді. .m3u8 URL және CORS баптауын тексеріңіз."
-          );
-          hls.startLoad();
-          return;
-        }
-
-        if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-          setError("Видео қалпына келтіріліп жатыр...");
-          hls.recoverMediaError();
-          return;
-        }
-
-        setError("HLS stream ашылмады. .m3u8 URL және R2 CORS баптауын тексеріңіз.");
+        setError("Видео әзірге қолжетімсіз. Біраздан кейін қайта көріңіз.");
+        hls.stopLoad();
       };
 
       hls.on(Hls.Events.MEDIA_ATTACHED, handleMediaAttached);
@@ -435,8 +416,8 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     }
 
     setLoading(false);
-    setError("Бұл браузер HLS stream ойната алмайды.");
-  }, [contentId, initialWatchProgress, src]);
+    setError("Видео әзірге қолжетімсіз. Біраздан кейін қайта көріңіз.");
+  }, [contentId, initialWatchProgress, progressKey, src, retryVersion]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -615,7 +596,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
           showToast("Ойнату");
         }
       } catch {
-        setError("Ойнату басталмады. HLS URL қолжетімді екенін тексеріңіз.");
+        setError("Видео әзірге қолжетімсіз. Біраздан кейін қайта көріңіз.");
       }
     } else {
       video.pause();
@@ -863,25 +844,13 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
   }
 
   function retryStream() {
-    setError(null);
-    setLoading(true);
-    revealControls();
-    hlsRef.current?.startLoad();
-
-    if (streamReadyRef.current) {
-      void videoRef.current?.play().catch(() => {
-        setLoading(false);
-      });
-      return;
-    }
-
-    videoRef.current?.load();
+    setRetryVersion((version) => version + 1);
   }
 
   function getProgressSnapshot(): SavedProgressSnapshot | null {
     const video = videoRef.current;
 
-    if (!video || !contentId) {
+    if (!video || (!contentId && !progressKey) || !resumeAppliedRef.current) {
       return null;
     }
 
@@ -896,13 +865,13 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     const progressSeconds = Math.max(0, Math.min(durationSeconds, Math.round(positionSeconds)));
     const percent = durationSeconds > 0 ? Math.min(100, Math.max(0, Math.round((progressSeconds / durationSeconds) * 100))) : 0;
 
-    if (progressSeconds < 30 || percent <= 2) {
+    if (progressSeconds < 30 && percent < 90) {
       return null;
     }
 
     return {
       completed: percent >= 90,
-      contentId,
+      contentId: contentId ?? progressKey!,
       durationSeconds,
       progressSeconds
     };
@@ -965,7 +934,10 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
     }
 
     lastBackendSaveRef.current = snapshot;
-    sendProgress(snapshot, Boolean(options.keepalive));
+    if (progressKey) {
+      try { localStorage.setItem(progressKey, JSON.stringify({ seconds: snapshot.completed ? 0 : snapshot.progressSeconds, completed: snapshot.completed })); } catch { /* Storage may be disabled. */ }
+    }
+    if (contentId) sendProgress(snapshot, Boolean(options.keepalive));
   }
 
   function restorePlaybackProgress(video: HTMLVideoElement) {
@@ -973,29 +945,32 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
       return;
     }
 
-    const saved = initialWatchProgress;
     const videoDuration = getVideoDuration(video);
-
-    if (
-      !saved ||
-      saved.contentId !== contentId ||
-      saved.completed ||
-      saved.progressPercent <= 2 ||
-      saved.progressPercent >= 90 ||
-      saved.lastPositionSeconds <= 0
-    ) {
-      resumeAppliedRef.current = true;
-      return;
+    if (videoDuration <= 0) return;
+    let seconds = initialWatchProgress && initialWatchProgress.contentId === contentId && !initialWatchProgress.completed && initialWatchProgress.progressPercent < 90
+      ? initialWatchProgress.lastPositionSeconds : 0;
+    if (progressKey) {
+      try {
+        const raw = localStorage.getItem(progressKey);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          seconds = saved.completed ? 0 : saved.seconds;
+        }
+      } catch { /* Ignore unavailable or malformed storage. */ }
     }
-
-    if (videoDuration <= 0 || saved.lastPositionSeconds > videoDuration - 20) {
-      return;
-    }
-
-    video.currentTime = saved.lastPositionSeconds;
-    setCurrentTime(saved.lastPositionSeconds);
     resumeAppliedRef.current = true;
-    showToast(`Жалғасты: ${formatTime(saved.lastPositionSeconds)}`);
+    if (Number.isFinite(seconds) && seconds >= 30 && seconds < videoDuration * 0.9) setResumeSeconds(seconds);
+  }
+
+  function chooseResume(resume: boolean) {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = resume ? resumeSeconds ?? 0 : 0;
+    if (!resume && progressKey) {
+      try { localStorage.setItem(progressKey, JSON.stringify({ seconds: 0, completed: false })); } catch { /* Optional storage. */ }
+    }
+    setResumeSeconds(null);
+    void video.play().catch(() => setLoading(false));
   }
 
   function revealControls() {
@@ -1232,7 +1207,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
             }}
             onError={() => {
               setLoading(false);
-              setError("Видео жүктелмеді. HLS URL және CORS баптауын тексеріңіз.");
+              setError("Видео әзірге қолжетімсіз. Біраздан кейін қайта көріңіз.");
             }}
             onPlay={() => {
               setPlaying(true);
@@ -1287,14 +1262,15 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
             </div>
           </div>
 
-          {resumeBadgeLabel ? (
-            <div
-              className={cn(
-                "cinema-badge absolute left-3 top-[4.25rem] z-30 transition duration-300 sm:left-5 sm:top-[4.75rem]",
-                visibleChrome ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0"
-              )}
-            >
-              {resumeBadgeLabel}
+          {resumeSeconds !== null && !error ? (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+              <div className="rounded-2xl bg-zinc-900 p-4 text-center text-white">
+                <p>{formatTime(resumeSeconds)} уақытынан жалғастыру</p>
+                <div className="mt-3 flex flex-wrap justify-center gap-3">
+                  <button type="button" className="min-h-11 rounded-full bg-white px-4 text-black" onClick={() => chooseResume(true)}>▶ Жалғастыру</button>
+                  <button type="button" className="min-h-11 rounded-full border border-white/30 px-4" onClick={() => chooseResume(false)}>Басынан көру</button>
+                </div>
+              </div>
             </div>
           ) : null}
 
@@ -1304,7 +1280,7 @@ export function HlsPlayer({ contentId, initialWatchProgress, src, poster, langua
                 <div className="cinema-loader" aria-label={qualitySwitching ? "Сапа ауыстырылуда" : streamReadyRef.current ? "Буферизация" : "Жүктелуде"}>
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
-                {qualitySwitching ? <span>Сапа ауыстырылуда</span> : null}
+                <span>{qualitySwitching ? "Сапа ауыстырылуда" : "Видео жүктелуде…"}</span>
               </div>
             </div>
           ) : null}

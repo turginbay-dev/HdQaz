@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { HeroBanner } from "@/components/home/hero-banner";
 import { MovieRow } from "@/components/movie/movie-row";
@@ -43,10 +44,6 @@ function prioritizeUnseen(movies: Movie[], seenIds: Set<string>) {
 
 export default async function HomePage() {
   const [movies, viewer] = await Promise.all([getAllMovies(), getViewerContext()]);
-  const [continueWatchingItems, recommendations] = await Promise.all([
-    viewer.user ? getMyWatchHistory(viewer.user.id, 10) : Promise.resolve([]),
-    getRecommendationsForUser(viewer.user?.id, 10)
-  ]);
   const heroMovies = getHeroMovies(movies);
   const rowSeenIds = new Set<string>();
   const homepageRows: Array<{
@@ -91,21 +88,28 @@ export default async function HomePage() {
       <HeroBanner movies={heroMovies} />
       <div className="home-content-flow">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 pb-24 pt-0 sm:px-6 lg:gap-12 lg:px-8">
-          {viewer.user ? <ContinueWatching isAuthenticated={Boolean(viewer.user)} items={continueWatchingItems} /> : null}
           {viewer.isAdmin ? <AdminShortcut /> : null}
-          <AiRecommendations recommendations={recommendations} />
-          {homepageRows.map((row, index) => (
+          {homepageRows.filter((row) => row.movies.length > 0).map((row) => (
             <MovieRow
               key={row.title}
               title={row.title}
               href={row.href}
-              movies={row.movies}
-              priorityCount={index === 0 ? 4 : 0}
+              movies={row.movies.slice(0, 12)}
+              priorityCount={0}
             />
           ))}
+          <Suspense fallback={null}><PersonalRows userId={viewer.user?.id} /></Suspense>
           <TopTenRow movies={getTopTenMovies(movies)} />
         </div>
       </div>
     </main>
   );
+}
+
+async function PersonalRows({ userId }: { userId?: string }) {
+  const [items, recommendations] = await Promise.all([
+    userId ? getMyWatchHistory(userId, 10) : Promise.resolve([]),
+    getRecommendationsForUser(userId, 10)
+  ]);
+  return <>{userId ? <ContinueWatching isAuthenticated items={items} /> : null}<AiRecommendations recommendations={recommendations} /></>;
 }

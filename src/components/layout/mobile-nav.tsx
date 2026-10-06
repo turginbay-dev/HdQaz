@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Crown, Search, X } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
-import { UserAvatar } from "@/components/user/user-avatar";
 import { MovieSearchResults, useMovieSearch } from "@/components/layout/movie-search-results";
-import { mainNavigation } from "@/lib/navigation";
 
 type MobileNavProps = {
   avatarUrl?: string | null;
@@ -15,25 +12,15 @@ type MobileNavProps = {
   isPremium?: boolean;
 };
 
-const mobileNavigation = [
-  {
-    label: "Басты бет",
-    href: "/"
-  },
-  ...mainNavigation.map((item) => (item.href === "/catalog" ? { ...item, label: "Каталог" } : item))
-];
-
-export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileNavProps) {
-  const [open, setOpen] = useState(false);
+export function MobileNav(_props: MobileNavProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const currentSearchQuery = searchParams.get("q") ?? "";
   const trimmedSearch = searchValue.trim();
-  const search = useMovieSearch(searchValue, searchOpen, 50);
+  const search = useMovieSearch(searchValue, searchOpen, 12);
 
   useEffect(() => {
     setSearchValue(currentSearchQuery);
@@ -47,40 +34,24 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
 
   function openMovie(slug: string) {
     router.push(`/${slug}`);
-    setOpen(false);
     setSearchOpen(false);
   }
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (search.results[0]) openMovie(search.results[0].slug);
   }
 
   return (
     <>
       <header className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-4 py-4 lg:hidden">
-        <button
-          className="mobile-nav-trigger"
-          aria-label="Мәзірді ашу"
-          aria-expanded={open}
-          type="button"
-          onClick={() => {
-            setSearchOpen(false);
-            setOpen(true);
-          }}
-        >
-          <span className="mobile-nav-menu-lines" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
-        </button>
+        <SiteLogo href="/" markClassName="h-10 w-16" />
         <button
           className="mobile-nav-icon-button"
           aria-label="Іздеу"
           aria-expanded={searchOpen}
           type="button"
           onClick={() => {
-            setOpen(false);
             setSearchOpen(true);
           }}
         >
@@ -97,6 +68,7 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
         onClick={() => setSearchOpen(false)}
       />
       <div
+        onKeyDown={(event) => { if (event.key === "Escape") setSearchOpen(false); }}
         className={`mobile-nav-panel mobile-nav-search-panel fixed left-3 right-3 top-3 z-[80] rounded-[26px] p-3 lg:hidden ${searchOpen ? "is-open" : ""}`}
         aria-hidden={!searchOpen}
         inert={!searchOpen}
@@ -125,115 +97,6 @@ export function MobileNav({ avatarUrl, displayName, isPremium = false }: MobileN
         />
       </div>
 
-      <button
-        className={`mobile-nav-backdrop fixed inset-0 z-[70] lg:hidden ${open ? "is-open" : ""}`}
-        aria-label="Мәзірді жабу"
-        aria-hidden={!open}
-        tabIndex={open ? 0 : -1}
-        type="button"
-        onClick={() => setOpen(false)}
-      />
-      <aside
-        className={`mobile-nav-panel mobile-nav-drawer fixed left-3 top-3 z-[80] flex h-[calc(100svh-24px)] w-[min(86vw,380px)] flex-col overflow-y-auto overscroll-contain rounded-[30px] p-4 lg:hidden ${open ? "is-open" : ""}`}
-        aria-hidden={!open}
-        inert={!open}
-      >
-        <div className="flex items-center justify-between">
-          <SiteLogo
-            href="/"
-            className="mobile-nav-drawer-brand"
-            variant="drawer"
-            markClassName="h-11 w-[66px] rounded-[18px] p-0.5"
-            onClick={() => setOpen(false)}
-          />
-          <button
-            className="mobile-nav-icon-button h-10 w-10"
-            aria-label="Жабу"
-            onClick={() => setOpen(false)}
-            type="button"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mt-8 flex flex-col gap-2">
-          {mobileNavigation.map((item) => {
-            const itemPath = item.href.split("?")[0];
-            const itemParams = new URLSearchParams(item.href.split("?")[1]);
-            const itemCatalog = itemParams.get("catalog");
-            const itemFilter = itemParams.get("filter");
-            const currentCatalog = searchParams.get("catalog");
-            const currentFilter = searchParams.get("filter");
-            const currentGenre = searchParams.get("genre");
-            const active =
-              pathname === itemPath &&
-              (itemCatalog
-                ? currentCatalog === itemCatalog
-                : itemFilter
-                  ? currentFilter === itemFilter
-                  : itemPath === "/catalog"
-                    ? !currentCatalog && !currentFilter && !currentGenre
-                    : true);
-
-            return (
-              <div key={item.href}>
-                <Link
-                  href={item.href}
-                  className={
-                    active
-                      ? "flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.12] px-4 py-3 text-base font-bold tracking-[-0.006em] text-white"
-                      : "flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold tracking-[-0.006em] text-zinc-100 transition hover:bg-white/10"
-                  }
-                  onClick={() => setOpen(false)}
-                >
-                  {item.label}
-                  {active && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
-                </Link>
-              </div>
-            );
-          })}
-          <div>
-            <Link
-              href="/profile"
-              className={
-                pathname === "/profile"
-                  ? "flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.12] px-4 py-3 text-base font-bold tracking-[-0.006em] text-white"
-                  : "flex items-center justify-between rounded-2xl px-4 py-3 text-base font-semibold tracking-[-0.006em] text-zinc-100 transition hover:bg-white/10"
-              }
-              onClick={() => setOpen(false)}
-            >
-              <span className="inline-flex items-center gap-2">
-                <UserAvatar
-                  avatarUrl={avatarUrl}
-                  displayName={displayName}
-                  className="h-7 w-7"
-                  sizes="28px"
-                />
-                Профиль
-              </span>
-              {pathname === "/profile" && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />}
-            </Link>
-          </div>
-        </div>
-
-        <Link
-          href="/premium"
-          className="mobile-nav-premium mt-auto"
-          onClick={() => setOpen(false)}
-        >
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)] text-black">
-              <Crown className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-sm font-bold tracking-[-0.008em] text-white">HdQaz Premium</p>
-              <p className="mt-1 text-sm font-medium leading-5 tracking-[0.004em] text-zinc-400">
-                {isPremium ? "Premium белсенді" : "1080p және Premium мүмкіндіктер"}
-              </p>
-            </div>
-          </div>
-        </Link>
-      </aside>
     </>
   );
 }

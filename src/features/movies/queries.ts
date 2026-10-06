@@ -1,6 +1,5 @@
 import { cache } from "react";
-import { movies } from "./data";
-import { movieMatchesSearch } from "./search";
+import { movieMatchesSearch, movieSearchRank } from "./search";
 import { contentToMovieRecord, getContentBySlug as getContentRecordBySlug, listContents } from "@/features/content/repository";
 import type { Movie } from "@/types/movie";
 import type { MovieRecord } from "@/types/backend";
@@ -58,7 +57,7 @@ export function selectMoviesByFilters(records: Movie[], filters: MovieFilters = 
   const country = filters.country?.trim();
   const query = filters.q?.trim();
 
-  return records.filter((movie) => {
+  const filtered = records.filter((movie) => {
     const matchesGenre = !genre || movie.genres.includes(genre);
     const matchesCatalog = !catalog || movie.catalogs.some((item) => item === catalog);
     const matchesLanguage = !language || movie.languages.some((item) => item === language);
@@ -77,6 +76,7 @@ export function selectMoviesByFilters(records: Movie[], filters: MovieFilters = 
       movieMatchesSearch(movie, query)
     );
   });
+  return query ? filtered.sort((a, b) => movieSearchRank(a, query) - movieSearchRank(b, query)) : filtered;
 }
 
 export async function getMoviesByFilters(filters: MovieFilters = {}) {
@@ -92,7 +92,7 @@ export function getMoviesByGenre(records: Movie[], genre: string) {
 }
 
 export function getFeaturedMovie(records: Movie[]) {
-  return records[0] ?? movies[0];
+  return records[0];
 }
 
 export function getHeroMovies(records: Movie[]) {
@@ -100,7 +100,7 @@ export function getHeroMovies(records: Movie[]) {
     .filter((movie) => movie.isHero)
     .sort((left, right) => (left.heroOrder ?? 9999) - (right.heroOrder ?? 9999));
 
-  return heroMovies.length > 0 ? heroMovies : [getFeaturedMovie(records)];
+  return heroMovies.length > 0 ? heroMovies : records.slice(0, 1);
 }
 
 export function getTrendingMovies(records: Movie[]) {

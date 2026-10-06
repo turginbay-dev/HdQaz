@@ -1955,3 +1955,10 @@ body:has(.app-loading-screen) {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Viewer interaction: immediate feedback without layout animation. */
+:where(a, button, input, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (hover: none) { .movie-card:active { transform: scale(.985); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

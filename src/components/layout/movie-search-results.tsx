@@ -32,30 +32,7 @@ function getMovieMeta(movie: Movie) {
     .join(" · ");
 }
 
-function normalizeSearchText(value: string) {
-  return value.trim().toLocaleLowerCase("kk-KZ");
-}
-
-function sortSearchResults(results: Movie[], query: string) {
-  const normalizedQuery = normalizeSearchText(query);
-
-  function score(movie: Movie) {
-    const title = normalizeSearchText(movie.title);
-    const originalTitle = normalizeSearchText(movie.originalTitle);
-
-    if (title === normalizedQuery) return 0;
-    if (title.startsWith(normalizedQuery)) return 1;
-    if (originalTitle.startsWith(normalizedQuery)) return 2;
-    if (title.includes(normalizedQuery)) return 3;
-    if (originalTitle.includes(normalizedQuery)) return 4;
-
-    return 5;
-  }
-
-  return [...results].sort((left, right) => score(left) - score(right) || left.title.localeCompare(right.title, "kk-KZ"));
-}
-
-export function useMovieSearch(query: string, enabled: boolean, limit = 50) {
+export function useMovieSearch(query: string, enabled: boolean, limit = 12) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<Movie[]>([]);
 
@@ -68,6 +45,8 @@ export function useMovieSearch(query: string, enabled: boolean, limit = 50) {
       return;
     }
 
+    setLoading(true);
+    setResults([]);
     const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
       setLoading(true);
@@ -83,7 +62,7 @@ export function useMovieSearch(query: string, enabled: boolean, limit = 50) {
         }
 
         const payload = (await response.json()) as SearchResponse;
-        setResults(sortSearchResults(payload.data?.items ?? [], trimmedQuery));
+        if (!controller.signal.aborted) setResults(payload.data?.items ?? []);
       } catch (error) {
         if (!controller.signal.aborted) {
           setResults([]);

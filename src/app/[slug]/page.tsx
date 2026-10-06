@@ -12,7 +12,7 @@ import { MovieBadge } from "@/components/movie/movie-badge";
 import { MovieRow } from "@/components/movie/movie-row";
 import { ReadMoreDescription } from "@/components/movie/read-more-description";
 import { EpisodesSection } from "@/components/player/episodes-section";
-import { HlsPlayer } from "@/components/player/hls-player";
+import { HlsPlayer } from "@/components/player/lazy-player";
 import { PremiumLockScreen } from "@/components/premium/premium-lock-screen";
 import { contentStatusLabels, contentTypeLabels, isEpisodicContent } from "@/features/content/format";
 import { getEngagementState, getMovieEngagementStats, listMovieComments } from "@/features/engagement/repository";
@@ -40,13 +40,20 @@ function getSearchParam(value?: string | string[]) {
 
 export async function generateMetadata({ params }: ContentPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const content = await getMovieBySlug(slug);
+  if (!content) return { robots: { index: false, follow: false } };
   const canonical = getCanonicalUrl(`/${encodeURIComponent(slug)}`);
 
   return {
+    title: `${content.title} — HD Qaz`,
+    description: content.description.slice(0, 180),
     alternates: {
       canonical
     },
     openGraph: {
+      title: content.title,
+      description: content.description.slice(0, 180),
+      images: [getMovieImageSrc(content.backdropUrl || content.posterUrl, "backdrop")],
       url: canonical
     }
   };
@@ -81,7 +88,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
     getEngagementState(viewer.user?.id, content.id),
     listMovieComments(content.id, { isAdmin: viewer.isAdmin }),
     getMovieEngagementStats(content.id),
-    viewer.user ? getWatchProgressForContent(viewer.user.id, content.id) : Promise.resolve(null)
+    viewer.user && !contentIsEpisodic ? getWatchProgressForContent(viewer.user.id, content.id) : Promise.resolve(null)
   ]);
   const canWatch = !content.isPremium || viewer.premium.isPremium || viewer.isAdmin;
   const playerStreamUrl = selectedEpisode ? selectedEpisode.hlsUrl : content.hlsUrl ?? content.streams.master;
@@ -163,7 +170,9 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
             <>
               <MovieViewTracker movieSlug={content.slug} />
               <HlsPlayer
-                contentId={viewer.user ? content.id : undefined}
+                key={selectedEpisode?.id ?? content.id}
+                progressKey={selectedEpisode ? `watch-progress:episode:${selectedEpisode.id}` : `watch-progress:movie:${content.id}`}
+                contentId={viewer.user && !contentIsEpisodic ? content.id : undefined}
                 initialWatchProgress={watchProgress}
                 poster={playerPoster}
                 src={playerStreamUrl}

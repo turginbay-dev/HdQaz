@@ -22,7 +22,7 @@ export function MovieCard({ eager = false, movie, priority = false }: MovieCardP
 
   return (
     <div className="movie-card group relative transition duration-300 hover:-translate-y-2">
-      <Link href={`/${movie.slug}`} className="block outline-none">
+      <Link prefetch={false} href={`/${movie.slug}`} className="block outline-none">
         <article className="movie-card-article relative overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] shadow-[0_24px_80px_rgba(0,0,0,0.28)] transition duration-500 group-hover:border-[rgba(217,183,111,0.35)] group-hover:shadow-[0_28px_110px_rgba(217,183,111,0.14)]">
           <div className="poster-reflection movie-image-frame movie-card-poster relative aspect-[2/3] overflow-hidden rounded-[24px]">
             <MovieImage

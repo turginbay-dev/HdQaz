@@ -10,6 +10,7 @@ from .workspace import Workspaces, MountedSource, disk
 from .media import Runner, encode
 from .storage import LocalStorage, verify_local
 from .r2 import R2Storage
+from .local_state import write,can_claim
 
 class Worker:
     def __init__(self,config,api=None,source=None,storage=None,stop=None):
@@ -31,7 +32,9 @@ class Worker:
             workspace=self.workspaces.create(job)
             source=timed('source_copy',lambda:self.source.acquire(job,workspace/'source.media',lease.check,lambda p:lease.set_progress(p*10)))
             lease.update('processing',10)
-            runner=Runner(self.config,lease.check)
+            fds=[self.workspaces.handles[workspace].fileno()]
+            if getattr(self.source,'handle',None):fds.append(self.source.handle.fileno())
+            runner=Runner(self.config,lease.check,tuple(fds))
             media=timed('probe',lambda:runner.probe(source))
             intro=timed('branding_probe',lambda:runner.probe(self.config.intro))
             if intro.duration>60: raise Failure('invalid_media')
@@ -57,13 +60,20 @@ class Worker:
         except Exception as exc:
             code=exc.code if isinstance(exc,Failure) else 'internal_error'
             log('job_failed',job=job['id'],code=code)
-            try:lease.terminal('fail',{'error_code':code})
+            try:
+                lease.terminal('fail',{'error_code':code})
+                if workspace:self.workspaces.remove(workspace);workspace=None
             except (LeaseLost,ApiFailure):log('terminal_unconfirmed',job=job['id'])
         finally:
             lease.close()
+            if hasattr(self.source,'close'):self.source.close()
             log('stage_timing',job=job['id'],stage='total',seconds=round(time.monotonic()-started,2))
-            if workspace: os.utime(workspace,None)
+            if workspace:
+                handle=self.workspaces.handles.pop(workspace,None)
+                if handle:handle.close()
+                os.utime(workspace,None)
             self.workspaces.cleanup()
+            write('cleanup-request',{'timestamp':time.time()})
         return False
     def run(self):
         # Fail closed BEFORE claiming production work until a remote storage adapter is configured.
@@ -71,8 +81,11 @@ class Worker:
         attempt=0
         while not self.stop.is_set():
             self.workspaces.cleanup();self.storage.cleanup_partials()
-            disk(self.config.workspace,self.config.max_source,self.config.min_free)
+            write('worker.json',{'timestamp':time.time(),'state':'idle'})
+            if not can_claim(self.config.workspace):
+                self.stop.wait(10);continue
             try:
+                disk(self.config.workspace,0,self.config.min_free)
                 job=self.api.claim()
                 if job:
                     self.process(job);attempt=0;continue

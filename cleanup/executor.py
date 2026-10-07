@@ -1,6 +1,7 @@
 """Separate cleanup executor. No processing/Telegram/service-role credential is accepted."""
 import os,json,time,uuid,urllib.request,hashlib,shutil,sqlite3
 from pathlib import Path
+from local_storage import Maintenance,settings
 import boto3
 from botocore.config import Config
 API=os.environ['HDQAZ_API_BASE_URL'].rstrip('/')+'/api/automation/cleanup'
@@ -99,8 +100,10 @@ class Executor:
   return results
 if __name__=='__main__':
  executor=Executor()
+ maintenance=Maintenance('/work','/sources','/control',call,executor.states) if os.environ.get('WORKER_CONTROL_ROOT') else None
  while True:
   try:
+   if maintenance:maintenance.tick()
    task=call({'action':'claim'})
    if task:call({'action':'report','id':task['id'],'lease_token':task['lease_token'],'results':executor.execute(task)})
    Path('/tmp/cleanup-heartbeat').touch()

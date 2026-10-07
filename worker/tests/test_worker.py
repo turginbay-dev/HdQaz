@@ -122,9 +122,9 @@ class LogicTests(unittest.TestCase):
         with self.assertRaises(Failure):ws.remove(foreign)
         with self.assertRaises(Failure):Workspaces(self.c)
         ws.remove(p);self.assertTrue((foreign/'keep').exists());ws.close()
-    def test_retention_budget(self):
+    def test_retention_budget_alone_never_deletes(self):
         ws=Workspaces(replace(self.c,retention_bytes=10));p=ws.create(JOB);(p/'source').write_bytes(b'a'*100)
-        ws.cleanup();self.assertFalse(p.exists());ws.close()
+        ws.cleanup();self.assertTrue(p.exists());ws.close()
     def test_logs_drop_secrets(self):
         out=io.StringIO()
         with contextlib.redirect_stdout(out):log('test',token='SECRET',url='https://secret',headers='SECRET',code='invalid_media')

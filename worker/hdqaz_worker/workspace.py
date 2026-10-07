@@ -48,11 +48,25 @@ class SourceProvider(Protocol):
 
 class MountedSource:
     """Operator atomically stages <job UUID>.media before starting/polling worker."""
-    def __init__(self,config): self.config=config
+    def __init__(self,config): self.config=config;self.handle=None
+    def close(self):
+        if self.handle:self.handle.close();self.handle=None
     def acquire(self,job,destination,check,progress):
+        self.close()
         source=self.config.sources/(uuid(job['id'])+'.media')
         try:
+            from .local_state import root,write
+            control=root();start=time.monotonic()
+            if control and not source.exists():
+                write('source-request.json',{'id':uuid(job['id']),'attempt':job['attempt_count'],'timestamp':time.time()})
+                while not source.exists():
+                    check()
+                    if time.monotonic()-start>self.config.source_timeout:raise Failure('download_failed')
+                    time.sleep(0.5)
             regular(source)
+            self.handle=os.fdopen(os.open(source,os.O_RDONLY|os.O_NOFOLLOW),'rb')
+            fcntl.flock(self.handle,fcntl.LOCK_SH|fcntl.LOCK_NB)
+            if not os.path.samestat(os.fstat(self.handle.fileno()),source.stat()):raise Failure('download_failed')
             info=source.stat()
             if not 0<info.st_size<=self.config.max_source:raise Failure('download_failed')
             # Telegram handoff is immutable and mounted read-only: use its owned
@@ -64,16 +78,20 @@ class MountedSource:
             exclusive_copy(source,destination,self.config.max_source,check,progress,
                 self.config.source_timeout,self.config.min_free)
             return destination
-        except LeaseLost: raise
+        except LeaseLost:
+            self.close();raise
         except Failure as exc:
+            self.close()
             if exc.code=='processing_failed': raise
             raise Failure('download_failed') from None
-        except OSError: raise Failure('download_failed') from None
+        except OSError:
+            self.close();raise Failure('download_failed') from None
 
 class Workspaces:
     def __init__(self,config):
         self.config=config
         self.root=config.workspace
+        self.handles={}
         self.root.mkdir(parents=True,exist_ok=True,mode=0o700)
         if self.root.is_symlink(): raise Failure()
         os.chmod(self.root,0o700)
@@ -86,22 +104,23 @@ class Workspaces:
     def create(self,job):
         path=self.root/(uuid(job['id'])+'-'+str(int(job['attempt_count']))+'-'+os.urandom(8).hex())
         path.mkdir(mode=0o700)
-        (path/MARKER).write_text('v1')
+        (path/MARKER).write_text('v2')
+        handle=open(path/MARKER,'r');fcntl.flock(handle,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        self.handles[path]=handle
         return path
     def remove(self,path):
         # Never follow symlinks or permit callers to remove root/ancestors/foreign paths.
-        if path.parent!=self.root or path.is_symlink() or not path.is_dir() or not (path/MARKER).is_file() or (path/MARKER).is_symlink():
+        path=Path(path)
+        if self.root.resolve()==Path('/') or path.resolve().parent!=self.root.resolve() or path.parent!=self.root or path.is_symlink() or not path.is_dir() or not (path/MARKER).is_file() or (path/MARKER).is_symlink():
             raise Failure()
         if not shutil.rmtree.avoids_symlink_attacks: raise Failure()
         shutil.rmtree(path)
+        handle=self.handles.pop(path,None)
+        if handle:handle.close()
     def cleanup(self,active=None):
-        candidates=[]
-        for p in self.root.iterdir():
-            if p==active or p.is_symlink() or not p.is_dir() or not (p/MARKER).is_file() or (p/MARKER).is_symlink(): continue
-            size=sum(f.lstat().st_size for f in p.rglob('*') if f.is_file() and not f.is_symlink())
-            candidates.append((p.stat().st_mtime,p,size))
-        total=sum(x[2] for x in candidates)
-        for modified,p,size in sorted(candidates):
-            if time.time()-modified>self.config.retention_seconds or total>self.config.retention_bytes or shutil.disk_usage(self.root).free<self.config.min_free:
-                self.remove(p);total-=size
-    def close(self): self.lock.close()
+        # Central maintenance needs DB authority + unchanged observations + no active locks.
+        # Never delete by age, quota or disk pressure alone.
+        return
+    def close(self):
+        for handle in self.handles.values():handle.close()
+        self.handles.clear();self.lock.close()

@@ -4,6 +4,8 @@ services:
     init: true
     restart: unless-stopped
     env_file: .env
+    environment:
+      BOT_CONTROL_ROOT: /control
     user: '10001:10001'
     read_only: true
     cap_drop: [ALL]
@@ -14,6 +16,7 @@ services:
     stop_grace_period: 45s
     tmpfs: ["/tmp:size=16m,mode=1777"]
     volumes:
+      - /opt/hdqaz-worker/runtime/control:/control
       - /opt/hdqaz-worker/runtime/sources:/handoff
       - ./runtime/state:/state
     healthcheck:

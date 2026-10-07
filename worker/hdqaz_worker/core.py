@@ -213,6 +213,8 @@ class Lease:
                     raise ApiFailure()
                 self.check()
                 self.deadline=started+80
+                from .local_state import write
+                write('worker.json',{'timestamp':time.time(),'state':self.stage,'id':self.job['id'],'progress':self.progress})
             except ApiFailure:
                 self.cancel.set()
                 raise LeaseLost() from None

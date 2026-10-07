@@ -216,10 +216,13 @@ class MovieFlow:
     except (OSError,SafeError):
      file=timed('local_api_file',lambda:b.tg.call('getFile',{'file_id':file_id},timeout=3600));check()
      if file.get('file_size')!=size:raise SafeError('source_changed')
+     s['cache_path']=str(Path(file['file_path']).relative_to(b.c.telegram_root))
+     with self.db_lock:self.db.execute('insert or replace into ingestions values(?,?)',(s['id'],json.dumps({**s,'actor':actor})));self.db.commit()
      timed('source_ingest_copy',lambda:stage_local(b.c.telegram_root,file['file_path'],b.c.root/'inbox',ref,size,b.c.max_source,check=check))
     if w.get('source_ref')!=ref:w=b.mutate(w,actor,uid,'source',{'source_ref':ref})
     w=b.mutate(w,actor,uid,'prepare',{'source_ref':ref})
    if w.get('source_ref')!=ref:raise SafeError('source_conflict')
+   s['job_id']=w['job_id']
    b.sources.stage(ref,w['job_id']);w=b.mutate(w,actor,uid,'activate')
    finished=True
    current=self.get(actor)

@@ -1,3 +1,5 @@
+import contextlib
+import fcntl
 import json
 import os
 import shutil
@@ -16,6 +18,10 @@ class Bot:
         self.c=c;self.api=backend or Backend(c);self.tg=telegram or Telegram(c);self.sources=sources or Sources(c)
         self.movie=MovieFlow(self) if hasattr(c,'state_root') else None
         self.admin=AdminFlow(self) if self.movie else None
+        self.storage_admin=None
+        if os.environ.get('BOT_CONTROL_ROOT') and self.movie:
+            from .storage import StorageAdmin
+            self.storage_admin=StorageAdmin(self)
         self.downloading=False
         self.ingestion_lock=threading.Lock();self.ingestion_thread=None;self.ingestion_key=None;self.ingestions={}
         self.owner=str(uuid.uuid4());self.stop=threading.Event();self.last_success=time.monotonic();self.lease_deadline=None
@@ -32,7 +38,12 @@ class Bot:
             if identity in active or len(active)>=2:return False
             if shutil.disk_usage(self.c.root).free<sum(value[1] for value in active.values())+reserve+10*1024**3:raise SafeError('storage_full')
             def run():
-                try:target(*args)
+                try:
+                    with contextlib.ExitStack() as stack:
+                        if self.storage_admin:
+                            lock=stack.enter_context(open(self.storage_admin.root/'source-lock','a'))
+                            fcntl.flock(lock,fcntl.LOCK_SH)
+                        target(*args)
                 finally:
                     with self.ingestion_lock:
                         self.ingestions.pop(identity,None);self.downloading=bool(self.ingestions)
@@ -136,6 +147,7 @@ class Bot:
             chat=(message or {}).get('chat',{})
             print(json.dumps({'event':'telegram_update_ignored','admin_allowed':type(user_id) is int and user_id in self.c.admins,'private_chat':chat.get('type')=='private' and chat.get('id')==user_id}),flush=True)
             return
+        if self.storage_admin and self.storage_admin.command(actor,u.get('message',{}).get('text','').strip()):return
         if self.admin and self.admin.handle(u,actor):return
         if self.movie and self.movie.handle(u,actor):return
         cb=u.get('callback_query');uid=u['update_id']
@@ -225,6 +237,7 @@ class Bot:
                 offset=state['offset'];self.lease_deadline=time.monotonic()+60
                 if keeper is None:
                     keeper=threading.Thread(target=self.keep_lease,daemon=True);keeper.start()
+                    if self.storage_admin:threading.Thread(target=self.storage_admin.run,daemon=True,name='storage-monitor').start()
                 stage='telegram_poll'
                 updates=self.tg.call('getUpdates',{'offset':offset,'timeout':20,'limit':1,'allowed_updates':['message','callback_query']},timeout=30)
                 for u in updates:

@@ -1,4 +1,5 @@
 import 'server-only';
+import {localStorageAction} from '@/features/cleanup/local-storage';
 import {createHmac,timingSafeEqual} from 'node:crypto';
 import {createAdminClient} from '@/lib/supabase/admin';
 import {requireAdmin} from '@/lib/api/auth';
@@ -30,6 +31,7 @@ export async function cleanupAdmin(request:Request){try{requireSameOrigin(reques
  const t=checked(await db.rpc('content_cleanup_begin',{p_id:contentId,p_expected:body.expectedUpdatedAt,p_title:body.confirmation})) as Task;return ok(view(t));
  }catch(e){return handleApiError(e);}}
 export async function cleanupExecutor(request:Request){try{cleanupAuth(request);const db=createAdminClient();const b=await readJsonObject(request);
+ if(b.action==='local_inspect'||b.action==='local_stale')return ok(await localStorageAction(b));
  if(b.action==='claim'){const r=await db.rpc('content_cleanup_claim');if(r.error)throw new ApiError(503,'cleanup_unavailable','Cleanup queue unavailable.');const t=r.data as Task|null;return ok(t?{id:t.id,lease_token:t.lease_token,assets:plan(t),workflow_ids:t.snapshot.flows.map(f=>f.id),source_refs:t.snapshot.flows.map(f=>f.source_ref).filter(Boolean),protected_source_refs:t.snapshot.references.filter(r=>r.owner!==t.content_id).map(r=>r.source_ref).filter(Boolean)}:null);}
  if(b.action!=='report')throw new ApiError(400,'invalid_cleanup','Invalid action.');const taskId=uuid(b.id),token=uuid(b.lease_token);const t=checked(await db.from('content_cleanup_tasks').select('*').eq('id',taskId).single()) as Task;
  if(t.status==='done')return ok(view(t));const assets=plan(t);if(t.status!=='running'||t.lease_token!==token||!validResults(assets,b.results))throw new ApiError(409,'cleanup_conflict','Cleanup ownership changed.');

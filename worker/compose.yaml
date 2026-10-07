@@ -4,6 +4,8 @@ services:
     init: true
     restart: unless-stopped
     env_file: .env
+    environment:
+      WORKER_CONTROL_ROOT: /control
     user: "10001:10001"
     read_only: true
     cap_drop: [ALL]
@@ -15,6 +17,7 @@ services:
     tmpfs:
       - /tmp:size=128m,mode=1777
     volumes:
+      - ./runtime/control:/control
       - ./runtime/work:/work
       - ./runtime/sources:/sources:ro
       - ./runtime/assets:/assets:ro

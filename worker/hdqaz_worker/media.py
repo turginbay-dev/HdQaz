@@ -20,10 +20,10 @@ class Media:
     video_start: float = 0.0
 
 class Runner:
-    def __init__(self,config,check=lambda:None): self.config,self.check=config,check
+    def __init__(self,config,check=lambda:None,pass_fds=()): self.config,self.check,self.pass_fds=config,check,pass_fds
     def run(self,args,timeout=None,progress=None):
         # No shell, stdin, network input protocols or uncontrolled diagnostic output.
-        proc=subprocess.Popen(args,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,start_new_session=True,env={k:v for k,v in os.environ.items() if k in {'PATH','LANG','LC_ALL','TMPDIR'}})
+        proc=subprocess.Popen(args,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,start_new_session=True,pass_fds=self.pass_fds,env={k:v for k,v in os.environ.items() if k in {'PATH','LANG','LC_ALL','TMPDIR'}})
         output=bytearray(); pending=b''; start=time.monotonic();last_log=start;metrics={}
         selector=selectors.DefaultSelector();selector.register(proc.stdout,selectors.EVENT_READ)
         try:

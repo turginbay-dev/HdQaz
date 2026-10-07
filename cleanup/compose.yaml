@@ -4,6 +4,8 @@ services:
     init: true
     restart: unless-stopped
     env_file: cleanup.env
+    environment:
+      WORKER_CONTROL_ROOT: /control
     user: '10001:10001'
     read_only: true
     cap_drop: [ALL]
@@ -14,6 +16,9 @@ services:
     command: [python, /cleanup/executor.py]
     volumes:
       - ./executor.py:/cleanup/executor.py:ro
+      - ./local_storage.py:/cleanup/local_storage.py:ro
+      - /opt/hdqaz-worker/runtime/control:/control
+      - /opt/hdqaz-bot/runtime/telegram-data:/telegram-data
       - /opt/hdqaz-worker/runtime/sources:/sources
       - /opt/hdqaz-worker/runtime/work:/work
       - /opt/hdqaz-worker/runtime/storage:/storage

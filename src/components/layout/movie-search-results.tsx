@@ -1,4 +1,6 @@
 "use client";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+
 
 import { useEffect, useState } from "react";
 import { MovieImage } from "@/components/movie/movie-image";
@@ -112,7 +114,7 @@ export function MovieSearchResults({
   return (
     <div className={cn(desktop ? "desktop-search-results" : "mobile-search-results", "mt-3")}>
       {error ? <div role="alert" className="search-hint">Іздеу қолжетімсіз. <button type="button" className="secondary-button" onClick={onRetry}>Қайталау</button></div> : loading ? (
-        <div className={desktop ? "desktop-search-state" : "mobile-search-state"}>Ізделіп жатыр...</div>
+        <div className={desktop ? "desktop-search-state" : "mobile-search-state"}><LoadingSpinner label="Ізделіп жатыр…" /></div>
       ) : results.length > 0 ? (
         results.map((movie) => (
           <button

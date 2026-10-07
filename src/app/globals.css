@@ -309,11 +309,13 @@ body:has(.app-loading-screen) {
 
 .mobile-search-results {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.45rem;
 }
 
 .mobile-search-result {
   display: flex;
+  min-width: 0;
   width: 100%;
   min-height: 4.4rem;
   align-items: center;
@@ -2130,3 +2132,39 @@ body::before, body::after, .ambient-page::before, .ambient-page::after { display
 .continue-item h3 { font-size:14px; line-height:1.5; margin-top:10px; }
 .continue-item p { color:#b7b8bf; font-size:12px; }
 @media(max-width:639px) { .continue-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } }
+
+/* Surgical viewer recovery: existing artwork, brand and compact loading feedback. */
+.header-logo { flex-shrink: 0; }
+.detail-identity { display:grid; grid-template-columns:300px minmax(0,1fr); grid-template-areas:"poster summary" "poster synopsis" "poster cta" "poster dubber"; grid-template-rows:min-content min-content min-content 1fr; column-gap:36px; row-gap:16px; align-items:start; margin-top:12px; margin-bottom:20px; }
+.detail-poster { grid-area:poster; position:relative; width:100%; aspect-ratio:2/3; overflow:hidden; border-radius:14px; background:var(--surface-strong); box-shadow:0 14px 36px #0005; }
+.detail-summary { grid-area:summary; min-width:0; }
+.detail-synopsis { grid-area:synopsis; min-width:0; max-width:68ch; }
+.detail-cta { grid-area:cta; }
+.detail-dubber { grid-area:dubber; min-width:0; }
+.detail-dubber > div { margin-top:0; }
+.detail-identity .detail-watch { margin-top:0; min-width:120px; }
+.detail-episodes .episodes-section { margin-top:0; }
+.loading-indicator { display:inline-flex; align-items:center; justify-content:center; gap:10px; color:var(--accent); font-size:14px; }
+.loading-spinner { width:24px; height:24px; flex-shrink:0; animation:viewer-spin .9s linear infinite; }
+.page-skeleton > .loading-indicator { margin-bottom:20px; }
+@keyframes viewer-spin { to { transform:rotate(360deg); } }
+.viewer-movie-card > a { transition:transform 180ms ease, opacity 180ms ease; }
+.viewer-movie-card > a:active { transform:scale(.985); }
+.primary-button, .secondary-button { transition:opacity 180ms ease, transform 180ms ease; }
+.primary-button:active, .secondary-button:active { transform:translateY(1px); }
+@media (min-width:640px) and (max-width:1023px) {
+ .detail-identity { grid-template-columns:260px minmax(0,1fr); column-gap:24px; }
+}
+@media (max-width:639px) {
+ .header-catalog, .header-admin { display:none; }
+ .detail-identity { grid-template-columns:112px minmax(0,1fr); grid-template-areas:"poster summary" "poster cta" "synopsis synopsis" "dubber dubber"; grid-template-rows:auto; column-gap:16px; row-gap:16px; margin-top:8px; margin-bottom:8px; }
+ .detail-heading h1 { font-size:22px; }
+ .detail-poster { border-radius:10px; }
+ .detail-identity .detail-meta { font-size:12px; margin-top:8px; }
+ .detail-synopsis { margin-top:4px; }
+ .episode-heading { flex-wrap:wrap; gap:8px; }
+}
+@media (prefers-reduced-motion:reduce) {
+ .loading-spinner, .animate-spin { animation:none !important; }
+ .viewer-movie-card > a, .primary-button, .secondary-button { transition:none; }
+}

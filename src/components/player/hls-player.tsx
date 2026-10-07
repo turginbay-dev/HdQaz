@@ -1336,24 +1336,24 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
 
           {error ? (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-md">
-              <div className="cinema-error-panel max-w-md rounded-[26px] p-5 text-center sm:p-6">
-                <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-red-300/20 bg-red-500/12 text-red-100">
+              <div className="cinema-error-panel max-w-md rounded-[26px] p-3 text-center sm:p-6">
+                <div className="mx-auto mb-3 hidden h-11 w-11 items-center justify-center rounded-full border border-red-300/20 sm:flex bg-red-500/12 text-red-100">
                   <AlertTriangle className="h-5 w-5" />
                 </div>
                 <p className="text-sm font-semibold leading-6 text-white">{error}</p>
                 <button
-                  className="hero-watch-button mt-4 inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold"
+                  className="hero-watch-button mt-2 sm:mt-4 inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold"
                   onClick={retryStream}
                   type="button"
                 >
                   <RotateCcw className="h-4 w-4" />
-                  Қайта қосу
+                  Қайта көру
                 </button>
               </div>
             </div>
           ) : null}
 
-          {showSkipIntro || showNextEpisode ? (
+          {!loading && !error && (showSkipIntro || showNextEpisode) ? (
             <div
               className={cn(
                 "absolute right-3 z-40 flex flex-col items-end gap-2 transition duration-300 sm:right-6",
@@ -1376,6 +1376,7 @@ export function HlsPlayer({ progressKey, contentId, initialWatchProgress, src, p
           ) : null}
 
           <div
+            hidden={Boolean(error) || (loading && !streamReadyRef.current)}
             className={cn(
               "cinema-player-controls absolute inset-x-2 bottom-2 z-50 transition duration-300 sm:inset-x-5 sm:bottom-5",
               visibleChrome ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"

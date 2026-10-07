@@ -245,7 +245,8 @@ function InlineStat({
       <span className="text-[var(--accent)]" aria-hidden="true">
         {icon}
       </span>
-      <span className="tabular-nums" aria-label={`${label}: ${formatCompactCount(value)}`}>{formatCompactCount(value)}</span>
+      <span className="text-xs font-normal">{label}</span>
+      <span className="tabular-nums">{formatCompactCount(value)}</span>
     </span>
   );
 }

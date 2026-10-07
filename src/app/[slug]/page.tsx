@@ -6,6 +6,7 @@ import { CommentsSection } from "@/components/engagement/comments-section";
 import { MovieEngagementActions } from "@/components/engagement/movie-engagement-actions";
 import { MovieViewTracker } from "@/components/engagement/movie-view-tracker";
 import { GlassPanel } from "@/components/glass/glass-panel";
+import { MovieImage } from "@/components/movie/movie-image";
 import { MovieRow } from "@/components/movie/movie-row";
 import { ReadMoreDescription } from "@/components/movie/read-more-description";
 import { EpisodesSection } from "@/components/player/episodes-section";
@@ -90,7 +91,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
     viewer.user && !contentIsEpisodic ? getWatchProgressForContent(viewer.user.id, content.id) : Promise.resolve(null)
   ]);
   const canWatch = !content.isPremium || viewer.premium.isPremium || viewer.isAdmin;
-  const playerStreamUrl = selectedEpisode ? selectedEpisode.hlsUrl : content.hlsUrl ?? content.streams.master;
+  const playerStreamUrl = contentIsEpisodic ? selectedEpisode?.hlsUrl : content.hlsUrl ?? content.streams.master;
   const playerPoster = getMovieImageSrc(selectedEpisode?.thumbnailUrl ?? content.backdropUrl, "backdrop");
   const skipIntro = getSkipIntro(selectedEpisode ?? content);
 
@@ -98,11 +99,28 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
     <main className="detail-page" id="main-content">
       <section className="viewer-container detail-heading">
         <Link className="detail-back" href="/catalog">← Каталог</Link>
-        <h1>{titles.title}</h1>
-        {titles.original && <p className="detail-original">{titles.original}</p>}
-        <p className="detail-meta">{[content.year, typeLabel, content.country, statusLabel, ...content.badges].filter(Boolean).join(" · ")}</p>
-        <a href="#player" className="primary-button detail-watch"><Play size={16} />Көру</a>
+        <div className="detail-identity">
+          <div className="detail-poster">
+            <MovieImage src={content.posterUrl} fallback="poster" alt={titles.title} fill priority sizes="(max-width: 639px) 112px, (max-width: 1023px) 260px, 300px" className="object-cover" />
+          </div>
+          <div className="detail-summary">
+            <h1>{titles.title}</h1>
+            {titles.original && <p className="detail-original">{titles.original}</p>}
+            <p className="detail-meta">{[content.year, content.country, typeLabel, ...content.genres].filter(Boolean).join(" · ")}</p>
+            <p className="detail-meta">{[statusLabel, content.durationMinutes ? `${content.durationMinutes} мин` : content.runtime, content.isPremium ? "Premium" : null].filter(Boolean).join(" · ")}</p>
+          </div>
+          <div className="detail-synopsis"><ReadMoreDescription description={content.description} /></div>
+          <div className="detail-cta"><a href="#player" className="primary-button detail-watch"><Play size={16} />Көру</a></div>
+          {content.dubber ? <div className="detail-dubber"><HeroDubberInfo dubber={content.dubber} /></div> : null}
+        </div>
       </section>
+      {contentIsEpisodic && <div className="viewer-container detail-episodes">
+        <EpisodesSection
+          contentSlug={content.slug}
+          episodes={episodes}
+          selectedEpisodeId={selectedEpisode?.id ?? null}
+        />
+      </div>}
       <section id="player" className="viewer-container detail-player">
         <div>
           {canWatch && playerStreamUrl ? (
@@ -129,7 +147,7 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
               />
             </>
           ) : canWatch ? (
-            <UnavailablePlayer title={content.title} />
+            <UnavailablePlayer title={content.title} episodic={contentIsEpisodic} />
           ) : (
             <PremiumLockScreen backdropUrl={content.backdropUrl} title={content.title} />
           )}
@@ -141,22 +159,10 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
             stats={stats}
             variant="player-row"
           />
-          {contentIsEpisodic ? (
-            <EpisodesSection
-              contentSlug={content.slug}
-              episodes={episodes}
-              selectedEpisodeId={selectedEpisode?.id ?? null}
-            />
-          ) : null}
         </div>
       </section>
 
       <div className="viewer-container detail-information">
-        <div className="mb-14">
-          <ReadMoreDescription description={content.description} />
-        </div>
-
-        {content.dubber ? <HeroDubberInfo dubber={content.dubber} /> : null}
         <div className="mb-14">
           <CommentsSection
             comments={comments}
@@ -167,13 +173,13 @@ export default async function ContentPage({ params, searchParams }: ContentPageP
           />
         </div>
 
-        <div className="mb-14">
+        {relatedMovies.length > 0 && <div className="mb-14">
           <MovieRow
             title="Ұқсас контент"
             href={content.genres[0] ? { pathname: "/catalog", query: { genre: content.genres[0] } } : "/catalog"}
             movies={relatedMovies}
           />
-        </div>
+        </div>}
       </div>
     </main>
   );
@@ -220,17 +226,17 @@ function HeroDubberInfo({ dubber }: { dubber: NonNullable<Movie["dubber"]> }) {
   );
 }
 
-function UnavailablePlayer({ title }: { title: string }) {
+function UnavailablePlayer({ title, episodic }: { title: string; episodic: boolean }) {
   return (
     <GlassPanel className="relative overflow-hidden p-0">
-      <div className="flex aspect-video min-h-[210px] items-center justify-center rounded-[18px] bg-black px-5 text-center sm:min-h-[280px] sm:rounded-[28px]">
+      <div className="flex aspect-video items-center justify-center rounded-[18px] bg-black px-5 text-center sm:rounded-[28px]">
         <div>
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-[var(--accent)]">
             <Play className="h-5 w-5 fill-current" />
           </span>
           <h2 className="mt-4 text-xl font-bold tracking-[-0.018em] text-white sm:text-2xl">{title}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-zinc-400">
-            Видео жақында қосылады.
+            {episodic ? "Бұл серия әзірге қолжетімсіз." : "Жақында"}
           </p>
         </div>
       </div>

@@ -13,29 +13,25 @@ export function ReadMoreDescription({ description }: ReadMoreDescriptionProps) {
 
   return (
     <section className="description-section">
-      <div className="mb-4">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--accent)]">Сипаттама</p>
-        <h2 className="mt-2 text-2xl font-bold tracking-[-0.024em] text-white">Контент туралы</h2>
-      </div>
       <p
         id="movie-description"
         className={cn(
           "max-w-4xl text-sm font-medium leading-7 tracking-[0.004em] text-zinc-300 sm:text-base",
-          expanded ? "" : "line-clamp-3"
+          expanded ? "" : description.length > 240 ? "line-clamp-3" : ""
         )}
       >
         {description}
       </p>
-      <button
+      {description.length > 240 && <button
         className="glass-button mt-4 inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-bold text-white"
         type="button"
         aria-expanded={expanded}
         aria-controls="movie-description"
         onClick={() => setExpanded((current) => !current)}
       >
-        {expanded ? "Жасыру" : "Толығырақ оқу"}
+        {expanded ? "Жасыру" : "Толығырақ"}
         <ChevronDown className={cn("h-4 w-4 transition", expanded ? "rotate-180" : "")} />
-      </button>
+      </button>}
     </section>
   );
 }

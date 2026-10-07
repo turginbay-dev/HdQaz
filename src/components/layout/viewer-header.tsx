@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { SiteLogo } from "./site-logo";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
@@ -21,9 +22,9 @@ export function ViewerHeader({ avatarUrl, displayName, isAdmin }: { avatarUrl?: 
   return <header ref={header} className="viewer-header" onKeyDown={event => { if (event.key === "Escape") close(); }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
     <a href="#main-content" className="skip-link">Контентке өту</a>
     <div className="viewer-container header-inner">
-      <Link href="/" className="viewer-brand" aria-label="HdQaz басты бет">Hd<span>Qaz</span><span className="brand-dot" /></Link>
-      <Link href="/catalog" className="header-catalog" aria-current={pathname === "/catalog" ? "page" : undefined}>Каталог</Link>
+      <SiteLogo priority className="header-logo" />
       <div className="header-spacer" />
+      <Link href="/catalog" className="header-catalog" aria-current={pathname === "/catalog" ? "page" : undefined}>Каталог</Link>
       <Link href="/premium" className="header-premium">Premium</Link>
       {isAdmin && <Link href="/admin" className="header-admin" aria-label="Әкімшілік">Басқару</Link>}
       <button ref={trigger} className="icon-button" aria-label={open ? "Іздеуді жабу" : "Іздеу"} aria-expanded={open} aria-controls="header-search" onClick={() => open ? close() : setOpen(true)}>{open ? <X size={20} /> : <Search size={20} />}</button>

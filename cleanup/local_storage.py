@@ -183,7 +183,8 @@ class Maintenance:
                     flows=references['flows']
                     if any(f['state'] in ('draft','staging') or not terminal(jobs.get(f.get('job_id'))) for f in flows):continue
                     if not flows and not old:continue
-                    reason='source_terminal' if flows else 'orphan'
+                    job=next((jobs.get(f.get('job_id')) for f in flows if jobs.get(f.get('job_id'),{}).get('status')=='failed'),None)
+                    reason=('cancelled' if job.get('admin_cancelled_at') else 'failed') if job else 'source_terminal' if flows else 'orphan'
                 elif terminal(job):reason='cancelled' if job.get('admin_cancelled_at') else job['status']
                 elif job is None:
                     if not old:continue
@@ -224,7 +225,7 @@ class Maintenance:
             if any(f['state'] in ('draft','staging') or not terminal(jobs.get(f.get('job_id'))) for f in entry['flows']):continue
             parts=Path(value).parts
             # Bot API metadata/database and global cache directories are never deletion targets.
-            if len(parts)!=3 or parts[1] not in ('videos','documents') or parts[2] in ('.','..') or not parts[2].startswith('file_'):continue
+            if len(parts)!=3 or any(part in ('.','..','/') for part in parts) or Path(value).is_absolute() or parts[1] not in ('videos','documents') or parts[2] in ('.','..') or not parts[2].startswith('file_'):continue
             path=root.joinpath(*parts)
             try:
                 if any(p.is_symlink() for p in (root/parts[0],path.parent,path)) or not path.is_file():continue

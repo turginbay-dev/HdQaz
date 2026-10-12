@@ -10,7 +10,7 @@ class API:
  def __init__(self):self.w={'id':ID,'revision':0,'kind':'movie','state':'draft','metadata':{}};self.calls=[]
  def call(self,action,*args,**kw):
   self.calls.append(action)
-  if action=='queue':return [self.w.copy()]
+  if action in ('queue','drafts'):return [self.w.copy()]
   if action in ('get','new'):return self.w.copy()
   data=args[3] if len(args)>3 else kw.get('data',{})
   if action=='edit':self.w['metadata']=data
@@ -54,7 +54,7 @@ class MovieTests(unittest.TestCase):
   self.api.w['metadata']={'title':'Movie','year':2026,'dubber_id':'44444444-4444-4444-8444-444444444444'}
   self.b.show(123,self.api.w);text=self.tg.calls[-1][1][1]
   for forbidden in ['/edit','/source','UUID','33333333','44444444','draft']:self.assertNotIn(forbidden,text)
-  rendered=str(self.tg.calls[-1]);self.assertIn('Дұрыс',rendered);self.assertIn('Өзгерту',rendered);self.assertIn('Видео қосу',rendered);self.assertIn('Бас тарту',rendered)
+  rendered=str(self.tg.calls[-1]);self.assertIn('Дұрыс',rendered);self.assertIn('Өзгерту',rendered);self.assertIn('Видео қосу',rendered);self.assertIn('Жою',rendered)
  def test_normal_ready_card_has_review_and_explicit_publish_only(self):
   self.api.w.update(state='submitted',job={'id':'secret-job-id','status':'ready','progress_percent':100,'attempt_count':1,'max_attempts':3,'output_manifest_url':'https://cdn.hdqaz.online/candidates/test/master.m3u8'})
   self.b.show(123,self.api.w);text=self.tg.calls[-1][1][1]
@@ -233,7 +233,7 @@ class MovieTests(unittest.TestCase):
  def test_waiting_video_drafts_have_separate_reopenable_screen(self):
   self.api.w['metadata']={'title':'Saved draft','year':2026}
   self.b.movie.queue(123,drafts=True)
-  self.assertIn('drafts',self.api.calls);self.assertNotIn('prepare',self.api.calls)
+  self.assertIn('drafts',self.api.calls);self.assertIn('Saved draft',str(self.tg.calls));self.assertNotIn('prepare',self.api.calls)
  def test_next_episode_ack_keeps_selected_season(self):
   s={'id':ID,'mode':'video','confirmed':True,'kind':'series','metadata':{'existing_content_id':ID,'season_number':2,'episode_number':1}}
   with patch.object(self.b,'ingestion_count',return_value=2):self.b.movie.ingest(123,{'update_id':100},s,{'file_id':'x','file_size':100,'mime_type':'video/mp4'})

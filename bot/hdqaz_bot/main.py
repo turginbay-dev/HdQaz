@@ -101,7 +101,7 @@ class Bot:
             if ready:buttons.append([button(w,'video','🎞 Видео қосу')])
             from .media import configured
             if configured():buttons.append([{'text':'🖼 Постер қосу','callback_data':'wm:'+w['id'].replace('-','')+':poster_url'},{'text':'🌄 Баннер қосу','callback_data':'wm:'+w['id'].replace('-','')+':banner_url'}])
-            buttons.append([button(w,'cancel','❌ Бас тарту')])
+            buttons.append([button(w,'cancel','🗑 Жою')])
         elif state=='staging':buttons=[[button(w,'activate','Жалғастыру')]]
         elif state=='published':
             lines.extend(['','✅ Жарияланды'])
@@ -122,7 +122,10 @@ class Bot:
         buttons.append([{'text':'⬅️ Мәзір','callback_data':'ahome'}])
         self.movie.panel(actor,'\n'.join(lines),buttons,message_id,'detail',workflow=w['id'],confirmed=confirmed)
     def current(self,actor):
+        session=self.movie.get(actor) if self.movie else None
+        if session and session.get('id'):return self.api.call('get',actor,session['id'])
         rows=self.api.call('queue',actor)
+        if not rows and self.movie:rows=self.api.call('drafts',actor)
         if not rows:raise SafeError('start_required')
         return rows[0]
     def guard(self):

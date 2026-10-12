@@ -104,28 +104,28 @@ class MovieFlow:
   self.prompt(actor,self.get(actor));return w
  def choice(self,actor,message_id):
   return self.panel(actor,('🎬 Киноны' if self.context(actor)['kind']=='movie' else '📺 Сериалды')+' қалай қосамыз?',[[{'text':'🔎 TMDB арқылы табу','callback_data':'movie_tmdb'},{'text':'✍️ Қолмен енгізу','callback_data':'movie_manual'}]],message_id,'movie_choice',workflow=None,confirmed=False)
- def queue(self,actor,page=0,message_id=None):
-  rows=self.b.api.call('queue',actor)
-  rows=[w for w in rows if isinstance(w,dict) and w.get('state') not in ('published','rejected') and w.get('job') and not w['job'].get('admin_hidden_at') and isinstance(w.get('id'),str) and type(w.get('revision')) is int]
+ def queue(self,actor,page=0,message_id=None,drafts=False):
+  rows=self.b.api.call('drafts' if drafts else 'queue',actor)
+  rows=[w for w in rows if isinstance(w,dict) and w.get('state') not in ('published','rejected') and (drafts or (w.get('job') and not w['job'].get('admin_hidden_at'))) and isinstance(w.get('id'),str) and type(w.get('revision')) is int]
   known={w['id'] for w in rows}
   for r in self.ingestion_rows(actor):
-   if r.get('mode') in ('pending','ingest','interrupted') and r['id'] not in known:
+   if not drafts and r.get('mode') in ('pending','ingest','interrupted') and r['id'] not in known:
     rows.insert(0,{'id':r['id'],'revision':0,'kind':r.get('kind','movie'),'state':'ingesting','metadata':r.get('metadata',{}),'job':{'status':'receiving','progress_percent':0}})
   if type(page) is not int or page<0:page=0
   size=5;pages=max(1,(len(rows)+size-1)//size);page=max(0,min(page,pages-1));items=rows[page*size:(page+1)*size]
-  lines=['📋 Кезек'];buttons=[]
+  lines=['✏️ Видео күткендер' if drafts else '📋 Кезек'];buttons=[]
   if not items:lines.append('Кезек бос.')
   for i,w in enumerate(items,page*size+1):
-   m=w.get('metadata') if isinstance(w.get('metadata'),dict) else {};j=w.get('job') if isinstance(w.get('job'),dict) else {};status={'draft':'✏️ Draft','staging':'⬇️ Қабылдау','rejected':'❌ Қабылданбады'}.get(w.get('state'),'⬇️ Кезекте')
+   m=w.get('metadata') if isinstance(w.get('metadata'),dict) else {};j=w.get('job') if isinstance(w.get('job'),dict) else {};status={'draft':'🎞 Видео күтілуде','staging':'⬇️ Қабылдау','rejected':'❌ Қабылданбады'}.get(w.get('state'),'⬇️ Кезекте')
    if j:status={'queued':'⬇️ '+str(j.get('progress_percent',0))+'%','processing':'⚙️ '+str(j.get('progress_percent',0))+'%','uploading':'☁️ '+str(j.get('progress_percent',0))+'%','ready':'✅ Ready','failed':'❌ Failed','receiving':'⬇️ Қабылдануда'}.get(j.get('status'),status)
    title=str(m.get('title') or 'Жаңа кино').replace('\n',' ')[:36]
    episode=(' · '+str(m.get('season_number','—'))+'×'+str(m.get('episode_number','—'))) if w.get('kind')=='series' else '';lines.append(f'{i}. 🎬 {title}{episode} — {status}')
    buttons.append([{'text':f'{i}. {title[:40]}','callback_data':'qrow:'+w['id'].replace('-','')+':'+str(w['revision'])}])
   nav=[]
-  if page:nav.append({'text':'◀️','callback_data':'qprev'})
-  nav.append({'text':'🔄 Жаңарту','callback_data':'qrefresh'})
-  if page<pages-1:nav.append({'text':'▶️','callback_data':'qnext'})
-  buttons.append(nav);buttons.append([{'text':'⬅️ Мәзір','callback_data':'ahome'}]);self.panel(actor,'\n'.join(lines),buttons,message_id,'queue',page)
+  if page:nav.append({'text':'◀️','callback_data':'dprev' if drafts else 'qprev'})
+  nav.append({'text':'🔄 Жаңарту','callback_data':'drefresh' if drafts else 'qrefresh'})
+  if page<pages-1:nav.append({'text':'▶️','callback_data':'dnext' if drafts else 'qnext'})
+  buttons.append(nav);buttons.append([{'text':'⬅️ Мәзір','callback_data':'ahome'}]);self.panel(actor,'\n'.join(lines),buttons,message_id,'drafts' if drafts else 'queue',page)
  def open_row(self,actor,wid,revision,message_id):
   r=next((r for r in self.ingestion_rows(actor) if r['id']==wid and r.get('mode') in ('pending','ingest','interrupted')),None)
   if r:
@@ -168,6 +168,10 @@ class MovieFlow:
    self.queue(actor,0,cb['message']['message_id']);return True
   if cb and value=='menu_movie':
    b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});self.clear(actor);self.b.admin.context(actor);self.choice(actor,cb['message']['message_id']);return True
+  if cb and value=='menu_drafts':
+   b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});self.queue(actor,0,cb['message']['message_id'],True);return True
+  if cb and value in ('drefresh','dprev','dnext'):
+   b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});page=self.panel_state(actor).get('page',0);page=(page if type(page) is int else 0)+(1 if value=='dnext' else -1 if value=='dprev' else 0);self.queue(actor,page,cb['message']['message_id'],True);return True
   if cb and value=='menu_queue':
    b.tg.call('answerCallbackQuery',{'callback_query_id':cb['id']});self.queue(actor,0,cb['message']['message_id']);return True
   if cb and value in ('qrefresh','qprev','qnext'):
@@ -302,19 +306,21 @@ class MovieFlow:
    if w['state']=='draft':
     try:b.sources.source(ref)
     except (OSError,SafeError):
+     s['phase']='downloading';self.ingestion_save(s)
      file=timed('local_api_file',lambda:b.tg.call('getFile',{'file_id':file_id},timeout=3600));check()
      if file.get('file_size')!=size:raise SafeError('source_changed')
      s['cache_path']=str(Path(file['file_path']).relative_to(b.c.telegram_root))
      with self.db_lock:self.db.execute('insert or replace into ingestions values(?,?)',(s['id'],json.dumps({**s,'actor':actor})));self.db.commit()
      timed('source_ingest_copy',lambda:stage_local(b.c.telegram_root,file['file_path'],b.c.root/'inbox',ref,size,b.c.max_source,check=check))
+    s['phase']='source_ready';self.ingestion_save(s)
     check()
     if w.get('source_ref')!=ref:w=b.mutate(w,actor,uid,'source',{'source_ref':ref})
     check()
     w=b.mutate(w,actor,uid,'prepare',{'source_ref':ref})
    if w.get('source_ref')!=ref:raise SafeError('source_conflict')
-   s['job_id']=w['job_id']
+   s.update(job_id=w['job_id'],phase='job_created');self.ingestion_save(s)
    check();b.sources.stage(ref,w['job_id']);check();w=b.mutate(w,actor,uid,'activate')
-   finished=True
+   finished=True;s['phase']='queued'
    self.ingestion_note(s,s.get('title','Видео')+'\n⬇️ Кезекте',[[button(w,'get','📋 Карточка'),{'text':'📋 Кезек','callback_data':'menu_queue'}]]+([[{'text':'➕ Келесі серия','callback_data':'cn:'+w['content_id'].replace('-','')+':'+str(w['metadata'].get('season_number') or 1)},{'text':'📋 Сериялар','callback_data':'cl:'+w['content_id'].replace('-','')}]] if w['kind']=='series' and w.get('content_id') else []))
   except (SafeError,OSError,KeyError,ValueError) as exc:
    s.update(mode='video',error=getattr(exc,'code','source_io'))

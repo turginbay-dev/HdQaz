@@ -230,4 +230,12 @@ class MovieTests(unittest.TestCase):
   self.b.movie.ingestion_note(r,'Old movie queued')
   self.assertEqual(self.tg.calls[-1][1]['message_id'],99)
   self.assertEqual(self.b.movie.panel_state(123)['message_id'],55)
+ def test_waiting_video_drafts_have_separate_reopenable_screen(self):
+  self.api.w['metadata']={'title':'Saved draft','year':2026}
+  self.b.movie.queue(123,drafts=True)
+  self.assertIn('drafts',self.api.calls);self.assertNotIn('prepare',self.api.calls)
+ def test_next_episode_ack_keeps_selected_season(self):
+  s={'id':ID,'mode':'video','confirmed':True,'kind':'series','metadata':{'existing_content_id':ID,'season_number':2,'episode_number':1}}
+  with patch.object(self.b,'ingestion_count',return_value=2):self.b.movie.ingest(123,{'update_id':100},s,{'file_id':'x','file_size':100,'mime_type':'video/mp4'})
+  self.assertIn('cn:'+ID.replace('-','')+':2',str(self.tg.calls[-1]))
 if __name__=='__main__':unittest.main()

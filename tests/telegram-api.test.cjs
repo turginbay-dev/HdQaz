@@ -21,7 +21,7 @@ test('existing movie attach accepts only empty unpublished movie targets',async(
  }
 });
 test('queue filters metadata drafts before applying its bounded result limit',async()=>{
- const calls=[];const db={from(){const q={};for(const k of ['select','eq','not','order','limit'])q[k]=(...a)=>(calls.push([k,...a]),q);q.then=f=>f({data:[],error:null});return q;}};
+ const calls=[];const db={from(){const q={};for(const k of ['select','eq','in','not','order','limit'])q[k]=(...a)=>(calls.push([k,...a]),q);q.then=f=>f({data:[],error:null});return q;}};
  const {telegramRequest}=loader({'@/lib/supabase/admin':{createAdminClient:()=>db}},env)('src/features/telegram/http.ts');
  assert.equal((await telegramRequest(req({action:'queue'}))).status,200);assert.ok(calls.some(x=>x[0]==='not'&&x[1]==='job_id'&&x[2]==='is'&&x[3]===null));assert.ok(calls.some(x=>x[0]==='limit'&&x[1]>=100));
 });

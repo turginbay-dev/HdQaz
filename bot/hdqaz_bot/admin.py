@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 from .media import upload,share,configured
 from .core import SafeError,button,request_key
 
-MENU=[[{'text':'➕ Контент қосу','callback_data':'aadd'},{'text':'🔎 Іздеу','callback_data':'asearch'}],[{'text':'📚 Каталог','callback_data':'acatalog'},{'text':'📋 Кезек','callback_data':'menu_queue'}],[{'text':'📺 Бар сериалдар','callback_data':'series_existing'}],[{'text':'⚙️ Басқару','callback_data':'asettings'}]]
+MENU=[[{'text':'➕ Контент қосу','callback_data':'aadd'},{'text':'🔎 Іздеу','callback_data':'asearch'}],[{'text':'📚 Каталог','callback_data':'acatalog'},{'text':'📋 Кезек','callback_data':'menu_queue'}],[{'text':'📺 Бар сериалдар','callback_data':'series_existing'},{'text':'✏️ Видео күткендер','callback_data':'menu_drafts'}],[{'text':'⚙️ Басқару','callback_data':'asettings'}]]
 FIELDS={'title':'Атауы','description':'Сипаттама','year':'Жылы','country':'Елі','genres':'Жанрлар','duration_minutes':'Ұзақтығы','is_premium':'Premium','dubber_id':'Дыбыстаушы','poster_url':'Постер','banner_url':'Баннер'}
 def btn(text,data):return {'text':text,'callback_data':data}
 def cid(value):return str(uuid.UUID(value))

@@ -52,8 +52,10 @@ export async function telegramRequest(request:Request){
    }else if(action==='titles'){
     const q=short(d.query,100).replace(/[%_,()]/g,'');result=checked(await db.from('contents').select('id,title,year,type').neq('type','movie').ilike('title','%'+q+'%').limit(6));
    }else if(action==='dubbers')result=checked(await db.from('dubbers').select('id,name').eq('is_active',true).limit(50));
-   else if(action==='queue'){
-    const rows=checked(await db.from('telegram_workflows').select('*').eq('actor_id',actor).not('job_id','is',null).order('created_at',{ascending:false}).limit(200));
+   else if(action==='queue'||action==='drafts'){
+    let query=db.from('telegram_workflows').select('*').eq('actor_id',actor);
+    query=action==='drafts'?query.eq('state','draft').is('job_id',null):query.in('state',['staging','submitted']).not('job_id','is',null);
+    const rows=checked(await query.order('created_at',{ascending:false}).limit(200));
     const ids=rows.flatMap(w=>w.job_id?[w.job_id]:[]);const jobs=ids.length?checked(await db.from('processing_jobs').select(jobColumns).in('id',ids)):[];
     result=rows.map(w=>({...w,job:jobs.find(j=>j.id===w.job_id)||null}));
    }else if(action==='discard'){

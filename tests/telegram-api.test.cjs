@@ -29,7 +29,7 @@ test('discard is actor scoped, cancels only exact owned job, and keeps content r
  const id='11111111-1111-4111-8111-111111111111',job='22222222-2222-4222-8222-222222222222';
  for(const state of ['submitted','published']){
   const cancelled=[],hidden=[],queries=[];const w={id,actor_id:123,revision:1,state,content_id:id,episode_id:null,job_id:job};
-  const db={from(table){const q={};for(const k of ['select','eq','maybeSingle'])q[k]=(...a)=>(queries.push([table,k,...a]),q);q.then=f=>f({data:table==='telegram_workflows'?w:{id:job,content_id:id,episode_id:null,status:'processing'},error:null});return q;}};
+  const db={from(table){const q={};for(const k of ['select','eq','update','maybeSingle'])q[k]=(...a)=>(queries.push([table,k,...a]),q);q.then=f=>f({data:table==='telegram_workflows'?w:{id:job,content_id:id,episode_id:null,status:'processing'},error:null});return q;}};
   const {telegramRequest}=loader({'@/lib/supabase/admin':{createAdminClient:()=>db},'@/features/processing/repository':{cancelJob:async id=>cancelled.push(id),hideJob:async id=>hidden.push(id)}},env)('src/features/telegram/http.ts');
   const res=await telegramRequest(req({action:'discard',id,revision:1,request_id:id}));assert.equal(res.status,state==='published'?409:200);
   assert.deepEqual(cancelled,state==='published'?[]:[job]);assert.deepEqual(hidden,state==='published'?[]:[job]);assert.ok(queries.some(x=>x[0]==='telegram_workflows'&&x[1]==='eq'&&x[2]==='actor_id'&&x[3]===123));assert.ok(queries.every(x=>x[0]!=='contents'&&x[0]!=='episodes'));
@@ -37,7 +37,7 @@ test('discard is actor scoped, cancels only exact owned job, and keeps content r
 });
 test('discard rejects a mismatched episode before cancellation',async()=>{
  const id='11111111-1111-4111-8111-111111111111';let touched=false;
- const db={from(table){const q={};for(const k of ['select','eq','maybeSingle'])q[k]=()=>q;q.then=f=>f({data:table==='telegram_workflows'?{id,state:'submitted',content_id:id,episode_id:id,job_id:id}:{id,episode_id:null,status:'processing'},error:null});return q;}};
+ const db={from(table){const q={};for(const k of ['select','eq','update','maybeSingle'])q[k]=()=>q;q.then=f=>f({data:table==='telegram_workflows'?{id,state:'submitted',content_id:id,episode_id:id,job_id:id}:{id,episode_id:null,status:'processing'},error:null});return q;}};
  const mod=loader({'@/lib/supabase/admin':{createAdminClient:()=>db},'@/features/processing/repository':{cancelJob:async()=>{touched=true;},hideJob:async()=>{touched=true;}}},env)('src/features/telegram/http.ts');
  assert.equal((await mod.telegramRequest(req({action:'discard',id}))).status,409);assert.equal(touched,false);
 });

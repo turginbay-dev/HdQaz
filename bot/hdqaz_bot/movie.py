@@ -215,7 +215,10 @@ class MovieFlow:
     self.panel(actor,'Тек осы тапсырманы кезектен алып тастаймыз ба? Контент беті сақталады.',[[button(w,'discard','Иә, алып тастау'),button(w,'get','Жоқ, қалсын')]],cb['message']['message_id']);return True
    if action in ('get','publish','reject','retry','discard'):
     if action!='get':w=b.mutate(w,actor,uid,action)
-    if action=='discard':self.queue(actor,0,cb['message']['message_id']);return True
+    if action=='discard':
+     r=next((r for r in self.ingestion_rows(actor) if r['id']==wid),None)
+     if r:r.update(mode='cancelled',terminal=True);self.ingestion_save(r)
+     self.queue(actor,0,cb['message']['message_id']);return True
     w=b.api.call('get',actor,wid);self.detail(actor,w,cb['message']['message_id']);return True
   message=u.get('message',{});media=message.get('video') or message.get('document')
   if media:

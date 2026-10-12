@@ -70,6 +70,7 @@ export async function telegramRequest(request:Request){
      }else{
       if(j.status!=='failed')await cancelJob(j.id);
       await hideJob(j.id);
+      if(w.state!=='rejected')checked(await db.from('telegram_workflows').update({state:'rejected',revision:w.revision+1,updated_at:new Date().toISOString()}).eq('id',w.id).eq('actor_id',actor).eq('revision',w.revision).eq('state',w.state).eq('job_id',j.id).select('id').maybeSingle());
      }
     }else if(w.state==='draft'){
      // Conditional deletion fences prepare racing with a cancelled transfer.

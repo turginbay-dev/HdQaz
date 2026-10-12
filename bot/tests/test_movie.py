@@ -128,9 +128,10 @@ class MovieTests(unittest.TestCase):
   u=update();u['message']['video']={'file_id':'file1','file_size':100,'mime_type':'video/mp4'}
   with patch('hdqaz_bot.movie.shutil.disk_usage',return_value=SimpleNamespace(free=10**12)):
    self.b.handle(u);thread=self.b.ingestion_thread;thread.join(2);self.assertFalse(thread.is_alive())
-  self.assertEqual(self.b.movie.get(123)['mode'],'video');self.assertNotIn('prepare',self.api.calls)
+  self.assertEqual(self.b.movie.ingestion_rows(123)[0]['mode'],'interrupted');self.assertNotIn('prepare',self.api.calls)
   source=self.c.telegram_root/'retry';source.write_bytes(b'\x00\x00\x00\x18ftypisom'+b'x'*88)
   self.tg.call=lambda method,*a,**kw: {'file_path':str(source),'file_size':100} if method=='getFile' else {'message_id':1}
+  self.b.movie.save(123,{'id':ID,'mode':'video','confirmed':True})
   retry=update();retry['update_id']=11;retry['message']['video']=u['message']['video']
   with patch('hdqaz_bot.movie.shutil.disk_usage',return_value=SimpleNamespace(free=10**12)):
    self.b.handle(retry);thread=self.b.ingestion_thread;thread.join(2);self.assertFalse(thread.is_alive())
@@ -180,4 +181,53 @@ class MovieTests(unittest.TestCase):
    self.b.handle(u);self.b.ingestion_thread.join(2)
   self.assertNotIn('prepare',self.api.calls);self.assertNotIn('activate',self.api.calls)
   self.assertFalse(list((self.c.root/'inbox').glob('*.media')))
+ def test_metadata_only_draft_never_appears_in_processing_queue(self):
+  self.api.w['metadata']={'title':'Metadata only','year':2026}
+  self.b.movie.queue(123)
+  self.assertIn('Кезек бос',str(self.tg.calls));self.assertNotIn('Metadata only',str(self.tg.calls))
+  self.assertNotIn('prepare',self.api.calls)
+ def test_ten_pending_uploads_are_durable_and_ack_before_backend(self):
+  with patch.object(self.b,'ingestion_count',return_value=2):
+   for n in range(10):
+    wid=str(uuid.uuid4());s={'id':wid,'mode':'video','confirmed':True}
+    u=update();u['update_id']=100+n
+    media={'file_id':'file'+str(n),'file_unique_id':'unique'+str(n),'file_size':100,'mime_type':'video/mp4'}
+    self.b.movie.ingest(123,u,s,media)
+  rows=self.b.movie.ingestion_rows(123)
+  self.assertEqual(len(rows),10);self.assertTrue(all(x['mode']=='pending' and x.get('ack_id') for x in rows))
+  self.assertEqual(len([c for c in self.tg.calls if c[0]=='send']),10);self.assertFalse(self.api.calls)
+  # Open the same durable database after process restart; no RAM-only queue.
+  from hdqaz_bot.movie import MovieFlow
+  recovered=MovieFlow(self.b)
+  try:self.assertEqual(len(recovered.ingestion_rows(123)),10)
+  finally:recovered.db.close()
+ def test_replayed_update_after_session_clear_does_not_ack_or_create_again(self):
+  self.api.w['metadata']={'title':'Test','year':2026}
+  self.b.movie.save(123,{'id':ID,'mode':'video','confirmed':True})
+  u=update();u['message']['video']={'file_id':'x','file_unique_id':'unique','file_size':100,'mime_type':'video/mp4'}
+  with patch.object(self.b,'ingestion_count',return_value=2):
+   self.b.handle(u);before=len(self.tg.calls);self.b.handle(u)
+  self.assertEqual(len(self.tg.calls),before);self.assertEqual(len(self.b.movie.ingestion_rows()),1);self.assertFalse(self.api.calls)
+ def test_same_file_allowed_for_different_episode_targets(self):
+  media={'file_id':'same','file_unique_id':'same-unique','file_size':100,'mime_type':'video/mp4'}
+  with patch.object(self.b,'ingestion_count',return_value=2):
+   for n in range(2):
+    self.b.movie.ingest(123,{'update_id':100+n},{'id':str(uuid.uuid4()),'mode':'video','confirmed':True},media)
+  rows=self.b.movie.ingestion_rows();self.assertEqual(len(rows),2)
+  self.assertNotEqual(rows[0]['source_ref'],rows[1]['source_ref'])
+ def test_manual_resend_for_same_target_warns_without_second_job(self):
+  s={'id':ID,'mode':'video','confirmed':True};media={'file_id':'same','file_size':100,'mime_type':'video/mp4'}
+  with patch.object(self.b,'ingestion_count',return_value=2):
+   self.b.movie.ingest(123,{'update_id':100},s,media)
+   self.b.movie.ingest(123,{'update_id':101},s,media)
+  self.assertEqual(len(self.b.movie.ingestion_rows()),1);self.assertIn('Алдыңғы тапсырманы',str(self.tg.calls));self.assertNotIn('prepare',self.api.calls)
+ def test_cancel_draft_uses_owned_backend_discard_without_processing(self):
+  self.cb('cancel')
+  self.assertIn('discard',self.api.calls);self.assertNotIn('prepare',self.api.calls)
+ def test_transfer_has_own_ack_and_does_not_overwrite_new_panel(self):
+  r={'id':ID,'actor':123,'ack_id':99}
+  self.b.movie.panel(123,'New movie metadata',message_id=55)
+  self.b.movie.ingestion_note(r,'Old movie queued')
+  self.assertEqual(self.tg.calls[-1][1]['message_id'],99)
+  self.assertEqual(self.b.movie.panel_state(123)['message_id'],55)
 if __name__=='__main__':unittest.main()

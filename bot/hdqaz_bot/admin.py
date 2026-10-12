@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 from .media import upload,share,configured
 from .core import SafeError,button,request_key
 
-MENU=[[{'text':'➕ Контент қосу','callback_data':'aadd'},{'text':'🔎 Іздеу','callback_data':'asearch'}],[{'text':'📚 Каталог','callback_data':'acatalog'},{'text':'📋 Кезек','callback_data':'menu_queue'}],[{'text':'⚙️ Басқару','callback_data':'asettings'}]]
+MENU=[[{'text':'➕ Контент қосу','callback_data':'aadd'},{'text':'🔎 Іздеу','callback_data':'asearch'}],[{'text':'📚 Каталог','callback_data':'acatalog'},{'text':'📋 Кезек','callback_data':'menu_queue'}],[{'text':'📺 Бар сериалдар','callback_data':'series_existing'}],[{'text':'⚙️ Басқару','callback_data':'asettings'}]]
 FIELDS={'title':'Атауы','description':'Сипаттама','year':'Жылы','country':'Елі','genres':'Жанрлар','duration_minutes':'Ұзақтығы','is_premium':'Premium','dubber_id':'Дыбыстаушы','poster_url':'Постер','banner_url':'Баннер'}
 def btn(text,data):return {'text':text,'callback_data':data}
 def cid(value):return str(uuid.UUID(value))
@@ -24,7 +24,7 @@ class AdminFlow:
   lines=['📚 Каталог'+(' · '+query if query else '')];rows=[]
   for c in result['items']:
    title=c['title'].replace('\n',' ')[:48];label=('🎬 ' if c['kind']=='movie' else '📺 ')+title
-   lines.append(('✅ ' if c['is_published'] else '✏️ ')+label);rows.append([btn(label,'ci:'+compact(c['id']))])
+   lines.append(('✅ ' if c['is_published'] else '✏️ ')+label);rows.append([btn(label,('cn:' if self.f.panel_state(actor).get('fast_series') and filter=='series' else 'ci:')+compact(c['id']))])
   if not result['items']:lines.append('Контент табылмады.')
   nav=[]
   if page:nav.append(btn('◀️','cprev'))
@@ -55,16 +55,18 @@ class AdminFlow:
   self.panel(actor,'\n'.join(lines),rows,mid)
  def start_numbers(self,actor,w,mid=None,season=1,episode=1):
   self.f.save(actor,{'id':w['id'],'mode':'series_number','step':'season_number','suggested_season':season,'suggested_episode':episode,'message_id':mid})
-  self.panel(actor,'📺 Маусым нөмірін жазыңыз.',[[btn(str(season),'snum:'+str(season)),btn('❌ Бас тарту','ahome')]],mid)
- def episode(self,actor,id,mid=None,new_season=False):
+  self.panel(actor,'📺 Маусым нөмірін жазыңыз.',[[btn(str(season),'snum:'+str(season)),button(w,'cancel','❌ Бас тарту')]],mid)
+ def episode(self,actor,id,mid=None,new_season=False,preferred_season=None):
   c=self.b.api.call('catalog_get',actor,id)
   if c['kind']!='series':raise SafeError('invalid_input')
   self.context(actor,'series',c['section']);uid=self.uid
   w=self.b.api.call('new',actor,data={'kind':'series'},key=request_key(actor,uid,'new'))
   w=self.b.mutate(w,actor,uid,'existing',{'content_id':id})
-  season=max([s['season_number'] for s in c['seasons']]+[1]);season=season+1 if new_season else season
+  season=max([s['season_number'] for s in c['seasons']]+[1]);season=preferred_season or (season+1 if new_season else season)
   sid=next((s['id'] for s in c['seasons'] if s['season_number']==season),None)
-  episode=max([e['episode_number'] for e in c['episodes'] if e['season_id']==sid]+[0])+1
+  pending=[x.get('metadata',{}).get('episode_number',0) for x in c.get('workflows',[]) if x.get('state') in ('draft','staging','submitted') and x.get('metadata',{}).get('season_number')==season]
+  pending += [x.get('metadata',{}).get('episode_number',0) for x in self.f.ingestion_rows(actor) if x.get('mode') in ('pending','ingest','done') and x.get('metadata',{}).get('existing_content_id')==id and x.get('metadata',{}).get('season_number')==season]
+  episode=max([e['episode_number'] for e in c['episodes'] if e['season_id']==sid]+pending+[0])+1
   self.start_numbers(actor,w,mid,season,episode)
  def handle(self,u,actor):
   cb=u.get('callback_query');v=cb.get('data','') if cb else '';v='ak:series' if v=='menu_series' else v;mid=cb['message'].get('message_id') if cb else None;self.uid=u['update_id'];s=self.f.get(actor) or {};text=u.get('message',{}).get('text','').strip()
@@ -75,7 +77,7 @@ class AdminFlow:
    id=cid(v[7:]);c=self.b.api.call('catalog_get',actor,id)
    if c['kind']!='movie' or c['is_published'] or c.get('hls_url'):raise SafeError('stale')
    self.context(actor,'movie',c['section']);w=self.b.api.call('new',actor,data={'kind':'movie','section':c['section']},key=request_key(actor,self.uid,'new'))
-   w=self.b.mutate(w,actor,self.uid,'existing',{'content_id':id});self.f.save(actor,{'id':w['id'],'mode':'video','step':0,'message_id':mid});self.f.prompt(actor,self.f.get(actor));return True
+   w=self.b.mutate(w,actor,self.uid,'existing',{'content_id':id});self.f.save(actor,{'id':w['id'],'mode':'video','step':0,'message_id':mid,'confirmed':True,'metadata':w['metadata'],'kind':w['kind']});self.f.prompt(actor,self.f.get(actor));return True
   if v.startswith(('attach:','cm:','cmup:','wm:','share:')):
    parts=v.split(':');op=parts[0];id=cid(parts[1])
    if op=='share':
@@ -120,20 +122,26 @@ class AdminFlow:
    _,kind,section=v.split(':')
    if kind not in ('movie','series') or section not in ('default','anime','dorama'):raise SafeError('invalid_input')
    self.f.clear(actor);self.context(actor,kind,section);self.f.choice(actor,mid);return True
-  if v=='series_existing':self.catalog(actor,'series',mid=mid);return True
+  if v=='series_existing':
+   state=self.f.panel_state(actor);state['fast_series']=True
+   with self.f.db_lock:self.f.db.execute('insert or replace into panels values(?,?)',(actor,json.dumps(state)));self.f.db.commit()
+   self.catalog(actor,'series',mid=mid);return True
   if v in ('asettings','channeloff'):
    self.panel(actor,'⚙️ Басқару\nКонтентті Каталог арқылы өзгертіңіз.\nЖариялау тек өз растауыңызбен орындалады.'+('\nTelegram арнасы бапталмаған. Бөлісу батырмасын қолдануға болады.' if v=='channeloff' else ''),[[btn('📚 Каталог','acatalog'),btn('📋 Кезек','menu_queue')]],mid);return True
   if v=='asearch':self.f.save(actor,{'mode':'catalog_search'});self.panel(actor,'🔎 Атауын жазыңыз.',mid=mid);return True
-  if v=='acatalog':self.panel(actor,'📚 Каталог',[[btn('🎬 Фильмдер','cf:movie'),btn('📺 Сериалдар','cf:series')],[btn('🇯🇵 Anime','cf:anime'),btn('🇰🇷 Dorama','cf:dorama')],[btn('✅ Жарияланған','cf:published'),btn('✏️ Draft / Ready','cf:draft')],[btn('Барлығы','cf:all')]],mid);return True
+  if v=='acatalog':
+   state=self.f.panel_state(actor);state['fast_series']=False
+   with self.f.db_lock:self.f.db.execute('insert or replace into panels values(?,?)',(actor,json.dumps(state)));self.f.db.commit()
+   self.panel(actor,'📚 Каталог',[[btn('🎬 Фильмдер','cf:movie'),btn('📺 Сериалдар','cf:series')],[btn('🇯🇵 Anime','cf:anime'),btn('🇰🇷 Dorama','cf:dorama')],[btn('✅ Жарияланған','cf:published'),btn('✏️ Draft / Ready','cf:draft')],[btn('Барлығы','cf:all')]],mid);return True
   if v.startswith('cf:'):self.catalog(actor,v[3:],mid=mid);return True
   if v in ('cprev','cnext','crefresh'):
    if s.get('mode')!='catalog':raise SafeError('stale')
    page=s.get('page',0);page=page if type(page) is int else 0
    self.catalog(actor,s.get('filter','all'),max(0,page+(1 if v=='cnext' else -1 if v=='cprev' else 0)),s.get('query',''),mid);return True
   if v.startswith(('ci:','cn:','cs:','cl:','ce:','cu:','cv:','cp:')):
-   op,id=v.split(':',1);id=cid(id)
+   op,id=v.split(':',1);parts=id.split(':');preferred_season=int(parts[1]) if op=='cn' and len(parts)==2 else None;id=cid(parts[0])
    if op=='ci':self.card(actor,id,mid)
-   elif op in ('cn','cs'):self.episode(actor,id,mid,op=='cs')
+   elif op in ('cn','cs'):self.episode(actor,id,mid,op=='cs',preferred_season)
    elif op=='cl':
     c=self.b.api.call('catalog_get',actor,id);seasons={x['id']:x['season_number'] for x in c['seasons']};lines=['📋 '+c['title']]
     for e in c['episodes'][:60]:lines.append(str(seasons.get(e['season_id'],'—'))+' маусым · '+str(e['episode_number'])+' серия '+('✅' if e['is_published'] else '✏️'))
@@ -169,7 +177,21 @@ class AdminFlow:
    if s['step']=='season_number':
     s['step']='episode_number';self.f.save(actor,s);self.panel(actor,'🎞 Серия нөмірін жазыңыз.',[[btn(str(s['suggested_episode']),'snum:'+str(s['suggested_episode']))]],mid)
    else:
-    self.f.save(actor,{'id':w['id'],'mode':'review','step':0,'last':self.uid,'message_id':mid});self.f.detail(actor,w,mid)
+    existing=w['metadata'].get('existing_content_id')
+    if existing:
+     c=self.b.api.call('catalog_get',actor,existing);sid=next((x['id'] for x in c['seasons'] if x['season_number']==w['metadata']['season_number']),None)
+     ep=next((x for x in c['episodes'] if x['season_id']==sid and x['episode_number']==number),None)
+     if ep and (ep.get('is_published') or ep.get('hls_url')):
+      self.panel(actor,'Бұл серияның видеосы бар. Оны ауыстырмаймын. Басқа серия нөмірін таңдаңыз.',mid=mid);return True
+     active=next((x for x in c.get('workflows',[]) if x['id']!=w['id'] and x.get('state') in ('staging','submitted') and x.get('metadata',{}).get('season_number')==w['metadata']['season_number'] and x.get('metadata',{}).get('episode_number')==number),None)
+     local=next((x for x in self.f.ingestion_rows(actor) if x['id']!=w['id'] and x.get('mode') in ('awaiting_ack','pending','ingest') and x.get('metadata',{}).get('existing_content_id')==existing and x.get('metadata',{}).get('season_number')==w['metadata']['season_number'] and x.get('metadata',{}).get('episode_number')==number),None)
+     if local:
+      self.panel(actor,'Бұл серия қабылданып жатыр.',[[btn('📋 Кезек','menu_queue')]],mid);return True
+     if active:
+      self.panel(actor,'Бұл серия өңдеу кезегінде бар.',[[button(active,'get','📋 Карточка')]],mid);return True
+     if ep:
+      self.f.save(actor,{'id':w['id'],'mode':'review','step':0,'last':self.uid,'message_id':mid});self.panel(actor,'Серия беті бар. Осы серияға видео қосамыз ба?',[[button(w,'video','🎞 Видео қосу'),button(w,'cancel','❌ Бас тарту')]],mid);return True
+    self.f.save(actor,{'id':w['id'],'mode':'video','step':0,'last':self.uid,'message_id':mid,'confirmed':True,'metadata':w['metadata'],'kind':w['kind']});self.f.prompt(actor,self.f.get(actor))
    return True
   if s.get('mode')=='catalog_search' and text and not text.startswith('/'):
    self.catalog(actor,query=text);return True

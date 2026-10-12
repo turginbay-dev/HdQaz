@@ -1,4 +1,5 @@
 import 'server-only';
+import { cancelJob, hideJob } from '@/features/processing/repository';
 import { catalogAction } from '@/features/telegram/catalog';
 import { botAuth } from '@/features/telegram/auth';
 import { integer, invalid, jsonBody, metadata, short } from '@/features/telegram/validation';
@@ -12,7 +13,7 @@ function checked<T>(result:{data:T;error:{code?:string}|null}):NonNullable<T>{
  if(result.error)throw new ApiError(['P0001','23505','23514','23503','22023'].includes(result.error.code||'')?409:503,'workflow_conflict','Workflow changed or is unavailable. Refresh and try again.');if(result.data==null)throw new ApiError(404,'not_found','Record not found.');return result.data;
 }
 async function workflow(actor:number,id:string){const d=checked(await createAdminClient().from('telegram_workflows').select('*').eq('actor_id',actor).eq('id',id).maybeSingle());if(!d)throw new ApiError(404,'not_found','Workflow not found.');return d;}
-const jobColumns='id,content_id,episode_id,status,progress_percent,attempt_count,max_attempts,output_manifest_url,output_metadata,error_code';
+const jobColumns='id,content_id,episode_id,status,progress_percent,attempt_count,max_attempts,output_manifest_url,output_metadata,error_code,admin_hidden_at,admin_cancelled_at';
 export async function telegramRequest(request:Request){
  try{
   requireSameOrigin(request);botAuth(request,false);const b=await jsonBody(request);const action=short(b.action,32);
@@ -52,9 +53,27 @@ export async function telegramRequest(request:Request){
     const q=short(d.query,100).replace(/[%_,()]/g,'');result=checked(await db.from('contents').select('id,title,year,type').neq('type','movie').ilike('title','%'+q+'%').limit(6));
    }else if(action==='dubbers')result=checked(await db.from('dubbers').select('id,name').eq('is_active',true).limit(50));
    else if(action==='queue'){
-    const rows=checked(await db.from('telegram_workflows').select('*').eq('actor_id',actor).order('created_at',{ascending:false}).limit(20));
+    const rows=checked(await db.from('telegram_workflows').select('*').eq('actor_id',actor).not('job_id','is',null).order('created_at',{ascending:false}).limit(200));
     const ids=rows.flatMap(w=>w.job_id?[w.job_id]:[]);const jobs=ids.length?checked(await db.from('processing_jobs').select(jobColumns).in('id',ids)):[];
     result=rows.map(w=>({...w,job:jobs.find(j=>j.id===w.job_id)||null}));
+   }else if(action==='discard'){
+    const w=await workflow(actor,uuid(b.id));
+    if(w.state==='published')throw new ApiError(409,'state_conflict','Published content cannot be removed from this queue.');
+    if(w.job_id){
+     // The actor-owned workflow supplies the job ID; callers cannot target arbitrary jobs.
+     const j=checked(await db.from('processing_jobs').select(jobColumns).eq('id',w.job_id).eq('content_id',w.content_id).maybeSingle());
+     if(j.episode_id!==w.episode_id)throw new ApiError(409,'state_conflict','Episode changed. Refresh.');
+     if(j.status==='ready'){
+      if(w.state!=='rejected')checked(await db.rpc('telegram_workflow_action',{p_actor:actor,p_request:uuid(b.request_id),p_action:'reject',p_id:w.id,p_revision:w.revision,p_data:{}}));
+     }else{
+      if(j.status!=='failed')await cancelJob(j.id);
+      await hideJob(j.id);
+     }
+    }else if(w.state==='draft'){
+     // Conditional deletion fences prepare racing with a cancelled transfer.
+     checked(await db.from('telegram_workflows').delete().eq('id',w.id).eq('actor_id',actor).eq('revision',w.revision).eq('state','draft').is('job_id',null).select('id').maybeSingle());
+    }else throw new ApiError(409,'state_conflict','Refresh before removing this task.');
+    result={discarded:true};
    }else if(action==='get'){
     const w=await workflow(actor,uuid(b.id));const c=w.content_id?checked(await db.from('contents').select('slug').eq('id',w.content_id).single()):null;result={...w,watch_url:c?'https://hdqaz.online/'+encodeURIComponent(c.slug):null,job:w.job_id?checked(await db.from('processing_jobs').select(jobColumns).eq('id',w.job_id).single()):null};
    }else{

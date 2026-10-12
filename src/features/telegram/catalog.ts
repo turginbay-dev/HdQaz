@@ -45,7 +45,7 @@ export async function catalogAction(action:string,actor:number,b:Record<string,u
    db.from('episodes').select('id,season_id,episode_number,title,is_published,hls_url').eq('content_id',id).order('episode_number').limit(1000),
    db.from('content_genres').select('genres(name)').eq('content_id',id),
    c.dubber_id?db.from('dubbers').select('name').eq('id',c.dubber_id).single():Promise.resolve({data:null,error:null}),
-   db.from('telegram_workflows').select('id,revision,state,kind,job_id').eq('content_id',id).eq('actor_id',actor).order('created_at',{ascending:false}).limit(20)
+   db.from('telegram_workflows').select('id,revision,state,kind,job_id,metadata').eq('content_id',id).eq('actor_id',actor).order('created_at',{ascending:false}).limit(200)
   ]);
   const workflows=checked(flowRes),jobIds=workflows.flatMap(w=>w.job_id?[w.job_id]:[]);
   const jobs=jobIds.length?checked(await db.from('processing_jobs').select('id,status,progress_percent,output_manifest_url').in('id',jobIds)):[];

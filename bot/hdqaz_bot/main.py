@@ -114,8 +114,10 @@ class Bot:
                 buttons=[[{'text':'▶️ Тексеру','url':j['output_manifest_url']}],[button(w,'publish','✅ Жариялау'),button(w,'reject','❌ Қабылдамау')]]
             elif j['status']=='failed' and state=='submitted' and j['attempt_count']<j['max_attempts']:
                 buttons=[[button(w,'retry','Қайталау')]]
+        if j and state not in ('published','rejected'):
+            buttons.append([button(w,'discardask','⛔ Тоқтату' if j['status'] in ('downloading','processing','uploading') else '🗑 Кезектен алып тастау')])
         if w['kind']=='series' and w.get('content_id'):
-            key=w['content_id'].replace('-','');buttons.extend([[{'text':'➕ Келесі серия','callback_data':'cn:'+key},{'text':'➕ Жаңа маусым','callback_data':'cs:'+key}],[{'text':'📋 Сериялар','callback_data':'cl:'+key}]])
+            key=w['content_id'].replace('-','');buttons.extend([[{'text':'➕ Келесі серия','callback_data':'cn:'+key+':'+str(m.get('season_number') or 1)},{'text':'➕ Жаңа маусым','callback_data':'cs:'+key}],[{'text':'📋 Сериялар','callback_data':'cl:'+key}]])
         buttons.append([button(w,'get','🔄 Жаңарту'),{'text':'📋 Кезек','callback_data':'qback'}])
         buttons.append([{'text':'⬅️ Мәзір','callback_data':'ahome'}])
         self.movie.panel(actor,'\n'.join(lines),buttons,message_id,'detail',workflow=w['id'],confirmed=confirmed)
@@ -237,6 +239,7 @@ class Bot:
                 offset=state['offset'];self.lease_deadline=time.monotonic()+60
                 if keeper is None:
                     keeper=threading.Thread(target=self.keep_lease,daemon=True);keeper.start()
+                    if self.movie:threading.Thread(target=self.movie.run_ingestions,daemon=True,name='ingestion-queue').start()
                     if self.storage_admin:threading.Thread(target=self.storage_admin.run,daemon=True,name='storage-monitor').start()
                 stage='telegram_poll'
                 updates=self.tg.call('getUpdates',{'offset':offset,'timeout':20,'limit':1,'allowed_updates':['message','callback_query']},timeout=30)

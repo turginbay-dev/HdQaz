@@ -59,6 +59,19 @@ class AdminTests(unittest.TestCase):
 
  def test_existing_web_movie_goes_directly_to_video(self):
   self.api.c.update(kind='movie',is_published=False,hls_url=None,section='default');self.cb('attach:'+ID.replace('-',''));self.assertEqual(self.b.movie.get(123)['mode'],'video');self.assertEqual(self.api.w['metadata']['existing_content_id'],ID);self.assertFalse(any(x[0]=='search' for x in self.api.actions))
+ def test_existing_series_fast_menu_selects_directly_into_numbers(self):
+  self.cb('series_existing')
+  self.assertIn('cn:'+ID.replace('-',''),str(self.tg.calls[-1]))
+  self.cb('cn:'+ID.replace('-',''));self.cb('snum:1');self.cb('snum:2')
+  self.assertEqual(self.b.movie.get(123)['mode'],'video');self.assertTrue(self.b.movie.get(123)['confirmed'])
+ def test_next_episode_includes_pending_not_yet_ready_upload(self):
+  self.b.movie.ingestion_save({'id':str(uuid.uuid4()),'actor':123,'mode':'pending','metadata':{'existing_content_id':ID,'season_number':1,'episode_number':2}})
+  self.cb('cn:'+ID.replace('-',''))
+  self.assertEqual(self.b.movie.get(123)['suggested_episode'],3)
+ def test_existing_published_episode_is_never_overwritten(self):
+  self.cb('cn:'+ID.replace('-',''));self.cb('snum:1');self.cb('snum:1')
+  self.assertIn('Оны ауыстырмаймын',str(self.tg.calls[-1]))
+  self.assertFalse(any(x[0] in ('prepare','activate') for x in self.api.actions))
  def test_published_movie_cannot_attach_replacement(self):
   self.api.c.update(kind='movie',is_published=True);self.assertRaises(SafeError,self.cb,'attach:'+ID.replace('-',''))
 
